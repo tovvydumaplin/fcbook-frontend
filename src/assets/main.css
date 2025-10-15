@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+/* Improved active/selected button state */
+.btn-active,
+button.btn-active,
+.selected__bg {
+  background-color: #eaf2ff4d !important;
+  border-color: #155dfc !important;
+  color: #155dfc !important;
+  box-shadow: 0 2px 8px 0 rgba(138, 142, 150, 0.08), 0 0 0 2px #155dfc;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+/* Optional: hover effect for active buttons */
+.btn-active:hover,
+button.btn-active:hover {
+  background-color: #eaf2ffc7 !important;
+  box-shadow: 0 4px 16px 0 rgba(21, 93, 252, 0.12), 0 0 0 2px #155dfc;
+}
+
+/* Brand color utilities */
+.brand-color {
+  color: #155dfc;
+}
+
+.bg-brand-color {
+  background-color: #f4f4f4;
+}
+.bg-brand-color-blue {
+  background-color: #155efc12 !important;
+}
+
+.border-brand-color {
+  border-color: #155dfc !important;
+}
+
+.shadow-border-brand-color {
+  box-shadow: 0 0 0 2px #155dfc;
+}
+
+.bg__brand__color {
+  background-color: #155efc;
+}
+.hide-select-icon {
+  -webkit-appearance: none; /* Chrome, Safari */
+  -moz-appearance: none; /* Firefox */
+  appearance: none; /* Modern browsers */
+  background-image: none; /* Remove default arrow */
+}
+
+/* For IE / old Edge */
+.hide-select-icon::-ms-expand {
+  display: none;
+}
+
+/* Custom style for the knob */
+
+.theme-checkbox {
+  --toggle-size: 13px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 4.25em;
+  height: 2.125em;
+  background: -webkit-gradient(
+      linear,
+      left top,
+      right top,
+      color-stop(50%, #c4c4c4),
+      color-stop(50%, #155dfc)
+    )
+    no-repeat;
+  background: -o-linear-gradient(left, #c4c4c4 50%, #1c398e 50%) no-repeat;
+  background: linear-gradient(to right, #c4c4c4 50%, #1c398e 50%) no-repeat;
+  background-size: 205%;
+  background-position: 0;
+  -webkit-transition: 0.4s;
+  -o-transition: 0.4s;
+  transition: 0.4s;
+  border-radius: 99em;
+  position: relative;
+  cursor: pointer;
+  font-size: var(--toggle-size);
+}
+
+.theme-checkbox::before {
+  content: "";
+  width: 1.75em;
+  height: 1.75em;
+  position: absolute;
+  top: 0.2em;
+  left: 0.2em;
+  background: -webkit-gradient(
+      linear,
+      left top,
+      right top,
+      color-stop(50%, #fff),
+      color-stop(50%, #fff)
+    )
+    no-repeat;
+  background: -o-linear-gradient(left, #fff 50%, #fff 50%) no-repeat;
+  background: linear-gradient(to right, #fff 50%, #fff 50%) no-repeat;
+  background-size: 205%;
+  background-position: 100%;
+  border-radius: 50%;
+  -webkit-transition: 0.4s;
+  -o-transition: 0.4s;
+  transition: 0.4s;
+}
+
+.theme-checkbox:checked::before {
+  left: calc(100% - 1.25em - 0.7em);
+  background-position: 0;
+}
+
+.theme-checkbox:checked {
+  background-position: 100%;
+}
+
+.selected__bg {
+}
+.step__instruction {
+  position: relative;
+  z-index: 1;
+}
+
+.step__instruction::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 90%;
+  height: 2.5em;
+  background: rgba(21, 93, 252, 0.08); /* subtle blue shadow */
+  border-radius: 1em;
+  box-shadow: 0 4px 24px 0 rgba(21, 93, 252, 0.12);
+  z-index: -1;
+  pointer-events: none;
+}
