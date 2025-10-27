@@ -1,3 +1,99 @@
+<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\views\RoutesModule.vue -->
+<script setup>
+import { ref, computed, onMounted } from "vue";
+import { Plus, BarChart3, AlertCircle, Search, Eye } from "lucide-vue-next";
+import ModalCreateRoute from "../components/ModalCreateRoute.vue";
+
+const apiBase = import.meta.env.VITE_API_URL;
+const isModalOpen = ref(false);
+const activeTab = ref("all");
+const searchQuery = ref("");
+const isTableLoading = ref(false);
+
+const tabs = [
+  { id: "all", name: "All Routes" },
+  { id: "active", name: "Active Route" },
+  { id: "closed", name: "Closed Route" },
+];
+
+const routes = ref([]);
+const totalRoutes = computed(() => routes.value.length);
+const activeRoutes = computed(
+  () => routes.value.filter((r) => r.status === "Active").length
+);
+const closedRoutes = computed(
+  () => routes.value.filter((r) => r.status !== "Active").length
+);
+
+const filteredRoutes = computed(() => {
+  let filtered = routes.value;
+  if (activeTab.value === "active")
+    filtered = filtered.filter((r) => r.status === "Active");
+  else if (activeTab.value === "closed")
+    filtered = filtered.filter((r) => r.status !== "Active");
+
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase();
+    filtered = filtered.filter(
+      (r) =>
+        r.origin_port.toLowerCase().includes(q) ||
+        r.destination_port.toLowerCase().includes(q) ||
+        r.updated_by.toLowerCase().includes(q)
+    );
+  }
+  return filtered;
+});
+
+const getStatusClass = (status) => {
+  if (status === "Active") return "bg-green-100 text-green-800";
+  return "bg-gray-100 text-gray-800";
+};
+
+const fetchRoutes = async () => {
+  isTableLoading.value = true;
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${apiBase}/routes`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+    });
+    const data = await response.json();
+    if (response.ok && data.success && data.data?.routes) {
+      routes.value = data.data.routes.map((route, idx) => ({
+        id: route.route_id || idx + 1,
+        origin_port: route.port_a,
+        destination_port: route.port_b,
+        status: route.status || "Active",
+        updated_by: route.updatedBy || route.updated_by || "Unknown",
+        updated_at: route.updated_at ? route.updated_at.slice(0, 10) : "",
+      }));
+    } else {
+      routes.value = [];
+      console.error("Failed to fetch routes:", data.message || data);
+    }
+  } catch (err) {
+    routes.value = [];
+    console.error("Network error fetching routes:", err);
+  } finally {
+    isTableLoading.value = false;
+  }
+};
+
+onMounted(fetchRoutes);
+
+const handleSave = () => {
+  isModalOpen.value = false;
+  fetchRoutes(); // reload after adding a route
+};
+
+const handleAction = (route) => {
+  // View or open route logic here
+  console.log("View route:", route);
+};
+</script>
+
 <template>
   <div class="min-h-screen bg-gray-50 p-6">
     <!-- Header -->
@@ -5,7 +101,7 @@
       <nav class="text-sm text-gray-500 mb-2">
         <span>Dashboard</span>
         <span class="mx-2">></span>
-        <span class="text-gray-900">Ports</span>
+        <span class="text-gray-900">Routes</span>
       </nav>
       <div class="flex justify-between items-center">
         <h1 class="text-2xl font-semibold text-gray-900">Route Management</h1>
@@ -24,40 +120,36 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       <div class="bg-white rounded-lg p-6 shadow-sm">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-medium text-gray-600">Total Ports</h3>
+          <h3 class="text-sm font-medium text-gray-600">Total Routes</h3>
         </div>
         <div class="text-3xl font-bold text-gray-900 mb-1">
-          {{ totalPorts }}
+          {{ totalRoutes }}
         </div>
         <p class="text-sm text-gray-500">
-          {{ closedPorts }} closed ports as of today
+          {{ closedRoutes }} closed routes as of today
         </p>
       </div>
 
       <div class="bg-white rounded-lg p-6 shadow-sm">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-medium text-gray-600">Closed Ports</h3>
+          <h3 class="text-sm font-medium text-gray-600">Active Route</h3>
           <BarChart3 class="w-5 h-5 text-blue-600" />
         </div>
         <div class="text-3xl font-bold text-gray-900 mb-1">
-          {{ closedPorts }}
+          {{ activeRoutes }}
         </div>
-        <p class="text-sm text-gray-500">Across all available ports</p>
+        <p class="text-sm text-gray-500">Across all available routes</p>
       </div>
 
       <div class="bg-white rounded-lg p-6 shadow-sm">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-medium text-gray-600">
-            Zero-Transaction Ports
-          </h3>
+          <h3 class="text-sm font-medium text-gray-600">Inactive Route</h3>
           <AlertCircle class="w-5 h-5 text-blue-600" />
         </div>
         <div class="text-3xl font-bold text-gray-900 mb-1">
-          {{ zeroTransactionPorts }}
+          {{ closedRoutes }}
         </div>
-        <p class="text-sm text-gray-500">
-          Total of active ports without transaction
-        </p>
+        <p class="text-sm text-gray-500">Total of inactive routes</p>
       </div>
     </div>
 
@@ -81,10 +173,10 @@
         </nav>
       </div>
 
-      <!-- List of Ports Section -->
+      <!-- List of Routes Section -->
       <div class="p-6">
         <div class="flex items-center justify-between mb-6">
-          <h2 class="text-lg font-medium text-gray-900">List of Ports</h2>
+          <h2 class="text-lg font-medium text-gray-900">List of Route</h2>
           <div class="relative">
             <Search
               class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4"
@@ -98,8 +190,24 @@
           </div>
         </div>
 
+        <!-- Table Loading Animation -->
+        <div
+          v-if="isTableLoading"
+          class="flex justify-center items-center py-8"
+        >
+          <div
+            class="flex items-center gap-3 bg-white border border-blue-600 shadow-lg px-5 py-3 rounded-lg"
+          >
+            <span
+              class="inline-block w-6 h-6 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"
+            ></span>
+            <span class="font-semibold text-blue-700 text-base"
+              >Loading routes...</span
+            >
+          </div>
+        </div>
         <!-- Data Table -->
-        <div class="overflow-x-auto">
+        <div v-else class="overflow-auto max-h-[400px]">
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
@@ -111,22 +219,12 @@
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
-                  Port Name
+                  Port Origin
                 </th>
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
-                  Corridor
-                </th>
-                <th
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Facilities
-                </th>
-                <th
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Updated by
+                  Port Destination
                 </th>
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -136,12 +234,12 @@
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
-                  Created at
+                  Updated by
                 </th>
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
-                  Last updated
+                  Updated at
                 </th>
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -152,45 +250,40 @@
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
               <tr
-                v-for="port in filteredPorts"
-                :key="port.id"
+                v-for="route in filteredRoutes"
+                :key="route.id"
                 class="hover:bg-gray-50"
               >
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {{ port.id }}
+                  {{ route.id }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {{ port.name }}
+                  {{ route.origin_port }}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ port.corridor }}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ port.facilities }}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ port.updatedBy }}
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {{ route.destination_port }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span
-                    :class="getStatusClass(port.status)"
+                    :class="getStatusClass(route.status)"
                     class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
                   >
-                    {{ port.status }}
+                    {{ route.status }}
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ port.createdAt }}
+                  {{ route.updated_by }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {{ port.lastUpdated }}
+                  {{ route.updated_at }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                   <button
-                    @click="handleAction(port)"
-                    class="font-medium text-blue-600 hover:text-blue-900"
+                    @click="handleAction(route)"
+                    class="font-medium text-blue-600 hover:text-blue-900 flex items-center"
                   >
-                    {{ port.status === "Available" ? "View" : "Open" }}
+                    <Eye class="w-4 h-4 mr-1" />
+                    View
                   </button>
                 </td>
               </tr>
@@ -208,110 +301,3 @@
     />
   </div>
 </template>
-
-<script setup>
-import { ref, computed } from "vue";
-import { Plus, BarChart3, AlertCircle, Search } from "lucide-vue-next";
-import ModalCreateRoute from "../components/ModalCreateRoute.vue"; // <-- RELATIVE import
-
-// modal state
-const isModalOpen = ref(false);
-
-// page state & data
-const activeTab = ref("all");
-const searchQuery = ref("");
-
-const tabs = [
-  { id: "all", name: "All Ports" },
-  { id: "active", name: "Active Ports" },
-  { id: "closed", name: "Closed Ports" },
-];
-
-const ports = ref([
-  {
-    id: 1,
-    name: "Batangas Port",
-    corridor: "Western",
-    facilities: "Ramp",
-    updatedBy: "Tovvy B. Dumaplin",
-    status: "Available",
-    createdAt: "2025-05-02 9:24",
-    lastUpdated: "2025-08-02 9:24",
-  },
-  {
-    id: 2,
-    name: "Calapan Port",
-    corridor: "Western",
-    facilities: "Ramp",
-    updatedBy: "Tovvy B. Dumaplin",
-    status: "Offline",
-    createdAt: "2025-05-02 9:24",
-    lastUpdated: "2025-08-02 9:24",
-  },
-  {
-    id: 2,
-    name: "Calapan Port",
-    corridor: "Western",
-    facilities: "Ramp",
-    updatedBy: "Tovvy B. Dumaplin",
-    status: "Offline",
-    createdAt: "2025-05-02 9:24",
-    lastUpdated: "2025-08-02 9:24",
-  },
-  {
-    id: 2,
-    name: "Calapan Port",
-    corridor: "Western",
-    facilities: "Ramp",
-    updatedBy: "Tovvy B. Dumaplin",
-    status: "Offline",
-    createdAt: "2025-05-02 9:24",
-    lastUpdated: "2025-08-02 9:24",
-  },
-]);
-
-const totalPorts = computed(() => ports.value.length);
-const closedPorts = computed(
-  () => ports.value.filter((p) => p.status === "Offline").length
-);
-const zeroTransactionPorts = ref(0);
-
-const filteredPorts = computed(() => {
-  let filtered = ports.value;
-
-  if (activeTab.value === "active")
-    filtered = filtered.filter(
-      (p) => p.status === "Online" || p.status === "Available"
-    );
-  else if (activeTab.value === "closed")
-    filtered = filtered.filter((p) => p.status === "Offline");
-
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase();
-    filtered = filtered.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.corridor.toLowerCase().includes(q) ||
-        p.updatedBy.toLowerCase().includes(q)
-    );
-  }
-  return filtered;
-});
-
-const getStatusClass = (status) => {
-  if (status === "Available" || status === "Online")
-    return "bg-green-100 text-green-800";
-  return "bg-gray-100 text-gray-800";
-};
-
-const handleAction = (port) => {
-  console.log("action on port", port);
-};
-
-const handleSave = (newPort) => {
-  console.log("handleSave received:", newPort); // debug log
-  // ensure id exists and is unique. The modal already sets id.
-  ports.value.unshift(newPort);
-  isModalOpen.value = false;
-};
-</script>

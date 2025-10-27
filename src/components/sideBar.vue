@@ -43,7 +43,7 @@
       <div class="pt-4">
         <button
           @click="toggleModules"
-          class="flex items-center justify-between w-full px-3 py-2 text-left text-gray-600 hover:text-gray-800 transition-colors"
+          class="flex items-center justify-between w-full px-3 py-2 text-left text-gray-400 hover:text-gray-800 transition-colors"
         >
           <span class="font-medium">Modules</span>
           <svg

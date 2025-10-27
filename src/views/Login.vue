@@ -181,7 +181,7 @@ const showPassword = ref(false);
 const router = useRouter();
 const errorMsg = ref("");
 const isLoading = ref(false);
-
+const apiBase = import.meta.env.VITE_API_URL;
 const handleNext = () => {
   if (username.value) step.value = 2;
 };
@@ -190,7 +190,7 @@ const handleSignIn = async () => {
   errorMsg.value = "";
   isLoading.value = true;
   try {
-    const response = await fetch("http://127.0.0.1:8000/api/login", {
+    const response = await fetch(`${apiBase}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -200,7 +200,7 @@ const handleSignIn = async () => {
     });
     const data = await response.json();
     console.log("Login response:", data);
-
+    console.log("apiBase:", apiBase);
     if (response.ok && data.success) {
       localStorage.setItem("token", data.data.token);
       localStorage.setItem("user", JSON.stringify(data.data.user));

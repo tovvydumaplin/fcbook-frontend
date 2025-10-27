@@ -5,6 +5,7 @@ import VehicleSelection from "../components/VehicleSelection.vue";
 import ViewTellerPassenger from "../components/ViewTellerPassenger.vue";
 import TellerHeader from "../components/TellerHeader.vue";
 import { onMounted } from "vue";
+const apiBase = import.meta.env.VITE_API_URL;
 const showSuccess = ref(false);
 const bookingActive = ref(false);
 
@@ -117,16 +118,39 @@ const fullname = ref("");
 // ];
 
 const schedules = ref([]);
-const token = localStorage.getItem("token");
+
 onMounted(async () => {
   try {
-    const token = localStorage.getItem("token");
-    const response = await fetch("http://127.0.0.1:8000/api/schedules/", {
+    const stored = localStorage.getItem("token");
+    console.log("stored token:", stored);
+
+    if (!stored) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      return (window.location.href = "/");
+    }
+
+    // only add "Bearer " if it doesn't already start with it
+    const authHeader = stored.startsWith("Bearer ")
+      ? stored
+      : `Bearer ${stored}`;
+
+    const response = await fetch(`${apiBase}/schedules/`, {
+      method: "GET",
       headers: {
         "Content-Type": "application/json",
-        Authorization: token,
+        Authorization: authHeader,
       },
     });
+
+    console.log("schedules response status:", response.status);
+
+    if (response.status === 401 || response.status === 403) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      return (window.location.href = "/");
+    }
+
     const result = await response.json();
     if (response.ok && result.success && result.data?.schedules) {
       schedules.value = result.data.schedules.map((item) => ({
@@ -135,7 +159,7 @@ onMounted(async () => {
         value: item.departure_time,
       }));
     } else {
-      console.error("Failed to fetch schedules:", result.message);
+      console.error("Failed to fetch schedules:", result.message || result);
     }
   } catch (err) {
     console.error("Failed to fetch schedules:", err);

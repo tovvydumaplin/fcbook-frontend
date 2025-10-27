@@ -16,9 +16,20 @@ const routes = [
 ];
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory("/fcbook-dev/"),
   routes,
 });
+
+function isTokenExpired(token) {
+  if (!token) return true;
+  try {
+    const jwt = token.startsWith("Bearer ") ? token.slice(7) : token;
+    const payload = JSON.parse(atob(jwt.split(".")[1]));
+    return payload.exp * 1000 < Date.now();
+  } catch (e) {
+    return true;
+  }
+}
 
 router.beforeEach((to, from, next) => {
   const publicPages = ["/"];
@@ -26,12 +37,14 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem("token");
 
   // If logged in and trying to access login page, redirect to dashboard
-  if (to.path === "/" && token) {
+  if (to.path === "/" && token && !isTokenExpired(token)) {
     return next("/dashboard");
   }
 
-  // If not logged in and trying to access protected page, redirect to login
-  if (authRequired && !token) {
+  // If not logged in (or token expired) and trying to access protected page, redirect to login
+  if (authRequired && (!token || isTokenExpired(token))) {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     return next("/");
   }
 

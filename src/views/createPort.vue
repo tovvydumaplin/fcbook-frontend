@@ -1,3 +1,4 @@
+<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\views\createPort.vue -->
 <template>
   <div class="min-h-screen bg-gray-50 p-6">
     <!-- Header -->
@@ -9,7 +10,6 @@
       </nav>
       <div class="flex justify-between items-center">
         <h1 class="text-2xl font-semibold text-gray-900">Port Management</h1>
-
         <button
           @click="isModalOpen = true"
           type="button"
@@ -100,7 +100,7 @@
         </div>
 
         <!-- Data Table -->
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto overflow-y-auto">
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
@@ -211,66 +211,21 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { Plus, BarChart3, AlertCircle, Search } from "lucide-vue-next";
-import ModalCreatePort from "../components/ModalCreatePort.vue"; // <-- RELATIVE import
+import ModalCreatePort from "../components/ModalCreatePort.vue";
 
-// modal state
 const isModalOpen = ref(false);
-
-// page state & data
 const activeTab = ref("all");
 const searchQuery = ref("");
-
+const apiBase = import.meta.env.VITE_API_URL;
 const tabs = [
   { id: "all", name: "All Ports" },
   { id: "active", name: "Active Ports" },
   { id: "closed", name: "Closed Ports" },
 ];
 
-const ports = ref([
-  {
-    id: 1,
-    name: "Batangas Port",
-    corridor: "Western",
-    facilities: "Ramp",
-    updatedBy: "Tovvy B. Dumaplin",
-    status: "Available",
-    createdAt: "2025-05-02 9:24",
-    lastUpdated: "2025-08-02 9:24",
-  },
-  {
-    id: 2,
-    name: "Calapan Port",
-    corridor: "Western",
-    facilities: "Ramp",
-    updatedBy: "Tovvy B. Dumaplin",
-    status: "Offline",
-    createdAt: "2025-05-02 9:24",
-    lastUpdated: "2025-08-02 9:24",
-  },
-  {
-    id: 2,
-    name: "Calapan Port",
-    corridor: "Western",
-    facilities: "Ramp",
-    updatedBy: "Tovvy B. Dumaplin",
-    status: "Offline",
-    createdAt: "2025-05-02 9:24",
-    lastUpdated: "2025-08-02 9:24",
-  },
-  {
-    id: 2,
-    name: "Calapan Port",
-    corridor: "Western",
-    facilities: "Ramp",
-    updatedBy: "Tovvy B. Dumaplin",
-    status: "Offline",
-    createdAt: "2025-05-02 9:24",
-    lastUpdated: "2025-08-02 9:24",
-  },
-]);
-
+const ports = ref([]);
 const totalPorts = computed(() => ports.value.length);
 const closedPorts = computed(
   () => ports.value.filter((p) => p.status === "Offline").length
@@ -309,10 +264,43 @@ const handleAction = (port) => {
   console.log("action on port", port);
 };
 
-const handleSave = (newPort) => {
-  console.log("handleSave received:", newPort); // debug log
-  // ensure id exists and is unique. The modal already sets id.
-  ports.value.unshift(newPort);
+const fetchPorts = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${apiBase}/ports`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+    });
+    const data = await response.json();
+    if (response.ok && data.success && data.data?.ports) {
+      ports.value = data.data.ports.map((port, idx) => ({
+        id: port.id || idx + 1,
+        name: port.port_name,
+        corridor: port.corridor,
+        facilities: port.facilities,
+        updatedBy: port.last_update_by,
+        status: port.is_active === 1 ? "Available" : "Offline",
+        createdAt: port.created_at
+          ? port.created_at.slice(0, 16).replace("T", " ")
+          : "",
+        lastUpdated: port.updated_at
+          ? port.updated_at.slice(0, 16).replace("T", " ")
+          : "",
+      }));
+    } else {
+      console.error("Failed to fetch ports:", data.message || data);
+    }
+  } catch (err) {
+    console.error("Network error fetching ports:", err);
+  }
+};
+
+onMounted(fetchPorts);
+
+const handleSave = () => {
   isModalOpen.value = false;
+  fetchPorts(); // reload the table after a new port is added
 };
 </script>

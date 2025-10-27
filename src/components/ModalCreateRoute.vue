@@ -1,19 +1,28 @@
+<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\components\ModalCreateRoute.vue -->
 <template>
-  <!-- Modal Overlay -->
   <div
     class="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50"
     @click="$emit('close')"
   >
+    <!-- Top-right Floating Saving Card -->
+    <div
+      v-if="isLoading"
+      class="fixed top-6 right-6 z-[100] flex items-center gap-3 bg-white border border-blue-600 shadow-lg px-5 py-3 rounded-lg"
+    >
+      <span
+        class="inline-block w-5 h-5 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"
+      ></span>
+      <span class="font-semibold text-blue-700 text-base">Saving data...</span>
+    </div>
     <!-- Modal Content -->
     <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4" @click.stop>
-      <!-- Modal Header -->
       <div
         class="flex items-center justify-between p-6 border-b border-gray-200"
       >
         <div>
           <h2 class="text-lg font-semibold text-gray-900">Create a Route</h2>
           <p class="text-sm text-gray-500 mt-1">
-            Provide basic information about the port
+            Select origin and destination ports
           </p>
         </div>
         <button
@@ -35,70 +44,47 @@
           </svg>
         </button>
       </div>
-      <!-- Modal Body -->
-      <form @submit.prevent="savePort" class="p-6 space-y-6">
-        <!-- Port Name -->
+      <form @submit.prevent="saveRoute" class="p-6 space-y-6">
+        <!-- Origin Port -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">
-            Port Name
+            Origin Port
           </label>
-          <input
-            v-model="port.name"
-            type="text"
-            placeholder="Enter port name (e.g. Batangas, etc.)"
+          <select
+            v-model="route.port_a"
             required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="" disabled>Select origin port</option>
+            <option
+              v-for="port in ports"
+              :key="port.id"
+              :value="port.port_name"
+            >
+              {{ port.port_name }}
+            </option>
+          </select>
         </div>
 
-        <!-- Corridor -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-3">
-            Select a corridor
-          </label>
-          <div class="space-y-3">
-            <label class="flex items-center">
-              <input
-                v-model="port.corridor"
-                type="radio"
-                value="Western Corridor"
-                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-              />
-              <span class="ml-3 text-sm text-gray-700">Western Corridor</span>
-            </label>
-            <label class="flex items-center">
-              <input
-                v-model="port.corridor"
-                type="radio"
-                value="Central Corridor"
-                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-              />
-              <span class="ml-3 text-sm text-gray-700">Central Corridor</span>
-            </label>
-            <label class="flex items-center">
-              <input
-                v-model="port.corridor"
-                type="radio"
-                value="Eastern Corridor"
-                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
-              />
-              <span class="ml-3 text-sm text-gray-700">Eastern Corridor</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Facilities -->
+        <!-- Destination Port -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">
-            Facilities
+            Destination Port
           </label>
-          <input
-            v-model="port.facilities"
-            type="text"
-            placeholder="Enter facilities"
+          <select
+            v-model="route.port_b"
             required
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="" disabled>Select destination port</option>
+            <option
+              v-for="port in ports"
+              :key="port.id + '-dest'"
+              :value="port.port_name"
+            >
+              {{ port.port_name }}
+            </option>
+          </select>
         </div>
 
         <!-- Modal Footer -->
@@ -115,9 +101,19 @@
           <button
             type="submit"
             class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            :disabled="isLoading"
           >
-            Save Port
+            <span v-if="isLoading" class="flex items-center gap-2">
+              <span
+                class="inline-block w-5 h-5 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"
+              ></span>
+              Saving...
+            </span>
+            <span v-else> Save Route </span>
           </button>
+        </div>
+        <div v-if="errorMsg" class="text-red-500 text-sm mt-2 text-center">
+          {{ errorMsg }}
         </div>
       </form>
     </div>
@@ -125,34 +121,69 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 
 const emit = defineEmits(["save", "close"]);
+const apiBase = import.meta.env.VITE_API_URL;
+const isLoading = ref(false);
+const errorMsg = ref("");
 
-const port = ref({
-  name: "",
-  corridor: "",
-  facilities: "",
-  updatedBy: "Tovvy B. Dumaplin",
-  status: "Available",
-  createdAt: new Date().toLocaleString(),
-  lastUpdated: new Date().toLocaleString(),
+const ports = ref([]);
+const route = ref({
+  port_a: "",
+  port_b: "",
 });
 
-const savePort = () => {
-  // Generate a random ID for demo
-  port.value.id = Math.floor(Math.random() * 10000);
-  // Emit the port data
-  emit("save", { ...port.value });
-  // Reset form
-  port.value = {
-    name: "",
-    corridor: "",
-    facilities: "",
-    updatedBy: "Tovvy B. Dumaplin",
-    status: "Available",
-    createdAt: new Date().toLocaleString(),
-    lastUpdated: new Date().toLocaleString(),
-  };
+onMounted(async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${apiBase}/ports`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+    });
+    const data = await response.json();
+    if (response.ok && data.success && data.data?.ports) {
+      ports.value = data.data.ports;
+    } else {
+      ports.value = [];
+      console.error("Failed to fetch ports:", data.message || data);
+    }
+  } catch (err) {
+    ports.value = [];
+    console.error("Network error fetching ports:", err);
+  }
+});
+
+const saveRoute = async () => {
+  errorMsg.value = "";
+  isLoading.value = true;
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${apiBase}/routes`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+      body: JSON.stringify(route.value),
+    });
+    const data = await response.json();
+    if (response.ok && data.success) {
+      emit("save", { ...route.value });
+      route.value = {
+        port_a: "",
+        port_b: "",
+      };
+      emit("close");
+    } else {
+      errorMsg.value = data.message || "Failed to save route.";
+    }
+  } catch (err) {
+    errorMsg.value = "Network error. Please try again.";
+  } finally {
+    isLoading.value = false;
+  }
 };
 </script>
