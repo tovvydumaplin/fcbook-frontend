@@ -1,3 +1,4 @@
+<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\components\sideBar.vue -->
 <template>
   <div
     class="w-64 flex-shrink-0 bg-white border-r border-gray-200 h-screen flex flex-col overflow-y-auto"
@@ -18,7 +19,7 @@
     <nav class="flex-1 px-4 py-6 space-y-2">
       <!-- Dashboard -->
       <router-link
-        to="/home"
+        to="/"
         class="flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors text-gray-700 hover:bg-gray-100"
         active-class="bg-blue-50 text-blue-600"
         exact-active-class="bg-blue-50 text-blue-600"
@@ -43,7 +44,7 @@
       <div class="pt-4">
         <button
           @click="toggleModules"
-          class="flex items-center justify-between w-full px-3 py-2 text-left text-gray-400 hover:text-gray-800 transition-colors"
+          class="flex items-center justify-between w-full px-3 py-2 text-left text-gray-600 hover:text-gray-800 transition-colors"
         >
           <span class="font-medium">Modules</span>
           <svg
