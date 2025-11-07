@@ -352,9 +352,48 @@ const handleSaveSchedule = (scheduleData) => {
               </div>
             </template>
             <template v-else-if="scheduleData && scheduleData.length">
-              <div class="w-full">
+              <div class="w-full grid grid-cols-2 gap-4">
                 <table class="min-w-full bg-white rounded-b-lg">
                   <thead>
+                    <tr>
+                      <th class="text-sm text-center" :colspan="3">
+                        {{ selectedRoute?.port_a }}
+                      </th>
+                    </tr>
+                    <tr>
+                      <th class="px-4 py-2 text-xs text-gray-500 text-left">
+                        Departure
+                      </th>
+                      <th class="px-4 py-2 text-xs text-gray-500 text-left">
+                        Vessel
+                      </th>
+                      <th class="px-4 py-2 text-xs text-gray-500 text-left">
+                        Arrival
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(sched, idx) in scheduleData" :key="idx">
+                      <td class="px-4 py-2 text-sm">
+                        {{ sched.departure_time || sched.departure }}
+                      </td>
+                      <td class="px-4 py-2 text-sm">
+                        {{ sched.vessel }}
+                      </td>
+                      <td class="px-4 py-2 text-sm">
+                        {{ sched.arrival_time || sched.arrival }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <!-- 2 -->
+                <table class="min-w-full bg-white rounded-b-lg">
+                  <thead>
+                    <tr>
+                      <th class="text-sm text-center" :colspan="3">
+                        {{ selectedRoute?.port_b }}
+                      </th>
+                    </tr>
                     <tr>
                       <th class="px-4 py-2 text-xs text-gray-500 text-left">
                         Departure

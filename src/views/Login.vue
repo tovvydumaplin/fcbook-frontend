@@ -25,7 +25,7 @@
             :class="{ invisible: isLoading }"
           />
           <div
-            class="flex items-center justify-between mb-4"
+            class="flex items-center justify-between mb-12"
             :class="{ invisible: isLoading }"
           >
             <label class="flex items-center gap-2 text-sm text-gray-600">
@@ -47,21 +47,11 @@
           <div
             class="mt-6 text-center text-gray-500 text-sm"
             :class="{ invisible: isLoading }"
-          >
-            or
-          </div>
+          ></div>
           <div
             class="mt-2 flex justify-center"
             :class="{ invisible: isLoading }"
-          >
-            <button
-              type="button"
-              class="flex items-center gap-2 px-4 py-2 text-gray-500 rounded hover:bg-gray-100 transition-colors cursor-pointer"
-            >
-              <img src="/assets/google-icon.png" alt="Google" class="h-5 w-5" />
-              Sign in with Google
-            </button>
-          </div>
+          ></div>
         </div>
         <div v-else>
           <div class="mb-6 text-center flex flex-col items-center">
@@ -88,40 +78,12 @@
             />
             <button
               type="button"
-              class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600"
+              class="absolute cursor-pointer right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-600"
               @click="showPassword = !showPassword"
               tabindex="-1"
             >
-              <svg
-                v-if="!showPassword"
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0zm-9 0c0 5 9 5 9 0s-9-5-9 0z"
-                />
-              </svg>
-              <svg
-                v-else
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-5 w-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M13.875 18.825A10.05 10.05 0 0112 19c-5 0-9-4-9-7a9.97 9.97 0 013.22-5.79M6.7 6.7A9.97 9.97 0 0112 5c5 0 9 4 9 7 0 1.61-.62 3.11-1.67 4.33M15 12a3 3 0 11-6 0 3 3 0 016 0zm-9 0c0 5 9 5 9 0s-9-5-9 0z"
-                />
-              </svg>
+              <Eye v-if="!showPassword" class="w-5 h-5" />
+              <EyeOff v-else class="w-5 h-5" />
             </button>
           </div>
           <div
@@ -152,8 +114,7 @@
             </button>
           </div>
         </div>
-        <div v-if="errorMsg" class="text-red-500 mt-2">{{ errorMsg }}</div>
-        <!-- Replace the loading bar section with this spinner -->
+
         <div v-if="isLoading" class="mt-4 flex flex-col items-center">
           <div class="flex justify-center items-center w-full">
             <span
@@ -166,13 +127,29 @@
         </div>
       </form>
     </div>
+    <transition
+      name="slide-down"
+      enter-active-class="transition-all duration-300"
+      leave-active-class="transition-all duration-200"
+      enter-from-class="opacity-0 -translate-y-6"
+      enter-to-class="opacity-100 translate-y-0"
+      leave-from-class="opacity-100 translate-y-0"
+      leave-to-class="opacity-0 -translate-y-6"
+    >
+      <div
+        v-if="errorMsg"
+        class="text-red-500 absolute top-[50px] left-1/2 -translate-x-1/2 p-3 bg-red-200 rounded-xl shadow-lg"
+      >
+        {{ errorMsg }}
+      </div>
+    </transition>
   </div>
 </template>
 
 <script setup>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-
+import { Eye, EyeOff } from "lucide-vue-next";
 const step = ref(1);
 const username = ref("");
 const password = ref("");
@@ -206,15 +183,25 @@ const handleSignIn = async () => {
       localStorage.setItem("user", JSON.stringify(data.data.user));
       router.push("/dashboard");
     } else {
-      errorMsg.value = data.message || "Login failed";
-      alert(errorMsg.value);
-      if (errorMsg.value === "Unauthenticated") {
-        alert("Incorrect username/password.");
+      if (data.errors) {
+        if (data.errors.email && data.errors.email.length > 0) {
+          errorMsg.value = data.errors.email[0];
+        } else if (data.errors.password && data.errors.password.length > 0) {
+          errorMsg.value = data.errors.password[0];
+        } else {
+          errorMsg.value = data.message || "Login failed";
+        }
+      } else if (
+        data.message === "Unauthenticated" ||
+        data.error_code === "UNAUTHENTICATED"
+      ) {
+        errorMsg.value = "Incorrect username or password.";
+      } else {
+        errorMsg.value = data.message || "Login failed";
       }
     }
   } catch (err) {
     errorMsg.value = "Network error";
-    alert(errorMsg.value);
   } finally {
     isLoading.value = false;
   }
