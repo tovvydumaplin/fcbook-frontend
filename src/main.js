@@ -9,6 +9,7 @@ import {
   ArrowsRightLeftIcon,
   ClockIcon,
 } from "@heroicons/vue/24/solid";
+import { Eye, EyeOff, AlertCircle } from "lucide-vue-next";
 
 // Create the app instance
 const app = createApp(App);
@@ -19,6 +20,9 @@ app.component("UserIcon", UserIcon);
 app.component("CalendarDaysIcon", CalendarDaysIcon);
 app.component("ArrowsRightLeftIcon", ArrowsRightLeftIcon);
 app.component("ClockIcon", ClockIcon);
+app.component("Eye", Eye);
+app.component("EyeOff", EyeOff);
+app.component("AlertCircle", AlertCircle);
 
 // Use the router
 app.use(router);

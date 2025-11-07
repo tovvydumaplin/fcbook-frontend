@@ -7,10 +7,8 @@
       </div>
       <form @submit.prevent="step === 1 ? handleNext() : handleSignIn()">
         <div v-if="step === 1">
-          <h2 class="text-xl font-bold text-gray-700 mb-2 text-center">
-            Sign in
-          </h2>
-          <p class="text-gray-600 text-sm mb-4 text-center">
+          <h2 class="text-xl font-bold text-gray-700 text-center">Sign in</h2>
+          <p class="text-gray-600 text-sm mb-6 text-center">
             Enter your username to continue
           </p>
           <label class="block text-sm font-medium text-gray-700 mb-1">
@@ -25,7 +23,7 @@
             :class="{ invisible: isLoading }"
           />
           <div
-            class="flex items-center justify-between mb-12"
+            class="flex items-center justify-between mb-8"
             :class="{ invisible: isLoading }"
           >
             <label class="flex items-center gap-2 text-sm text-gray-600">
@@ -138,9 +136,10 @@
     >
       <div
         v-if="errorMsg"
-        class="text-red-500 absolute top-[50px] left-1/2 -translate-x-1/2 p-3 bg-red-200 rounded-xl shadow-lg"
+        class="flex items-center gap-2 text-red-500 absolute top-[50px] left-1/2 -translate-x-1/2 p-3 bg-red-100 rounded-xl shadow-lg"
       >
-        {{ errorMsg }}
+        <AlertCircle class="w-5 h-5 flex-shrink-0" />
+        <span>{{ errorMsg }}</span>
       </div>
     </transition>
   </div>
@@ -149,7 +148,6 @@
 <script setup>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import { Eye, EyeOff } from "lucide-vue-next";
 const step = ref(1);
 const username = ref("");
 const password = ref("");
