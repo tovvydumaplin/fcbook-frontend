@@ -5,6 +5,7 @@ import createPort from "../views/createPort.vue";
 import tellerBooking from "../views/tellerBooking.vue";
 import ScheduleModule from "../views/ScheduleModule.vue";
 import RoutesModule from "../views/RoutesModule.vue";
+import VesselsModule from "../views/VesselsModule.vue";
 
 const routes = [
   { path: "/", component: Login },
@@ -13,6 +14,7 @@ const routes = [
   { path: "/teller-booking", component: tellerBooking },
   { path: "/schedule", component: ScheduleModule },
   { path: "/routes", component: RoutesModule },
+  { path: "/vessels", component: VesselsModule },
 ];
 
 const router = createRouter({
