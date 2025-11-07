@@ -428,10 +428,10 @@ const handleAction = (route) => {
     </div>
 
     <!-- Modal rendered only when open -->
-    <ModalCreateRoute
+    <!-- <ModalCreateRoute
       v-if="isModalOpen"
       @close="isModalOpen = false"
       @save="handleSave"
-    />
+    /> -->
   </div>
 </template>
