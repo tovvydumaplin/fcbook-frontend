@@ -2,7 +2,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { Plus, BarChart3, AlertCircle, Search, Eye } from "lucide-vue-next";
-// import ModalCreateRoute from "../components/ModalCreateRoute.vue";
+import ModalCreateVessel from "../components/ModalCreateVessel.vue";
 
 const apiBase = import.meta.env.VITE_API_URL;
 const isModalOpen = ref(false);
@@ -111,6 +111,7 @@ const vessels = ref([
     status: "Drydock",
   },
 ]);
+
 const routes = ref([]);
 
 const totalRoutes = computed(() => routes.value.length);
@@ -428,10 +429,10 @@ const handleAction = (route) => {
     </div>
 
     <!-- Modal rendered only when open -->
-    <!-- <ModalCreateRoute
+    <ModalCreateVessel
       v-if="isModalOpen"
       @close="isModalOpen = false"
       @save="handleSave"
-    /> -->
+    />
   </div>
 </template>
