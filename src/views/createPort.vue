@@ -207,7 +207,7 @@
                         @click="handleAction(port)"
                         class="font-medium text-blue-600 hover:text-blue-900"
                       >
-                        {{ port.status === "Available" ? "View" : "Open" }}
+                        View
                       </button>
                     </td>
                   </tr>
@@ -225,6 +225,14 @@
       @close="isModalOpen = false"
       @save="handleSave"
     />
+
+    <!-- Port View Modal -->
+    <ModalViewPort
+      v-if="selectedPort"
+      :port="selectedPort"
+      :passengers="selectedPortPassengers"
+      @close="selectedPort = null"
+    />
   </div>
 </template>
 
@@ -232,6 +240,7 @@
 import { ref, computed, onMounted } from "vue";
 import { Plus, BarChart3, AlertCircle, Search } from "lucide-vue-next";
 import ModalCreatePort from "../components/ModalCreatePort.vue";
+import ModalViewPort from "../components/ModalViewPort.vue";
 
 const isModalOpen = ref(false);
 const activeTab = ref("all");
@@ -249,6 +258,9 @@ const closedPorts = computed(
   () => ports.value.filter((p) => p.status === "Offline").length
 );
 const zeroTransactionPorts = ref(0);
+
+const selectedPort = ref(null);
+const selectedPortPassengers = ref([]);
 
 const filteredPorts = computed(() => {
   let filtered = ports.value;
@@ -279,7 +291,58 @@ const getStatusClass = (status) => {
 };
 
 const handleAction = (port) => {
-  console.log("action on port", port);
+  selectedPort.value = port;
+  // Example passengers, replace with real data as needed
+  selectedPortPassengers.value = [
+    {
+      id: 1,
+      fullname: "Towy B. Dumaplin",
+      bookingNo: "BF09KLDXZ",
+      departureDate: "2025-08-02",
+      transactionDate: "2025-08-02",
+      status: "Paid",
+    },
+    {
+      id: 2,
+      fullname: "Johnny D. Doe",
+      bookingNo: "BF09KLDXZ",
+      departureDate: "2025-08-02",
+      transactionDate: "2025-08-02",
+      status: "Cancelled",
+    },
+    {
+      id: 3,
+      fullname: "Jade L. Smith",
+      bookingNo: "BF09KLDXZ",
+      departureDate: "2025-08-02",
+      transactionDate: "2025-08-02",
+      status: "Paid",
+    },
+    {
+      id: 4,
+      fullname: "Carlsen Y. Not",
+      bookingNo: "BF09KLDXZ",
+      departureDate: "2025-08-02",
+      transactionDate: "2025-08-02",
+      status: "Open",
+    },
+    {
+      id: 5,
+      fullname: "Earl G. Barkawi",
+      bookingNo: "BF09KLDXZ",
+      departureDate: "2025-08-02",
+      transactionDate: "2025-08-02",
+      status: "Paid",
+    },
+    {
+      id: 6,
+      fullname: "Jess L. Smith",
+      bookingNo: "BF09KLDXZ",
+      departureDate: "2025-08-02",
+      transactionDate: "2025-08-02",
+      status: "Open",
+    },
+  ];
 };
 
 const fetchPorts = async () => {

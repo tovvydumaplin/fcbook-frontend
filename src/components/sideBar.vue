@@ -1,7 +1,7 @@
 <!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\components\sideBar.vue -->
 <template>
   <div
-    class="w-64 flex-shrink-0 bg-white border-r border-gray-200 h-screen flex flex-col overflow-y-auto"
+    class="w-64 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col overflow-y-auto"
   >
     <!-- Logo/Brand -->
     <div class="p-6 border-b border-gray-200">
@@ -191,6 +191,14 @@ const bookingItems = [
   { name: "Teller Booking", route: "/teller-booking", icon: BookingIcon },
   { name: "Merchant Booking", route: "/merchant-booking", icon: BookingIcon },
   { name: "VIP Booking", route: "/vip-booking", icon: BookingIcon },
+  { name: "Cancellations/Refunds", route: "/cancellations", icon: BookingIcon },
+  { name: "Cancellations/Refunds", route: "/cancellations", icon: BookingIcon },
+  { name: "Cancellations/Refunds", route: "/cancellations", icon: BookingIcon },
+  { name: "Cancellations/Refunds", route: "/cancellations", icon: BookingIcon },
+  { name: "Cancellations/Refunds", route: "/cancellations", icon: BookingIcon },
+  { name: "Cancellations/Refunds", route: "/cancellations", icon: BookingIcon },
+  { name: "Cancellations/Refunds", route: "/cancellations", icon: BookingIcon },
+  { name: "Cancellations/Refunds", route: "/cancellations", icon: BookingIcon },
   { name: "Cancellations/Refunds", route: "/cancellations", icon: BookingIcon },
 ];
 
