@@ -3,12 +3,14 @@
 import { ref, computed, onMounted } from "vue";
 import { Plus, BarChart3, AlertCircle, Search, Eye } from "lucide-vue-next";
 import ModalCreateVessel from "../components/ModalCreateVessel.vue";
+import ModalCreateSeatmap from "../components/ModalCreateSeatmap.vue";
 
 const apiBase = import.meta.env.VITE_API_URL;
 const isModalOpen = ref(false);
 const activeTab = ref("all");
 const searchQuery = ref("");
 const isTableLoading = ref(false);
+const showCreateSeatmap = ref(false);
 
 const tabs = [
   { id: "all", name: "All Vessels" },
@@ -111,7 +113,20 @@ const vessels = ref([
     status: "Drydock",
   },
 ]);
-
+const seatClasses = ref([
+  {
+    id: 1,
+    name: "Business Class",
+  },
+  {
+    id: 2,
+    name: "Premium Economy",
+  },
+  {
+    id: 3,
+    name: "Economy Class",
+  },
+]);
 const routes = ref([]);
 
 const totalRoutes = computed(() => routes.value.length);
@@ -433,6 +448,25 @@ const handleAction = (route) => {
       v-if="isModalOpen"
       @close="isModalOpen = false"
       @save="handleSave"
+      @open-seatmap="
+        () => {
+          isModalOpen = false;
+          showCreateSeatmap = true;
+        }
+      "
+    />
+    <!-- Create Seatmap Modal -->
+    <ModalCreateSeatmap
+      v-if="showCreateSeatmap"
+      :seatClasses="seatClasses"
+      @close="showCreateSeatmap = false"
+      @save="
+        (data) => {
+          seatmapData.value = data; // Store seatmap data
+          showCreateSeatmap = false;
+          isModalOpen = true; // Reopen vessel form
+        }
+      "
     />
   </div>
 </template>
