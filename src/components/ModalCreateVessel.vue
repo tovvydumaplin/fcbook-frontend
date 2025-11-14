@@ -1,4 +1,4 @@
-<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\components\ModalCreateRoute.vue -->
+<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\components\ModalCreateVessel.vue -->
 <template>
   <div
     class="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50"
@@ -77,10 +77,16 @@
           <button
             class="px-4 py-2 text-sm font-medium text-blue-600 border border-blue-600 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
             :disabled="isLoading"
-            @click="$emit('open-seatmap')"
+            @click="showSeatmapModal = true"
           >
             Create Seatmap
           </button>
+          <ModalCreateSeatmap
+            v-if="showSeatmapModal"
+            :accomodations="accomodations"
+            @close="showSeatmapModal = false"
+            @save="handleSeatmapSave"
+          />
         </div>
         <div class="w-full">
           <!-- TABLE SWITCHES  -->
@@ -265,11 +271,38 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { reactive, ref } from "vue";
+import ModalCreateSeatmap from "./ModalCreateSeatmap.vue";
 
-const emit = defineEmits(["save", "close"]);
-const apiBase = import.meta.env.VITE_API_URL;
-const isLoading = ref(false);
-const errorMsg = ref("");
-const model = ref(false);
+const emit = defineEmits(["save"]);
+
+const vesselInfo = reactive({
+  name: "",
+  status: "Available",
+});
+
+const seatmapData = ref(null);
+const showSeatmapModal = ref(false);
+
+const accomodations = [
+  { id: 1, name: "Business Class" },
+  { id: 2, name: "Premium Economy" },
+  { id: 3, name: "Economy Class" },
+];
+
+const handleSeatmapSave = (data) => {
+  seatmapData.value = data;
+  showSeatmapModal.value = false;
+};
+
+const createVessel = () => {
+  if (!vesselInfo.name) return alert("Enter vessel name!");
+
+  const payload = {
+    ...vesselInfo,
+    seatmap: seatmapData.value || { classes: [] },
+  };
+
+  emit("save", payload);
+};
 </script>

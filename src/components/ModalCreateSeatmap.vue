@@ -1,25 +1,14 @@
-<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\components\ModalCreateRoute.vue -->
 <template>
-  <div
-    class="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50"
-  >
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
     <div class="bg-white rounded-lg shadow-xl w-fit mx-4" @click.stop>
-      <div
-        class="flex items-center justify-between p-6 border-b border-gray-200"
-      >
-        <div>
-          <h2 class="text-lg font-semibold text-gray-900">Create Seatmap</h2>
-        </div>
+      <!-- HEADER -->
+      <div class="flex items-center justify-between p-6 border-b">
+        <h2 class="text-lg font-semibold text-gray-900">Create Seatmap</h2>
         <button
           @click="$emit('close')"
-          class="text-gray-400 hover:text-gray-600 transition-colors"
+          class="text-gray-400 hover:text-gray-600"
         >
-          <svg
-            class="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -28,169 +17,197 @@
             />
           </svg>
         </button>
-        <!-- <form action="" class="p-6 space-y-6"></form> -->
       </div>
-      <form action="" class="p-6 space-y-6">
+
+      <!-- BODY -->
+      <form class="p-6 space-y-6">
         <div class="flex gap-8 justify-between">
+          <!-- LEFT SIDE -->
           <div class="seatmap_tools h-[410px] overflow-y-auto">
-            <!-- ClASS LIST STARTS HERE -->
+            <!-- CLASS LIST -->
             <div class="mb-4">
               <p class="text-sm font-medium text-gray-700 mb-3">
                 List of Class
               </p>
-              <div class="mb-2">
+              <div class="mb-2 space-y-2">
                 <div
-                  v-for="(seat, index) in seatClasses"
-                  :key="index"
-                  class="flex justify-between p-1"
+                  v-for="(item, i) in addedClasses"
+                  :key="i"
+                  @click="selectClass(item)"
+                  class="flex justify-between p-1 rounded cursor-pointer"
+                  :class="
+                    currentSelectedClass?.name === item.name
+                      ? 'bg-blue-200'
+                      : 'hover:bg-gray-200'
+                  "
                 >
-                  <p class="text-sm">{{ seat.name }}</p>
+                  <span class="text-sm font-medium">{{ item.name }}</span>
                   <span
-                    class="text-sm text-red-500 cursor-pointer"
-                    @click="$emit('delete-seat', index)"
+                    class="text-sm font-medium text-red-500 cursor-pointer"
+                    @click.stop="removeClass(i)"
+                    >DEL</span
                   >
-                    DEL
-                  </span>
                 </div>
               </div>
+
+              <!-- Add class dropdown -->
               <div class="w-full">
-                <!-- Main Button -->
-                <div>
-                  <select
-                    v-if="isOpen"
-                    required
-                    class="mb-4 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                <select
+                  v-if="isOpen"
+                  v-model="selectedClassIndex"
+                  class="mb-4 w-full px-3 py-2 border rounded-md"
+                >
+                  <option value="" disabled>Select accommodation</option>
+                  <option
+                    v-for="(seat, index) in availableClasses"
+                    :key="seat.name"
+                    :value="seat.name"
                   >
-                    <option value="" disabled selected>
-                      Select accommodation to add
-                    </option>
-                    <option
-                      v-for="(seat, index) in seatClasses"
-                      :key="index"
-                      :value="index"
-                    >
-                      {{ seat.name }}
-                    </option>
-                  </select>
-                </div>
+                    {{ seat.name }}
+                  </option>
+                </select>
+
                 <button
                   v-if="!isOpen"
+                  @click="isOpen = true"
                   type="button"
-                  @click="isOpen = !isOpen"
-                  class="w-full px-4 py-2 text-sm font-medium text-gray-800 bg-gray-200 border border-transparent rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                  class="w-full px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
                 >
-                  Add Class
+                  + Add Class
                 </button>
 
-                <!-- Dropdown -->
-                <div v-if="isOpen" class="w-full grid grid-cols-2 gap-4">
+                <div v-if="isOpen" class="grid grid-cols-2 gap-4 w-full">
                   <button
-                    class="w-full px-4 py-2 text-sm font-medium text-gray-800 bg-gray-200 border border-transparent rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                     @click="cancelAction"
+                    type="button"
+                    class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
                   >
                     Cancel
                   </button>
                   <button
-                    class="w-full px-4 py-2 text-sm font-medium text-gray-800 bg-gray-200 border border-transparent rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                     @click="saveChanges"
+                    type="button"
+                    class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
                   >
-                    Save Changes
+                    Save
                   </button>
                 </div>
               </div>
             </div>
-            <!-- ClASS LIST ENDS HERE -->
-            <!-- GENERATING SEATS STARTS HERE -->
-            <div>
+
+            <!-- GENERATE SEATS -->
+            <div v-if="currentSelectedClass">
               <div class="flex gap-4 w-80 mb-4">
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
-                    Row Seats
-                  </label>
+                  <label class="block text-sm mb-2 text-gray-700"
+                    >Row Seats</label
+                  >
                   <input
-                    type="text"
-                    placeholder="Input rows"
-                    required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    :disabled="isLoading"
+                    type="number"
+                    v-model.number="tempRows"
+                    class="w-full px-3 py-2 border rounded-md"
                   />
                 </div>
                 <div>
-                  <label class="block text-sm font-medium text-gray-700 mb-2">
-                    Column Seats
-                  </label>
+                  <label class="block text-sm mb-2 text-gray-700"
+                    >Column Seats</label
+                  >
                   <input
-                    type="text"
-                    placeholder="Input columns"
-                    required
-                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    :disabled="isLoading"
+                    type="number"
+                    v-model.number="tempColumns"
+                    class="w-full px-3 py-2 border rounded-md"
                   />
                 </div>
               </div>
               <button
-                class="w-full px-4 py-2 text-sm font-medium text-gray-800 bg-gray-200 border border-transparent rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors mb-4"
+                type="button"
+                @click="generateSeats"
+                class="w-full px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400 mb-4"
+                :class="
+                  !currentSelectedClass ? 'opacity-50 cursor-not-allowed' : ''
+                "
               >
-                Generating Seats
+                Generate Seats
               </button>
             </div>
-            <!-- GENERATING SEATS ENDS HERE  -->
+
+            <!-- MODE BUTTONS -->
             <div class="grid grid-cols-2 gap-4">
               <button
-                class="w-full px-4 py-2 text-sm font-medium text-gray-800 bg-gray-200 border border-transparent rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                type="button"
+                @click="toggleRenameMode"
+                :class="renameMode ? 'bg-blue-500 text-white' : 'bg-gray-200'"
+                class="px-4 py-2 rounded-md"
               >
                 Rename Seat
               </button>
-              <button
-                class="w-full px-4 py-2 text-sm font-medium text-gray-800 bg-gray-200 border border-transparent rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-              >
+              <button type="button" class="px-4 py-2 bg-gray-200 rounded-md">
                 Block/Unblock
               </button>
-              <button
-                class="w-full px-4 py-2 text-sm font-medium text-gray-800 bg-gray-200 border border-transparent rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-              >
+              <button type="button" class="px-4 py-2 bg-gray-200 rounded-md">
                 Walk Path
               </button>
               <button
-                class="w-full px-4 py-2 text-sm font-medium text-gray-800 bg-gray-200 border border-transparent rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                type="button"
+                class="px-4 py-2 bg-gray-200 rounded-md"
+                @click="resetSeats"
               >
                 Reset Changes
               </button>
             </div>
           </div>
-          <!-- SEATMAP PREVIEW STARTS HERE -->
-          <div
-            class="seatmap_preview border border-gray-400 p-3 rounded-lg w-96"
-          >
+
+          <!-- RIGHT SIDE - SEATMAP PREVIEW -->
+          <div class="seatmap_preview border p-3 rounded-lg w-96">
             <p class="text-sm text-center font-medium text-gray-700 mb-3">
               Seatmap Preview
             </p>
+
+            <div v-if="!currentSelectedClass" class="text-center text-gray-500">
+              Select a class to preview
+            </div>
+            <div
+              v-else-if="!currentSelectedClass.seats.length"
+              class="text-center text-gray-500"
+            >
+              No seats generated yet.
+            </div>
+            <div
+              v-else
+              class="grid gap-2"
+              :style="{
+                gridTemplateColumns: `repeat(${currentSelectedClass.columns}, 1fr)`,
+              }"
+            >
+              <div
+                v-for="(seat, index) in currentSelectedClass.seats"
+                :key="index"
+                @click="onSeatClick(seat)"
+                class="border rounded-md py-2 text-center text-xs font-medium cursor-pointer select-none"
+                :class="{
+                  'bg-gray-300': seat.path,
+                  'bg-red-400 text-white': seat.blocked,
+                  'bg-gray-100': !seat.path && !seat.blocked,
+                  'ring-2 ring-blue-400': renameMode,
+                }"
+              >
+                {{ seat.seat_no }}
+              </div>
+            </div>
           </div>
-          <!-- SEATMAP PREVIEW ENDS HERE -->
         </div>
-        <!-- Modal Footer -->
-        <div
-          class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200"
-        >
-          <button
-            type="button"
-            @click="$emit('close')"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-            :disabled="isLoading"
-          >
+
+        <!-- FOOTER -->
+        <div class="flex justify-end gap-3 pt-6 border-t">
+          <button type="button" @click="$emit('close')">Cancel</button>
+          <button type="button" :disabled="isLoading" @click="saveSeatmap">
             <span v-if="isLoading" class="flex items-center gap-2">
               <span
                 class="inline-block w-5 h-5 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"
               ></span>
               Saving...
             </span>
-            <span v-else> Save Seatmap </span>
+            <span v-else> Save Seatmap</span>
           </button>
         </div>
       </form>
@@ -199,25 +216,109 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, computed } from "vue";
+
 const props = defineProps({
-  seatClasses: {
-    type: Array,
-    default: () => [],
-  },
+  accomodations: { type: Array, default: () => [] },
 });
 const emit = defineEmits(["save", "close"]);
-const apiBase = import.meta.env.VITE_API_URL;
-const isLoading = ref(false);
-const errorMsg = ref("");
-const model = ref(false);
+
+const currentSelectedClass = ref(null);
+const addedClasses = ref([]);
 const isOpen = ref(false);
+const selectedClassIndex = ref(null);
+const isLoading = ref(false);
 
-function cancelAction() {
-  isOpen.value = false; // closes dropdown
-}
+const tempRows = ref(null);
+const tempColumns = ref(null);
+const renameMode = ref(false);
 
-function saveChanges() {
-  isOpen.value = false; // closes dropdown
-}
+const availableClasses = computed(() =>
+  props.accomodations.filter(
+    (a) => !addedClasses.value.some((c) => c.name === a.name)
+  )
+);
+
+const selectClass = (item) => {
+  currentSelectedClass.value = item;
+  tempRows.value = item.rows || null;
+  tempColumns.value = item.columns || null;
+};
+
+const removeClass = (index) => {
+  if (addedClasses.value[index] === currentSelectedClass.value)
+    currentSelectedClass.value = null;
+  addedClasses.value.splice(index, 1);
+};
+
+const addClass = () => {
+  if (!selectedClassIndex.value) return;
+  addedClasses.value.push({
+    name: selectedClassIndex.value,
+    rows: null,
+    columns: null,
+    seats: [],
+  });
+  selectedClassIndex.value = null;
+  isOpen.value = false;
+};
+const cancelAction = () => (isOpen.value = false);
+const saveChanges = () => addClass();
+
+const generateSeats = () => {
+  const cls = currentSelectedClass.value;
+  if (!cls || !tempRows.value || !tempColumns.value)
+    return alert("Enter rows and columns first.");
+  cls.rows = Number(tempRows.value);
+  cls.columns = Number(tempColumns.value);
+  cls.seats = [];
+  for (let r = 1; r <= cls.rows; r++) {
+    for (let c = 1; c <= cls.columns; c++) {
+      cls.seats.push({
+        seat_no: `${r}${String.fromCharCode(64 + c)}`,
+        blocked: false,
+        path: false,
+      });
+    }
+  }
+};
+
+const toggleRenameMode = () => (renameMode.value = !renameMode.value);
+const onSeatClick = (seat) => {
+  if (renameMode.value) renameSeat(seat);
+};
+const renameSeat = (seat) => {
+  const newName = prompt("Rename seat:", seat.seat_no);
+  if (newName?.trim()) seat.seat_no = newName.trim();
+};
+
+const resetSeats = () => {
+  if (!currentSelectedClass.value) return;
+  currentSelectedClass.value.seats.forEach((seat) => {
+    seat.blocked = false;
+    seat.path = false;
+  });
+};
+
+const saveSeatmap = () => {
+  if (!addedClasses.value.length) {
+    alert("Add at least one class before saving!");
+    return;
+  }
+  isLoading.value = true;
+  try {
+    const payload = {
+      classes: addedClasses.value.map((c) => ({
+        name: c.name,
+        rows: c.rows || 0,
+        columns: c.columns || 0,
+        seats: c.seats || [],
+      })),
+    };
+    console.log("Seatmap payload:", payload);
+    emit("save", payload);
+  } finally {
+    isLoading.value = false;
+  }
+};
 </script>

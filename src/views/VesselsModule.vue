@@ -1,4 +1,4 @@
-<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\views\RoutesModule.vue -->
+<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\views\VesselsModule.vue -->
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { Plus, BarChart3, AlertCircle, Search, Eye } from "lucide-vue-next";
@@ -6,12 +6,12 @@ import ModalCreateVessel from "../components/ModalCreateVessel.vue";
 import ModalCreateSeatmap from "../components/ModalCreateSeatmap.vue";
 
 const apiBase = import.meta.env.VITE_API_URL;
-const isModalOpen = ref(false);
 const activeTab = ref("all");
 const searchQuery = ref("");
 const isTableLoading = ref(false);
+const isModalOpen = ref(false);
 const showCreateSeatmap = ref(false);
-
+const seatmapData = ref(null);
 const tabs = [
   { id: "all", name: "All Vessels" },
   { id: "available", name: "Available Vessels" },
@@ -113,7 +113,64 @@ const vessels = ref([
     status: "Drydock",
   },
 ]);
-const seatClasses = ref([
+
+// const vesselSeatClasses = ref([
+//   {
+//     vessel_id: 1,
+//     classes: [
+//       {
+//         class_name: "Business Class",
+//         rows: 5,
+//         cols: 4,
+//         seats: [
+//           {
+//             seat_no: "001A",
+//             type: "seat",
+//             blocked: false,
+//           },
+//           {
+//             seat_no: "001B",
+//             type: "seat",
+//             blocked: false,
+//           },
+//           {
+//             seat_no: "001C",
+//             type: "path",
+//             blocked: false,
+//           },
+//           {
+//             seat_no: "002A",
+//             type: "seat",
+//             blocked: true,
+//           },
+//         ],
+//       },
+//       {
+//         class_name: "Economy",
+//         rows: 8,
+//         cols: 4,
+//         seats: [
+//           {
+//             seat_no: "001A",
+//             type: "seat",
+//             blocked: false,
+//           },
+//           {
+//             seat_no: "001B",
+//             type: "path",
+//             blocked: false,
+//           },
+//           {
+//             seat_no: "001C",
+//             type: "seat",
+//             blocked: true,
+//           },
+//         ],
+//       },
+//     ],
+//   },
+// ]);
+const accomodations = ref([
   {
     id: 1,
     name: "Business Class",
@@ -127,15 +184,6 @@ const seatClasses = ref([
     name: "Economy Class",
   },
 ]);
-const routes = ref([]);
-
-const totalRoutes = computed(() => routes.value.length);
-const activeRoutes = computed(
-  () => routes.value.filter((r) => r.status === "Active").length
-);
-const closedRoutes = computed(
-  () => routes.value.filter((r) => r.status !== "Active").length
-);
 
 const filteredVessels = computed(() => {
   if (activeTab.value === "all") return vessels.value;
@@ -147,54 +195,27 @@ const filteredVessels = computed(() => {
     return vessels.value.filter((v) => v.status === "Grounded");
   return [];
 });
+const openSeatmap = () => {
+  isModalOpen.value = false;
+  showCreateSeatmap.value = true;
+};
 
 const getStatusClass = (status) => {
   if (status === "Available") return "bg-green-100 text-green-800";
   return "bg-gray-100 text-gray-800";
 };
 
-const fetchRoutes = async () => {
-  isTableLoading.value = true;
-  try {
-    const token = localStorage.getItem("token");
-    const response = await fetch(`${apiBase}/routes`, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-    });
-    const data = await response.json();
-    if (response.ok && data.success && data.data?.routes) {
-      routes.value = data.data.routes.map((route, idx) => ({
-        id: route.route_id || idx + 1,
-        origin_port: route.port_a,
-        destination_port: route.port_b,
-        status: route.status || "Active",
-        updated_by: route.updatedBy || route.updated_by || "Unknown",
-        updated_at: route.updated_at ? route.updated_at.slice(0, 10) : "",
-      }));
-    } else {
-      routes.value = [];
-      console.error("Failed to fetch routes:", data.message || data);
-    }
-  } catch (err) {
-    routes.value = [];
-    console.error("Network error fetching routes:", err);
-  } finally {
-    isTableLoading.value = false;
-  }
+const handleSeatmapSave = (data) => {
+  seatmapData.value = data;
+  showCreateSeatmap.value = false;
+  isModalOpen.value = true; // reopen first modal if needed
 };
 
-onMounted(fetchRoutes);
-
-const handleSave = () => {
+const handleCreateVessel = (vesselData) => {
+  console.log("Vessel Data Saved:", vesselData);
   isModalOpen.value = false;
-  fetchRoutes(); // reload after adding a route
-};
 
-const handleAction = (route) => {
-  // View or open route logic here
-  console.log("View route:", route);
+  // For now, we just log the data. Later, send to backend.
 };
 </script>
 <template>
@@ -225,9 +246,7 @@ const handleAction = (route) => {
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-medium text-gray-600">Total Vessels</h3>
         </div>
-        <div class="text-3xl font-bold text-gray-900 mb-1">
-          {{ totalRoutes }}
-        </div>
+        <div class="text-3xl font-bold text-gray-900 mb-1">4</div>
       </div>
 
       <div class="bg-white rounded-lg p-6 shadow-sm">
@@ -235,9 +254,7 @@ const handleAction = (route) => {
           <h3 class="text-sm font-medium text-gray-600">Active Vessels</h3>
           <BarChart3 class="w-5 h-5 text-blue-600" />
         </div>
-        <div class="text-3xl font-bold text-gray-900 mb-1">
-          {{ activeRoutes }}
-        </div>
+        <div class="text-3xl font-bold text-gray-900 mb-1">2</div>
       </div>
 
       <div class="bg-white rounded-lg p-6 shadow-sm">
@@ -245,9 +262,7 @@ const handleAction = (route) => {
           <h3 class="text-sm font-medium text-gray-600">Drydock</h3>
           <AlertCircle class="w-5 h-5 text-blue-600" />
         </div>
-        <div class="text-3xl font-bold text-gray-900 mb-1">
-          {{ closedRoutes }}
-        </div>
+        <div class="text-3xl font-bold text-gray-900 mb-1">4</div>
       </div>
     </div>
 
@@ -447,26 +462,15 @@ const handleAction = (route) => {
     <ModalCreateVessel
       v-if="isModalOpen"
       @close="isModalOpen = false"
-      @save="handleSave"
-      @open-seatmap="
-        () => {
-          isModalOpen = false;
-          showCreateSeatmap = true;
-        }
-      "
+      @save="handleCreateVessel"
+      @open-seatmap="openSeatmap"
     />
     <!-- Create Seatmap Modal -->
     <ModalCreateSeatmap
       v-if="showCreateSeatmap"
-      :seatClasses="seatClasses"
+      :accomodations="accomodations"
       @close="showCreateSeatmap = false"
-      @save="
-        (data) => {
-          seatmapData.value = data; // Store seatmap data
-          showCreateSeatmap = false;
-          isModalOpen = true; // Reopen vessel form
-        }
-      "
+      @save="handleSeatmapSave"
     />
   </div>
 </template>
