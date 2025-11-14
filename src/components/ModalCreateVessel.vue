@@ -33,13 +33,14 @@
           </svg>
         </button>
       </div>
-      <form @submit.prevent="savePort" class="p-6 space-y-6">
+      <form @submit.prevent="createVessel" class="p-6 space-y-6">
         <div class="flex gap-5">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
               Prefix
             </label>
             <select
+              v-model="prefix"
               class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Select Prefix</option>
@@ -54,6 +55,7 @@
               Vessel Code
             </label>
             <input
+              v-model="vesselInfo.name"
               type="text"
               placeholder="Input vessel code"
               required
@@ -67,6 +69,7 @@
             Vessel Details
           </label>
           <textarea
+            v-model="vesselInfo.details"
             placeholder="Input vessel details"
             required
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -75,6 +78,7 @@
         </div>
         <div>
           <button
+            type="button"
             class="px-4 py-2 text-sm font-medium text-blue-600 border border-blue-600 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
             :disabled="isLoading"
             @click="showSeatmapModal = true"
@@ -275,9 +279,10 @@ import { reactive, ref } from "vue";
 import ModalCreateSeatmap from "./ModalCreateSeatmap.vue";
 
 const emit = defineEmits(["save"]);
-
+const prefix = ref("");
 const vesselInfo = reactive({
   name: "",
+  details: "",
   status: "Available",
 });
 
@@ -296,13 +301,28 @@ const handleSeatmapSave = (data) => {
 };
 
 const createVessel = () => {
-  if (!vesselInfo.name) return alert("Enter vessel name!");
+  if (!vesselInfo.name) return alert("Enter vessel code!");
+
+  const fullName = prefix.value
+    ? `${prefix.value}${vesselInfo.name}`
+    : vesselInfo.name;
+
+  // Map seatmap classes and set all features to true
+  const seatmapWithDefaults = (seatmapData.value?.classes || []).map((c) => ({
+    ...c,
+    online: true,
+    teller: true,
+    aircon: true,
+    wifi: true,
+  }));
 
   const payload = {
     ...vesselInfo,
-    seatmap: seatmapData.value || { classes: [] },
+    name: fullName,
+    seatmap: { classes: seatmapWithDefaults },
   };
 
+  console.log("Payload to save:", payload); // for testing
   emit("save", payload);
 };
 </script>

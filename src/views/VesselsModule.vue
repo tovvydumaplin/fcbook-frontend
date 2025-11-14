@@ -212,10 +212,21 @@ const handleSeatmapSave = (data) => {
 };
 
 const handleCreateVessel = (vesselData) => {
-  console.log("Vessel Data Saved:", vesselData);
-  isModalOpen.value = false;
+  vessels.value.push({
+    id: vessels.value.length + 1,
+    name: vesselData.name,
+    classes: vesselData.seatmap.classes.map((c) => ({
+      name: c.name,
+      seats: c.seats?.length || 0, // store number of seats
+      online: true, // default true
+      teller: true, // default true
+      aircon: true, // default true
+      wifi: true, // default true
+    })),
+    status: vesselData.status || "Available",
+  });
 
-  // For now, we just log the data. Later, send to backend.
+  isModalOpen.value = false;
 };
 </script>
 <template>
