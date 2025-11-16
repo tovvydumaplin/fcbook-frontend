@@ -88,6 +88,7 @@
           <ModalCreateSeatmap
             v-if="showSeatmapModal"
             :accomodations="accomodations"
+            :seatmap="seatmapData"
             @close="showSeatmapModal = false"
             @save="handleSeatmapSave"
           />
@@ -105,66 +106,37 @@
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td class="py-2">
-                  <p class="text-sm">Business Class: 105</p>
-                </td>
-                <td class="p-1">
-                  <div class="flex items-center gap-3">
-                    <div class="relative inline-block w-11 h-5">
-                      <input
-                        id="switch-component-bc-aircon"
-                        type="checkbox"
-                        class="peer appearance-none w-11 h-5 bg-slate-300 rounded-full checked:bg-green-600 cursor-pointer transition-colors duration-300"
-                        :disabled="isLoading"
-                      />
-                      <label
-                        for="switch-component-bc-aircon"
-                        class="absolute top-0 left-0 w-5 h-5 bg-white rounded-full border border-slate-300 shadow-sm transition-transform duration-300 peer-checked:translate-x-6 peer-checked:border-green-600 cursor-pointer"
-                      ></label>
-                    </div>
-
-                    <span class="text-sm text-gray-700 select-none"
-                      >Inactive</span
-                    >
-                  </div>
-                </td>
-                <td class="p-1">
-                  <div class="flex items-center gap-3">
-                    <div class="relative inline-block w-11 h-5">
-                      <input
-                        id="switch-component-bc-wifi"
-                        type="checkbox"
-                        class="peer appearance-none w-11 h-5 bg-slate-300 rounded-full checked:bg-green-600 cursor-pointer transition-colors duration-300"
-                        :disabled="isLoading"
-                      />
-                      <label
-                        for="switch-component-bc-wifi"
-                        class="absolute top-0 left-0 w-5 h-5 bg-white rounded-full border border-slate-300 shadow-sm transition-transform duration-300 peer-checked:translate-x-6 peer-checked:border-green-600 cursor-pointer"
-                      ></label>
-                    </div>
-
-                    <span class="text-sm text-gray-700 select-none"
-                      >Inactive</span
-                    >
-                  </div>
+              <!-- If no seatmap yet -->
+              <tr v-if="!seatmapData || !seatmapData.classes.length">
+                <td colspan="3" class="py-4 text-center text-gray-500">
+                  No seatmap created yet. Please create a seatmap.
                 </td>
               </tr>
-              <tr>
+
+              <!-- Loop through all classes in the seatmap -->
+              <tr
+                v-else
+                v-for="(cls, index) in seatmapData.classes"
+                :key="index"
+              >
                 <td class="py-2">
-                  <p class="text-sm">Premium Economy: 105</p>
+                  <p class="text-sm">
+                    {{ cls.name }}: {{ cls.seats?.length || 0 }}
+                  </p>
                 </td>
+
+                <!-- Aircon -->
                 <td class="p-1">
                   <div class="flex items-center gap-3">
                     <div class="relative inline-block w-11 h-5">
                       <input
-                        id="switch-component-pc-aircon"
+                        :id="`switch-${cls.name}-aircon`"
                         type="checkbox"
                         class="peer appearance-none w-11 h-5 bg-slate-300 rounded-full checked:bg-green-600 cursor-pointer transition-colors duration-300"
                         :disabled="isLoading"
                       />
                       <label
-                        for="switch-component-pc-aircon"
+                        :for="`switch-${cls.name}-aircon`"
                         class="absolute top-0 left-0 w-5 h-5 bg-white rounded-full border border-slate-300 shadow-sm transition-transform duration-300 peer-checked:translate-x-6 peer-checked:border-green-600 cursor-pointer"
                       ></label>
                     </div>
@@ -174,62 +146,19 @@
                     >
                   </div>
                 </td>
-                <td class="p-1">
-                  <div class="flex items-center gap-3">
-                    <div class="relative inline-block w-11 h-5">
-                      <input
-                        id="switch-component-pc-wifi"
-                        type="checkbox"
-                        class="peer appearance-none w-11 h-5 bg-slate-300 rounded-full checked:bg-green-600 cursor-pointer transition-colors duration-300"
-                        :disabled="isLoading"
-                      />
-                      <label
-                        for="switch-component-pc-wifi"
-                        class="absolute top-0 left-0 w-5 h-5 bg-white rounded-full border border-slate-300 shadow-sm transition-transform duration-300 peer-checked:translate-x-6 peer-checked:border-green-600 cursor-pointer"
-                      ></label>
-                    </div>
 
-                    <span class="text-sm text-gray-700 select-none"
-                      >Inactive</span
-                    >
-                  </div>
-                </td>
-              </tr>
-              <tr>
-                <td class="py-2">
-                  <p class="text-sm">Economy Class: 105</p>
-                </td>
+                <!-- Wifi -->
                 <td class="p-1">
                   <div class="flex items-center gap-3">
                     <div class="relative inline-block w-11 h-5">
                       <input
-                        id="switch-component-ec-aircon"
+                        :id="`switch-${cls.name}-wifi`"
                         type="checkbox"
                         class="peer appearance-none w-11 h-5 bg-slate-300 rounded-full checked:bg-green-600 cursor-pointer transition-colors duration-300"
                         :disabled="isLoading"
                       />
                       <label
-                        for="switch-component-ec-aircon"
-                        class="absolute top-0 left-0 w-5 h-5 bg-white rounded-full border border-slate-300 shadow-sm transition-transform duration-300 peer-checked:translate-x-6 peer-checked:border-green-600 cursor-pointer"
-                      ></label>
-                    </div>
-
-                    <span class="text-sm text-gray-700 select-none"
-                      >Inactive</span
-                    >
-                  </div>
-                </td>
-                <td class="p-1">
-                  <div class="flex items-center gap-3">
-                    <div class="relative inline-block w-11 h-5">
-                      <input
-                        id="switch-component-ec-wifi"
-                        type="checkbox"
-                        class="peer appearance-none w-11 h-5 bg-slate-300 rounded-full checked:bg-green-600 cursor-pointer transition-colors duration-300"
-                        :disabled="isLoading"
-                      />
-                      <label
-                        for="switch-component-ec-wifi"
+                        :for="`switch-${cls.name}-wifi`"
                         class="absolute top-0 left-0 w-5 h-5 bg-white rounded-full border border-slate-300 shadow-sm transition-transform duration-300 peer-checked:translate-x-6 peer-checked:border-green-600 cursor-pointer"
                       ></label>
                     </div>

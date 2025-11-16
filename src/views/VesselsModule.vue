@@ -426,6 +426,7 @@ const handleCreateVessel = (vesselData) => {
     <ModalCreateSeatmap
       v-if="showCreateSeatmap"
       :accomodations="accomodations"
+      :seatmap="seatmapData"
       @close="showCreateSeatmap = false"
       @save="handleSeatmapSave"
     />

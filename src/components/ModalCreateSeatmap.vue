@@ -273,10 +273,11 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 
 const props = defineProps({
-  accomodations: { type: Array, default: () => [] },
+  accomodations: Array,
+  seatmap: Object, // <--- new prop
 });
 const emit = defineEmits(["save", "close"]);
 
@@ -302,6 +303,24 @@ const selectClass = (item) => {
   tempColumns.value = item.columns || null;
 };
 
+const localSeatmap = ref({
+  classes: props.accomodations.map((a) => ({
+    name: a.name,
+    seats: [], // default empty
+  })),
+});
+
+// If editing existing seatmap, load it
+watch(
+  () => props.seatmap,
+  (newVal) => {
+    if (newVal) {
+      addedClasses.value = JSON.parse(JSON.stringify(newVal.classes || []));
+      currentSelectedClass.value = addedClasses.value[0] || null;
+    }
+  },
+  { immediate: true }
+);
 const removeClass = (index) => {
   if (addedClasses.value[index] === currentSelectedClass.value)
     currentSelectedClass.value = null;
