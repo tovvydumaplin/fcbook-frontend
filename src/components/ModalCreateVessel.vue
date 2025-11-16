@@ -277,7 +277,7 @@
 <script setup>
 import { reactive, ref } from "vue";
 import ModalCreateSeatmap from "./ModalCreateSeatmap.vue";
-
+const isLoading = ref(false);
 const emit = defineEmits(["save"]);
 const prefix = ref("");
 const vesselInfo = reactive({

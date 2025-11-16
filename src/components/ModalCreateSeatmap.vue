@@ -133,24 +133,65 @@
 
             <!-- MODE BUTTONS -->
             <div class="grid grid-cols-2 gap-4">
+              <!-- RENAME -->
               <button
                 type="button"
                 @click="toggleRenameMode"
-                :class="renameMode ? 'bg-blue-500 text-white' : 'bg-gray-200'"
-                class="px-4 py-2 rounded-md"
+                :disabled="!currentSelectedClass"
+                :class="[
+                  'px-4 py-2 rounded-md',
+                  !currentSelectedClass
+                    ? 'opacity-40 cursor-not-allowed'
+                    : renameMode
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-200',
+                ]"
               >
                 Rename Seat
               </button>
-              <button type="button" class="px-4 py-2 bg-gray-200 rounded-md">
-                Block/Unblock
-              </button>
-              <button type="button" class="px-4 py-2 bg-gray-200 rounded-md">
-                Walk Path
-              </button>
+              <!-- BLOCK -->
               <button
                 type="button"
-                class="px-4 py-2 bg-gray-200 rounded-md"
+                @click="toggleBlockMode"
+                :disabled="!currentSelectedClass"
+                :class="[
+                  'px-4 py-2 rounded-md',
+                  !currentSelectedClass
+                    ? 'opacity-40 cursor-not-allowed'
+                    : blockMode
+                    ? 'bg-red-500 text-white'
+                    : 'bg-gray-200',
+                ]"
+              >
+                Block/Unblock
+              </button>
+              <!-- PATH -->
+              <button
+                type="button"
+                @click="togglePathMode"
+                :disabled="!currentSelectedClass"
+                :class="[
+                  'px-4 py-2 rounded-md',
+                  !currentSelectedClass
+                    ? 'opacity-40 cursor-not-allowed'
+                    : pathMode
+                    ? 'bg-yellow-400 text-white'
+                    : 'bg-gray-200',
+                ]"
+              >
+                Walk Path
+              </button>
+              <!-- RESET -->
+              <button
+                type="button"
                 @click="resetSeats"
+                :disabled="!currentSelectedClass"
+                :class="[
+                  'px-4 py-2 rounded-md',
+                  !currentSelectedClass
+                    ? 'opacity-40 cursor-not-allowed'
+                    : 'bg-gray-200',
+                ]"
               >
                 Reset Changes
               </button>
@@ -174,7 +215,7 @@
             </div>
             <div
               v-else
-              class="grid gap-2"
+              class="grid gap-1"
               :style="{
                 gridTemplateColumns: `repeat(${currentSelectedClass.columns}, 1fr)`,
               }"
@@ -183,15 +224,26 @@
                 v-for="(seat, index) in currentSelectedClass.seats"
                 :key="index"
                 @click="onSeatClick(seat)"
-                class="border rounded-md py-2 text-center text-xs font-medium cursor-pointer select-none"
+                class="relative h-10 flex items-center justify-center border rounded-md text-xs font-medium cursor-pointer select-none overflow-hidden"
                 :class="{
-                  'bg-gray-300': seat.path,
-                  'bg-red-400 text-white': seat.blocked,
-                  'bg-gray-100': !seat.path && !seat.blocked,
+                  'bg-gray-300': seat.path, // walk path
+                  'bg-red-700 text-white': seat.blocked, // blocked
+                  'bg-gray-100': !seat.path && !seat.blocked, // normal
                   'ring-2 ring-blue-400': renameMode,
                 }"
               >
-                {{ seat.seat_no }}
+                <!-- Seat number is hidden on block or walk path -->
+                <span v-if="!seat.blocked && !seat.path">
+                  {{ seat.seat_no }}
+                </span>
+
+                <!-- Block X -->
+                <span
+                  v-if="seat.blocked"
+                  class="absolute inset-0 flex items-center justify-center text-white text-xl font-bold pointer-events-none"
+                >
+                  ✕
+                </span>
               </div>
             </div>
           </div>
@@ -200,7 +252,12 @@
         <!-- FOOTER -->
         <div class="flex justify-end gap-3 pt-6 border-t">
           <button type="button" @click="$emit('close')">Cancel</button>
-          <button type="button" :disabled="isLoading" @click="saveSeatmap">
+          <button
+            type="button"
+            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            :disabled="isLoading"
+            @click="saveSeatmap"
+          >
             <span v-if="isLoading" class="flex items-center gap-2">
               <span
                 class="inline-block w-5 h-5 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"
@@ -228,11 +285,11 @@ const addedClasses = ref([]);
 const isOpen = ref(false);
 const selectedClassIndex = ref(null);
 const isLoading = ref(false);
-
 const tempRows = ref(null);
 const tempColumns = ref(null);
 const renameMode = ref(false);
-
+const blockMode = ref(false);
+const pathMode = ref(false);
 const availableClasses = computed(() =>
   props.accomodations.filter(
     (a) => !addedClasses.value.some((c) => c.name === a.name)
@@ -285,11 +342,37 @@ const generateSeats = () => {
 
 const toggleRenameMode = () => (renameMode.value = !renameMode.value);
 const onSeatClick = (seat) => {
-  if (renameMode.value) renameSeat(seat);
+  if (renameMode.value) {
+    renameSeat(seat);
+    return;
+  }
+
+  if (blockMode.value) {
+    seat.blocked = !seat.blocked;
+    seat.path = false; // cannot be both blocked & path
+    return;
+  }
+
+  if (pathMode.value) {
+    seat.path = !seat.path;
+    seat.blocked = false; // cannot be both path & blocked
+    return;
+  }
 };
 const renameSeat = (seat) => {
   const newName = prompt("Rename seat:", seat.seat_no);
   if (newName?.trim()) seat.seat_no = newName.trim();
+};
+const toggleBlockMode = () => {
+  blockMode.value = !blockMode.value;
+  renameMode.value = false;
+  pathMode.value = false;
+};
+
+const togglePathMode = () => {
+  pathMode.value = !pathMode.value;
+  renameMode.value = false;
+  blockMode.value = false;
 };
 
 const resetSeats = () => {

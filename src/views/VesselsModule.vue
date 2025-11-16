@@ -9,6 +9,7 @@ const apiBase = import.meta.env.VITE_API_URL;
 const activeTab = ref("all");
 const searchQuery = ref("");
 const isTableLoading = ref(false);
+const isLoading = ref(false);
 const isModalOpen = ref(false);
 const showCreateSeatmap = ref(false);
 const seatmapData = ref(null);
@@ -114,62 +115,6 @@ const vessels = ref([
   },
 ]);
 
-// const vesselSeatClasses = ref([
-//   {
-//     vessel_id: 1,
-//     classes: [
-//       {
-//         class_name: "Business Class",
-//         rows: 5,
-//         cols: 4,
-//         seats: [
-//           {
-//             seat_no: "001A",
-//             type: "seat",
-//             blocked: false,
-//           },
-//           {
-//             seat_no: "001B",
-//             type: "seat",
-//             blocked: false,
-//           },
-//           {
-//             seat_no: "001C",
-//             type: "path",
-//             blocked: false,
-//           },
-//           {
-//             seat_no: "002A",
-//             type: "seat",
-//             blocked: true,
-//           },
-//         ],
-//       },
-//       {
-//         class_name: "Economy",
-//         rows: 8,
-//         cols: 4,
-//         seats: [
-//           {
-//             seat_no: "001A",
-//             type: "seat",
-//             blocked: false,
-//           },
-//           {
-//             seat_no: "001B",
-//             type: "path",
-//             blocked: false,
-//           },
-//           {
-//             seat_no: "001C",
-//             type: "seat",
-//             blocked: true,
-//           },
-//         ],
-//       },
-//     ],
-//   },
-// ]);
 const accomodations = ref([
   {
     id: 1,
@@ -225,6 +170,7 @@ const handleCreateVessel = (vesselData) => {
     })),
     status: vesselData.status || "Available",
   });
+  console.log("Vessels after save:", JSON.parse(JSON.stringify(vessels.value)));
 
   isModalOpen.value = false;
 };
