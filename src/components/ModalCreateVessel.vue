@@ -251,7 +251,7 @@ const createVessel = () => {
     seatmap: { classes: seatmapWithDefaults },
   };
 
-  console.log("Payload to save:", payload); // for testing
+  console.log("Payload to save:", payload);
   emit("save", payload);
 };
 </script>

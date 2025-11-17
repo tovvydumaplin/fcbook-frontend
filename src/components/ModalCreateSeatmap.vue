@@ -215,7 +215,7 @@
             </div>
             <div
               v-else
-              class="grid gap-1"
+              class="grid gap-1 max-h-[384px] overflow-y-auto"
               :style="{
                 gridTemplateColumns: `repeat(${currentSelectedClass.columns}, 1fr)`,
               }"
@@ -405,6 +405,15 @@ const resetSeats = () => {
 const saveSeatmap = () => {
   if (!addedClasses.value.length) {
     alert("Add at least one class before saving!");
+    return;
+  }
+  const classWithNoSeats = addedClasses.value.find(
+    (c) => !c.seats || c.seats.length === 0
+  );
+  if (classWithNoSeats) {
+    alert(
+      `Class "${classWithNoSeats.name}" has no seats. Please add seats before saving.`
+    );
     return;
   }
   isLoading.value = true;
