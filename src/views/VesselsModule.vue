@@ -19,116 +19,19 @@ const tabs = [
   { id: "drydock", name: "Drydock" },
   { id: "grounded", name: "Grounded" },
 ];
-const vessels = ref([
-  {
-    id: 1,
-    name: "FCM19",
-    classes: [
-      {
-        name: "Business Class",
-        seats: 100,
-        teller: true,
-        online: false,
-        aircon: true,
-        wifi: false,
-      },
-      {
-        name: "Premium Economy",
-        seats: 50,
-        teller: true,
-        online: false,
-        aircon: true,
-        wifi: true,
-      },
-      {
-        name: "Economy",
-        seats: 30,
-        teller: true,
-        online: false,
-        aircon: false,
-        wifi: false,
-      },
-    ],
-    status: "Available",
-  },
-  {
-    id: 2,
-    name: "FCM14",
-    classes: [
-      {
-        name: "Business Class",
-        seats: 100,
-        teller: true,
-        online: true,
-        aircon: true,
-        wifi: false,
-      },
-      {
-        name: "Premium Economy",
-        seats: 50,
-        teller: true,
-        online: true,
-        aircon: true,
-        wifi: true,
-      },
-      {
-        name: "Economy",
-        seats: 30,
-        teller: false,
-        online: true,
-        aircon: false,
-        wifi: false,
-      },
-    ],
-    status: "Available",
-  },
-  {
-    id: 3,
-    name: "FCM5",
-    classes: [
-      {
-        name: "Business Class",
-        seats: 100,
-        teller: true,
-        online: true,
-        aircon: true,
-        wifi: false,
-      },
-      {
-        name: "Premium Economy",
-        seats: 50,
-        teller: true,
-        online: true,
-        aircon: true,
-        wifi: true,
-      },
-      {
-        name: "Economy",
-        seats: 30,
-        teller: false,
-        online: true,
-        aircon: false,
-        wifi: false,
-      },
-    ],
-    status: "Drydock",
-  },
-]);
+const editVessel = ref(null);
+const vessels = ref([]);
+const openCreateModal = () => {
+  editVessel.value = null; // create mode
+  isModalOpen.value = true;
+};
 
-const accomodations = ref([
-  {
-    id: 1,
-    name: "Business Class",
-  },
-  {
-    id: 2,
-    name: "Premium Economy",
-  },
-  {
-    id: 3,
-    name: "Economy Class",
-  },
-]);
+const openEditModal = (vessel) => {
+  // ensure vessel.classes is always an array to prevent template errors
+  if (!vessel.classes) vessel.classes = [];
+  editVessel.value = vessel; // edit mode
+  isModalOpen.value = true;
+};
 
 const filteredVessels = computed(() => {
   if (activeTab.value === "all") return vessels.value;
@@ -150,28 +53,23 @@ const getStatusClass = (status) => {
   return "bg-gray-100 text-gray-800";
 };
 
-const handleSeatmapSave = (data) => {
-  seatmapData.value = data;
-  showCreateSeatmap.value = false;
-  isModalOpen.value = true; // reopen first modal if needed
-};
+// const handleSeatmapSave = (data) => {
+//   seatmapData.value = data;
+//   showCreateSeatmap.value = false;
+//   isModalOpen.value = true; // reopen first modal if needed
+// };
 
-const handleCreateVessel = (vesselData) => {
-  vessels.value.push({
-    id: vessels.value.length + 1,
-    name: vesselData.name,
-    classes: vesselData.seatmap.classes.map((c) => ({
-      name: c.name,
-      seats: c.seats?.length || 0, // store number of seats
-      online: true, // default true
-      teller: true, // default true
-      aircon: true, // default true
-      wifi: true, // default true
-    })),
-    status: vesselData.status || "Available",
-  });
-  console.log("Vessels after save:", JSON.parse(JSON.stringify(vessels.value)));
-
+const handleSaveVessel = (vesselData) => {
+  if (editVessel.value) {
+    // Edit mode: update existing vessel
+    Object.assign(editVessel.value, vesselData);
+  } else {
+    // Create mode: add new vessel
+    vessels.value.push({
+      id: vessels.value.length + 1,
+      ...vesselData,
+    });
+  }
   isModalOpen.value = false;
 };
 </script>
@@ -355,7 +253,7 @@ const handleCreateVessel = (vesselData) => {
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   <ul>
                     <li v-for="(clas, index) in vessel.classes" :key="index">
-                      {{ clas.seats }}
+                      {{ clas.seats?.length || 0 }}
                     </li>
                   </ul>
                 </td>
@@ -402,6 +300,7 @@ const handleCreateVessel = (vesselData) => {
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                   <button
+                    @click="openEditModal(vessel)"
                     class="font-medium text-blue-600 hover:text-blue-900 flex items-center"
                   >
                     <Eye class="w-4 h-4 mr-1" />
@@ -418,9 +317,9 @@ const handleCreateVessel = (vesselData) => {
     <!-- Modal rendered only when open -->
     <ModalCreateVessel
       v-if="isModalOpen"
+      :vessel="editVessel || { classes: [] }"
       @close="isModalOpen = false"
-      @save="handleCreateVessel"
-      @open-seatmap="openSeatmap"
+      @save="handleSaveVessel"
     />
     <!-- Create Seatmap Modal -->
     <ModalCreateSeatmap

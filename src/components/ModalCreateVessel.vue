@@ -107,7 +107,7 @@
             </thead>
             <tbody>
               <!-- If no seatmap yet -->
-              <tr v-if="!seatmapData || !seatmapData.classes.length">
+              <tr v-if="!seatmapData || !(seatmapData.classes?.length || 0)">
                 <td colspan="3" class="py-4 text-center text-gray-500">
                   No seatmap created yet. Please create a seatmap.
                 </td>
@@ -132,6 +132,7 @@
                       <input
                         :id="`switch-${cls.name}-aircon`"
                         type="checkbox"
+                        v-model="cls.aircon"
                         class="peer appearance-none w-11 h-5 bg-slate-300 rounded-full checked:bg-green-600 cursor-pointer transition-colors duration-300"
                         :disabled="isLoading"
                       />
@@ -154,6 +155,7 @@
                       <input
                         :id="`switch-${cls.name}-wifi`"
                         type="checkbox"
+                        v-model="cls.wifi"
                         class="peer appearance-none w-11 h-5 bg-slate-300 rounded-full checked:bg-green-600 cursor-pointer transition-colors duration-300"
                         :disabled="isLoading"
                       />
@@ -172,6 +174,48 @@
             </tbody>
           </table>
           <!-- TABLE ENDS HERE SWITCHES  -->
+        </div>
+        <div class="w-full mt-4">
+          <select
+            v-if="isOpen"
+            v-model="selectedClassIndex"
+            class="mb-4 w-full px-3 py-2 border rounded-md"
+          >
+            <option value="" disabled>Select accommodation</option>
+            <option
+              v-for="seat in availableClasses"
+              :key="seat.name"
+              :value="seat.name"
+            >
+              {{ seat.name }}
+            </option>
+          </select>
+
+          <button
+            v-if="!isOpen"
+            @click="isOpen = true"
+            type="button"
+            class="w-full px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
+          >
+            + Add Class
+          </button>
+
+          <div v-if="isOpen" class="grid grid-cols-2 gap-4 w-full">
+            <button
+              @click="cancelAction"
+              type="button"
+              class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
+            >
+              Cancel
+            </button>
+            <button
+              @click="saveChanges"
+              type="button"
+              class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
+            >
+              Save
+            </button>
+          </div>
         </div>
         <!-- Modal Footer -->
         <div
@@ -204,25 +248,100 @@
 </template>
 
 <script setup>
-import { reactive, ref } from "vue";
+import { reactive, ref, computed, watch } from "vue";
 import ModalCreateSeatmap from "./ModalCreateSeatmap.vue";
 const isLoading = ref(false);
 const emit = defineEmits(["save"]);
 const prefix = ref("");
+const isOpen = ref(false); // controls the dropdown
+const selectedClassIndex = ref(""); // selected value from dropdown
+const addedClasses = ref([]); // track newly added classes
+const seatmapData = ref(null);
+const showSeatmapModal = ref(false);
+
 const vesselInfo = reactive({
   name: "",
   details: "",
   status: "Available",
 });
+const accomodations = ref([
+  {
+    id: 1,
+    name: "Business Class",
+  },
+  {
+    id: 2,
+    name: "Premium Economy",
+  },
+  {
+    id: 3,
+    name: "Economy Class",
+  },
+]);
+const props = defineProps({
+  vessel: {
+    type: Object,
+    default: () => ({ classes: [] }), // default empty vessel
+  },
+});
+watch(
+  () => props.vessel,
+  (newVal) => {
+    if (newVal) {
+      vesselInfo.name = newVal.name;
+      vesselInfo.details = newVal.details;
+      vesselInfo.status = newVal.status;
 
-const seatmapData = ref(null);
-const showSeatmapModal = ref(false);
+      // Normalize seatmapData to object with classes array
+      seatmapData.value = {
+        classes: JSON.parse(JSON.stringify(newVal.classes || [])),
+      };
+    } else {
+      // Reset for create
+      vesselInfo.name = "";
+      vesselInfo.details = "";
+      vesselInfo.status = "Available";
+      seatmapData.value = { classes: [] };
+    }
+  },
+  { immediate: true }
+);
+// const addClass = () => {
+//   if (!selectedClassIndex.value) return;
+//   addedClasses.value.push({
+//     name: selectedClassIndex.value,
+//     rows: null,
+//     columns: null,
+//     seats: [],
+//   });
+//   selectedClassIndex.value = null;
+//   isOpen.value = false;
+// };
+const availableClasses = computed(() =>
+  accomodations.value.filter(
+    (a) => !seatmapData.value?.classes?.some((c) => c.name === a.name)
+  )
+);
+const cancelAction = () => {
+  selectedClassIndex.value = "";
+  isOpen.value = false;
+};
 
-const accomodations = [
-  { id: 1, name: "Business Class" },
-  { id: 2, name: "Premium Economy" },
-  { id: 3, name: "Economy Class" },
-];
+const saveChanges = () => {
+  if (!selectedClassIndex.value) return;
+
+  if (!seatmapData.value) seatmapData.value = { classes: [] };
+
+  seatmapData.value.classes.push({
+    name: selectedClassIndex.value,
+    seats: [],
+    aircon: false,
+    wifi: false,
+  });
+
+  selectedClassIndex.value = "";
+  isOpen.value = false;
+};
 
 const handleSeatmapSave = (data) => {
   seatmapData.value = data;
@@ -232,26 +351,41 @@ const handleSeatmapSave = (data) => {
 const createVessel = () => {
   if (!vesselInfo.name) return alert("Enter vessel code!");
 
+  // Keep the prefix logic
   const fullName = prefix.value
     ? `${prefix.value}${vesselInfo.name}`
     : vesselInfo.name;
 
-  // Map seatmap classes and set all features to true
-  const seatmapWithDefaults = (seatmapData.value?.classes || []).map((c) => ({
-    ...c,
-    online: true,
-    teller: true,
-    aircon: true,
-    wifi: true,
+  // Merge classes safely, ensuring seats is always an array
+  const mergedClasses = (seatmapData.value?.classes || []).map((c) => ({
+    name: c.name,
+    aircon: c.aircon ?? false,
+    wifi: c.wifi ?? false,
+    online: c.online ?? true,
+    teller: c.teller ?? true,
   }));
 
+  // Prepare payload
   const payload = {
     ...vesselInfo,
     name: fullName,
-    seatmap: { classes: seatmapWithDefaults },
+    classes: mergedClasses,
+    status: vesselInfo.status,
   };
 
-  console.log("Payload to save:", payload); // for testing
+  console.log("Normalized Payload:", JSON.parse(JSON.stringify(payload))); // plain arrays
+
+  // Emit payload to parent (create or edit handled in parent)
   emit("save", payload);
+
+  // Reset only if in create mode (optional)
+  if (!props.vessel) {
+    vesselInfo.name = "";
+    vesselInfo.details = "";
+    prefix.value = "";
+    addedClasses.value = [];
+    seatmapData.value = null;
+    isOpen.value = false;
+  }
 };
 </script>
