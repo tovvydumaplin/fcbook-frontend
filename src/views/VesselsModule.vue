@@ -11,7 +11,7 @@ const searchQuery = ref("");
 const isTableLoading = ref(false);
 const isLoading = ref(false);
 const isModalOpen = ref(false);
-const showCreateSeatmap = ref(false);
+const showSeatmapModal = ref(false);
 const seatmapData = ref(null);
 const tabs = [
   { id: "all", name: "All Vessels" },
@@ -25,6 +25,7 @@ const openCreateModal = () => {
   editVessel.value = null; // create mode
   isModalOpen.value = true;
 };
+const selectedVessel = ref(null);
 
 const openEditModal = (vessel) => {
   // ensure vessel.classes is always an array to prevent template errors
@@ -43,21 +44,36 @@ const filteredVessels = computed(() => {
     return vessels.value.filter((v) => v.status === "Grounded");
   return [];
 });
-const openSeatmap = () => {
-  isModalOpen.value = false;
-  showCreateSeatmap.value = true;
-};
 
 const getStatusClass = (status) => {
   if (status === "Available") return "bg-green-100 text-green-800";
   return "bg-gray-100 text-gray-800";
 };
 
-// const handleSeatmapSave = (data) => {
-//   seatmapData.value = data;
-//   showCreateSeatmap.value = false;
-//   isModalOpen.value = true; // reopen first modal if needed
-// };
+const handleSeatmapSave = (seatmapPayload) => {
+  if (!selectedVessel.value) return;
+
+  // Find vessel index
+  const index = vessels.value.findIndex(
+    (v) => v.id === selectedVessel.value.id
+  );
+
+  if (index === -1) return;
+
+  // Merge seats into classes
+  vessels.value[index].classes = vessels.value[index].classes.map((cls) => {
+    const found = seatmapPayload.classes.find((c) => c.name === cls.name);
+
+    return {
+      ...cls,
+      rows: found?.rows || cls.rows,
+      columns: found?.columns || cls.columns,
+      seats: found?.seats || cls.seats, // <--- Save seats here
+    };
+  });
+
+  showSeatmapModal.value = false;
+};
 
 const handleSaveVessel = (vesselData) => {
   if (editVessel.value) {
@@ -85,7 +101,7 @@ const handleSaveVessel = (vesselData) => {
       <div class="flex justify-between items-center">
         <h1 class="text-2xl font-semibold text-gray-900">Vessels Management</h1>
         <button
-          @click="isModalOpen = true"
+          @click="openCreateModal"
           type="button"
           class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 flex items-center gap-2 cursor-pointer"
         >
@@ -199,16 +215,7 @@ const handleSaveVessel = (vesselData) => {
                 >
                   Seats
                 </th>
-                <th
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Online
-                </th>
-                <th
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Teller
-                </th>
+
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
@@ -253,26 +260,11 @@ const handleSaveVessel = (vesselData) => {
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   <ul>
                     <li v-for="(clas, index) in vessel.classes" :key="index">
-                      {{ clas.seats?.length || 0 }}
+                      {{ clas.seats }}
                     </li>
                   </ul>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  <ul>
-                    <li v-for="(clas, index) in vessel.classes" :key="index">
-                      <span v-if="clas.online">✅</span>
-                      <span v-else>❌</span>
-                    </li>
-                  </ul>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  <ul>
-                    <li v-for="(clas, index) in vessel.classes" :key="index">
-                      <span v-if="clas.teller">✅</span>
-                      <span v-else>❌</span>
-                    </li>
-                  </ul>
-                </td>
+
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   <ul>
                     <li v-for="(clas, index) in vessel.classes" :key="index">
@@ -323,10 +315,9 @@ const handleSaveVessel = (vesselData) => {
     />
     <!-- Create Seatmap Modal -->
     <ModalCreateSeatmap
-      v-if="showCreateSeatmap"
-      :accomodations="accomodations"
+      v-if="showSeatmapModal"
       :seatmap="seatmapData"
-      @close="showCreateSeatmap = false"
+      @close="showSeatmapModal = false"
       @save="handleSeatmapSave"
     />
   </div>

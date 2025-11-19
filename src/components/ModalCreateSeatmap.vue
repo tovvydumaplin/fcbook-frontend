@@ -51,48 +51,7 @@
               </div>
 
               <!-- Add class dropdown -->
-              <div class="w-full">
-                <select
-                  v-if="isOpen"
-                  v-model="selectedClassIndex"
-                  class="mb-4 w-full px-3 py-2 border rounded-md"
-                >
-                  <option value="" disabled>Select accommodation</option>
-                  <option
-                    v-for="(seat, index) in availableClasses"
-                    :key="seat.name"
-                    :value="seat.name"
-                  >
-                    {{ seat.name }}
-                  </option>
-                </select>
-
-                <button
-                  v-if="!isOpen"
-                  @click="isOpen = true"
-                  type="button"
-                  class="w-full px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
-                >
-                  + Add Class
-                </button>
-
-                <div v-if="isOpen" class="grid grid-cols-2 gap-4 w-full">
-                  <button
-                    @click="cancelAction"
-                    type="button"
-                    class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    @click="saveChanges"
-                    type="button"
-                    class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
+              e
             </div>
 
             <!-- GENERATE SEATS -->
@@ -208,7 +167,7 @@
               Select a class to preview
             </div>
             <div
-              v-else-if="!currentSelectedClass.seats.length"
+              v-else-if="!currentSelectedClass.seats?.length"
               class="text-center text-gray-500"
             >
               No seats generated yet.
@@ -236,7 +195,6 @@
                 <span v-if="!seat.blocked && !seat.path">
                   {{ seat.seat_no }}
                 </span>
-
                 <!-- Block X -->
                 <span
                   v-if="seat.blocked"
