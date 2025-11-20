@@ -10,25 +10,27 @@ import {
   Eye,
   List,
 } from "lucide-vue-next";
+import ModalCreatePassengerType from "../components/ModalCreatePassengerType.vue";
 
 const apiBase = import.meta.env.VITE_API_URL;
 const isModalOpen = ref(false);
-const activeTab = ref("all");
+const activeTab = ref("rate");
 const searchQuery = ref("");
 const isTableLoading = ref(false);
+const isRateLoading = ref(false);
 const selectedRoute = ref(null);
 const rateData = ref(null);
 
 const tabs = [
-  { id: "all", name: "Rates" },
-  { id: "active", name: "Discounts" },
+  { id: "rate", name: "Rates" },
+  { id: "discount", name: "Discounts" },
 ];
 
 const routes = ref([{}]);
 const dummyRoutes = [
   {
     id: 1,
-    route_name: "Cebu – Tagbilaran",
+    route_name: "Batangas – Calapan",
     accommodations: [
       { id: 1, class_name: "Business Class", rate: 654 },
       { id: 2, class_name: "Premium Economy", rate: 452 },
@@ -37,7 +39,7 @@ const dummyRoutes = [
   },
   {
     id: 2,
-    route_name: "Cebu – Ormoc",
+    route_name: "Bulalacao – Caticlan",
     accommodations: [
       { id: 1, class_name: "Business Class", rate: null },
       { id: 2, class_name: "Premium Economy", rate: null },
@@ -45,19 +47,48 @@ const dummyRoutes = [
   },
   {
     id: 3,
-    route_name: "Tagbilaran – Dumaguete",
+    route_name: "Cebu – Tubigon",
     accommodations: [
       { id: 3, class_name: "Economy Class", rate: null },
       { id: 4, class_name: "Pets ", rate: null },
     ],
   },
 ];
+const passengerTypes = [
+  {
+    id: 1,
+    passenger_type: "Standard",
+    discount: 0,
+    status: "active",
+    updated_at: "2025-06-09",
+    updated_by: "John Doe",
+  },
+  {
+    id: 2,
+    passenger_type: "Senior Citizen",
+    discount: 0.25,
+    status: "active",
+    updated_at: "2025-06-09",
+    updated_by: "John Doe",
+  },
+  {
+    id: 3,
+    passenger_type: "Student",
+    discount: 0.3,
+    status: "active",
+    updated_at: "2025-06-09",
+    updated_by: "John Doe",
+  },
+];
+
 const getStatusClass = (status) => {
   if (status === "Active") return "bg-green-100 text-green-800";
   return "bg-gray-100 text-gray-800";
 };
+
 const filteredRoutes = computed(() => {
   let filtered = routes.value;
+
   if (activeTab.value === "active")
     filtered = filtered.filter((r) => r.status === "Active");
   else if (activeTab.value === "closed")
@@ -69,6 +100,7 @@ const filteredRoutes = computed(() => {
   }
   return filtered;
 });
+
 const fetchRoutes = async () => {
   isTableLoading.value = true;
   try {
@@ -100,10 +132,18 @@ const fetchRoutes = async () => {
     isTableLoading.value = false;
   }
 };
+
 const fetchRateForRoute = async (route) => {
-  selectedRoute.value = route;
+  isRateLoading.value = true;
+  selectedRoute.value = null;
   rateData.value = null;
+
+  setTimeout(() => {
+    selectedRoute.value = route;
+    isRateLoading.value = false;
+  }, 800);
 };
+
 onMounted(fetchRoutes);
 </script>
 
@@ -116,11 +156,14 @@ onMounted(fetchRoutes);
         <span class="mx-2">></span>
         <span class="text-gray-900">Rates/Discounts</span>
       </nav>
+
       <div class="flex justify-between items-center">
         <h1 class="text-2xl font-semibold text-gray-900">
           Rates/Discounts Management
         </h1>
+
         <button
+          v-if="activeTab === 'discount'"
           @click="isModalOpen = true"
           type="button"
           class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 flex items-center gap-2 cursor-pointer"
@@ -130,115 +173,119 @@ onMounted(fetchRoutes);
         </button>
       </div>
     </div>
-    <div class="grid md:grid-cols-[380px_1fr] gap-6">
-      <!-- Tabs -->
-      <div class="bg-white rounded-lg shadow-sm">
-        <div class="border-b border-gray-200">
-          <nav class="flex space-x-8 px-6">
-            <button
-              v-for="tab in tabs"
-              :key="tab.id"
-              @click="activeTab = tab.id"
-              :class="[
-                'py-4 px-1 border-b-2 font-medium text-sm',
-                activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
-              ]"
-            >
-              {{ tab.name }}
-            </button>
-          </nav>
-        </div>
 
-        <!-- List of Route Section -->
+    <!-- TABS -->
+    <div class="bg-white rounded-lg shadow-sm w-fit mb-4">
+      <nav class="flex space-x-8 px-6">
+        <button
+          v-for="tab in tabs"
+          :key="tab.id"
+          @click="activeTab = tab.id"
+          :class="[
+            'py-4 px-1 border-b-2 font-medium text-sm',
+            activeTab === tab.id
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+          ]"
+        >
+          {{ tab.name }}
+        </button>
+      </nav>
+    </div>
+
+    <!-- RATE MANAGEMENT -->
+    <div
+      v-if="activeTab === 'rate'"
+      class="grid md:grid-cols-[380px_1fr] gap-6"
+    >
+      <!-- LEFT ROUTE LIST -->
+      <div class="bg-white rounded-lg shadow-sm">
         <div class="p-6">
-          <!-- Left: List of Routes as table -->
+          <h2 class="text-lg font-medium text-gray-900 mb-4">List of Route</h2>
+
+          <div class="flex items-center mb-4">
+            <div class="relative w-full">
+              <Search
+                class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4"
+              />
+              <input
+                v-model="searchQuery"
+                type="text"
+                placeholder="Search"
+                class="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full"
+              />
+            </div>
+          </div>
+
+          <!-- ROUTE TABLE -->
           <div>
-            <h2 class="text-lg font-medium text-gray-900 mb-4">
-              List of Route
-            </h2>
-            <div class="flex items-center mb-4">
-              <div class="relative w-full">
-                <Search
-                  class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4"
-                />
-                <input
-                  v-model="searchQuery"
-                  type="text"
-                  placeholder="Search"
-                  class="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full"
-                />
+            <div
+              v-if="isTableLoading"
+              class="flex justify-center items-center py-8"
+            >
+              <div
+                class="flex items-center gap-3 bg-white border border-blue-600 shadow-lg px-5 py-3 rounded-lg"
+              >
+                <span
+                  class="inline-block w-6 h-6 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"
+                ></span>
+                <span class="font-semibold text-blue-700 text-base"
+                  >Loading routes...</span
+                >
               </div>
             </div>
-            <div>
-              <div
-                v-if="isTableLoading"
-                class="flex justify-center items-center py-8"
-              >
-                <div
-                  class="flex items-center gap-3 bg-white border border-blue-600 shadow-lg px-5 py-3 rounded-lg"
-                >
-                  <span
-                    class="inline-block w-6 h-6 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"
-                  ></span>
-                  <span class="font-semibold text-blue-700 text-base"
-                    >Loading routes...</span
-                  >
-                </div>
-              </div>
-              <div v-else class="overflow-auto max-h-[400px]">
-                <table class="min-w-full divide-y divide-gray-200">
-                  <thead class="bg-gray-50">
-                    <tr>
-                      <th
-                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        #
-                      </th>
-                      <th
-                        class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        Route
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody class="bg-white divide-y divide-gray-200">
-                    <tr
-                      v-for="route in dummyRoutes"
-                      :key="route.id"
-                      @click="fetchRateForRoute(route)"
-                      class="hover:bg-gray-50 cursor-pointer"
-                      :class="{
-                        'bg-blue-50':
-                          selectedRoute && selectedRoute.id === route.id,
-                      }"
+
+            <div v-else class="overflow-auto max-h-[400px]">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
-                      <td
-                        class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-bold"
+                      #
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Route
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr
+                    v-for="route in dummyRoutes"
+                    :key="route.id"
+                    @click="fetchRateForRoute(route)"
+                    class="hover:bg-gray-50 cursor-pointer"
+                    :class="{
+                      'bg-blue-50':
+                        selectedRoute && selectedRoute.id === route.id,
+                    }"
+                  >
+                    <td class="px-6 py-4 text-sm text-blue-600 font-bold">
+                      {{ route.id }}
+                    </td>
+                    <td class="px-6 py-4 text-sm">
+                      <span
+                        :class="
+                          selectedRoute && selectedRoute.id === route.id
+                            ? 'text-blue-600 font-bold underline'
+                            : 'text-gray-900'
+                        "
                       >
-                        {{ route.id }}
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm">
-                        <span
-                          :class="
-                            selectedRoute && selectedRoute.id === route.id
-                              ? 'text-blue-600 font-bold underline'
-                              : 'text-gray-900'
-                          "
-                        >
-                          {{ route.route_name }}
-                        </span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+                        {{ route.route_name }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       </div>
-      <!-- Right: Schedule Details for selected route -->
+
+      <!-- RIGHT RATE DETAILS -->
       <div class="bg-white rounded-lg shadow-sm">
         <div class="p-6">
           <div class="flex justify-between items-center mb-2">
@@ -246,103 +293,95 @@ onMounted(fetchRoutes);
               {{
                 selectedRoute
                   ? selectedRoute.route_name + " Rate"
-                  : "No route Selected"
+                  : "No Route Selected"
               }}
             </h2>
           </div>
 
-          <!-- Table Loading Animation -->
+          <!-- LOADING -->
           <div
-            v-if="isTableLoading"
-            class="flex justify-center items-center py-8"
+            v-if="isRateLoading"
+            class="flex justify-center items-center py-10"
           >
             <div
               class="flex items-center gap-3 bg-white border border-blue-600 shadow-lg px-5 py-3 rounded-lg"
             >
               <span
-                class="inline-block w-6 h-6 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"
+                class="w-6 h-6 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"
               ></span>
               <span class="font-semibold text-blue-700 text-base"
-                >Loading routes...</span
+                >Loading rate...</span
               >
             </div>
           </div>
-          <!-- Data Table -->
+
+          <!-- NO SELECTION -->
+          <div
+            v-else-if="!selectedRoute"
+            class="text-gray-500 text-center py-10"
+          >
+            Select a route to view details.
+          </div>
+
+          <!-- RATE TABLE -->
           <div v-else class="overflow-auto max-h-[400px]">
             <table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
                 <tr>
                   <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500"
                   >
                     #
                   </th>
                   <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500"
                   >
                     Type name
                   </th>
                   <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500"
                   >
                     Base Rate
                   </th>
                   <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500"
                   >
                     Last Updated
                   </th>
                   <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500"
                   >
                     Updated by
                   </th>
                   <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500"
                   >
                     Updated Status
                   </th>
                   <th
-                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500"
                   >
                     Action
                   </th>
                 </tr>
               </thead>
+
               <tbody class="bg-white divide-y divide-gray-200">
                 <tr
-                  v-for="(acc, index) in selectedRoute?.accommodations || []"
+                  v-for="(acc, index) in selectedRoute.accommodations"
                   :key="acc.id"
                   class="hover:bg-gray-50"
                 >
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {{ index + 1 }}
-                  </td>
-
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {{ acc.class_name }}
-                  </td>
-
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <span v-if="acc.rate === null" class="text-red-500"
-                      >No rate yet</span
-                    >
+                  <td class="px-6 py-4 text-sm">{{ index + 1 }}</td>
+                  <td class="px-6 py-4 text-sm">{{ acc.class_name }}</td>
+                  <td class="px-6 py-4 text-sm">
+                    <span v-if="acc.rate === null">—</span>
                     <span v-else>₱{{ acc.rate }}</span>
                   </td>
-
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    —
-                  </td>
-
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    —
-                  </td>
-
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    —
-                  </td>
-
-                  <td class="px-6 py-4 whitespace-nowrap text-sm">
+                  <td class="px-6 py-4 text-sm text-gray-500">—</td>
+                  <td class="px-6 py-4 text-sm text-gray-500">—</td>
+                  <td class="px-6 py-4 text-sm text-gray-500">—</td>
+                  <td class="px-6 py-4 text-sm">
                     <button
                       @click="handleAction(acc)"
                       class="font-medium text-blue-600 hover:text-blue-900 flex items-center"
@@ -357,9 +396,87 @@ onMounted(fetchRoutes);
           </div>
         </div>
       </div>
-      <!-- Right: Schedule Details for selected route ENDS HERE-->
     </div>
+    <!-- ✅ FIXED missing closing div for RATE tab -->
 
-    <!-- Modal rendered only when open -->
+    <!-- DISCOUNT MANAGEMENT -->
+    <div v-if="activeTab === 'discount'">
+      <div class="bg-white rounded-lg shadow-sm">
+        <div class="p-6">
+          <h2 class="text-lg font-medium text-gray-900 mb-4">
+            Passenger Type Lists
+          </h2>
+
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500"
+                >
+                  #
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500"
+                >
+                  Passenger Type
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500"
+                >
+                  Discount %
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500"
+                >
+                  Status
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500"
+                >
+                  Last Updated
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500"
+                >
+                  Updated By
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500"
+                >
+                  Action
+                </th>
+              </tr>
+            </thead>
+
+            <tbody class="bg-white divide-y divide-gray-200">
+              <tr
+                v-for="passenger in passengerTypes"
+                :key="passenger.id"
+                class="hover:bg-gray-50"
+              >
+                <td class="px-6 py-4 text-sm">{{ passenger.id }}</td>
+                <td class="px-6 py-4 text-sm">
+                  {{ passenger.passenger_type }}
+                </td>
+                <td class="px-6 py-4 text-sm">{{ passenger.discount }}</td>
+                <td class="px-6 py-4 text-sm">{{ passenger.status }}</td>
+                <td class="px-6 py-4 text-sm">{{ passenger.updated_at }}</td>
+                <td class="px-6 py-4 text-sm">{{ passenger.updated_by }}</td>
+
+                <td class="px-6 py-4 text-sm">
+                  <button
+                    @click="handleAction(passenger)"
+                    class="font-medium text-blue-600 hover:text-blue-900 flex items-center"
+                  >
+                    <Edit class="w-4 h-4 mr-1" />
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <ModalCreatePassengerType v-if="isModalOpen" @close="isModalOpen = false" />
   </div>
 </template>
