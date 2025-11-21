@@ -46,7 +46,7 @@
           </svg>
         </button>
       </div>
-      <form @submit.prevent="savePassengerType" class="p-6 space-y-6">
+      <form @submit.prevent="savePassengerTypes" class="p-6 space-y-6">
         <!-- Origin Port -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">
