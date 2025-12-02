@@ -10,18 +10,14 @@ import {
   List,
 } from "lucide-vue-next";
 import ModalCreateSchedule from "../components/ModalCreateSchedule.vue";
+
 const apiBase = import.meta.env.VITE_API_URL;
 const isModalOpen = ref(false);
 const activeTab = ref("all");
 const searchQuery = ref("");
 const isTableLoading = ref(false);
-const isScheduleLoading = ref(false);
 const selectedRoute = ref(null);
-const scheduleData = ref(null);
 
-const modalRouteId = ref("");
-const modalPortASchedules = ref([{ departure: "", arrival: "" }]);
-const modalPortBSchedules = ref([{ departure: "", arrival: "" }]);
 const tabs = [
   { id: "all", name: "All Routes" },
   { id: "active", name: "Active Schedules" },
@@ -29,8 +25,16 @@ const tabs = [
 ];
 
 const routes = ref([]);
+
+// Summary cards
 const totalSchedules = computed(() =>
-  routes.value.reduce((sum, r) => sum + r.schedules, 0)
+  routes.value.reduce(
+    (sum, r) =>
+      sum +
+      (r.portA?.schedules?.length || 0) +
+      (r.portB?.schedules?.length || 0),
+    0
+  )
 );
 const activeSchedules = computed(
   () => routes.value.filter((r) => r.status === "Active").length
@@ -48,7 +52,17 @@ const filteredRoutes = computed(() => {
 
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase();
-    filtered = filtered.filter((r) => r.route_name.toLowerCase().includes(q));
+    filtered = filtered.filter((r) => {
+      // Try to match port names or route id
+      return (
+        r.portA?.port_name?.toLowerCase().includes(q) ||
+        false ||
+        r.portB?.port_name?.toLowerCase().includes(q) ||
+        false ||
+        r.route_id?.toString().includes(q) ||
+        false
+      );
+    });
   }
   return filtered;
 });
@@ -57,7 +71,7 @@ const fetchRoutes = async () => {
   isTableLoading.value = true;
   try {
     const token = localStorage.getItem("token");
-    const response = await fetch(`${apiBase}/routes`, {
+    const response = await fetch(`${apiBase}/routes/with-schedules`, {
       headers: {
         "Content-Type": "application/json",
         Authorization: token,
@@ -66,12 +80,10 @@ const fetchRoutes = async () => {
     const data = await response.json();
     if (response.ok && data.success && data.data?.routes) {
       routes.value = data.data.routes.map((route, idx) => ({
-        id: route.route_id || idx + 1,
-        route_name: `${route.port_a} - ${route.port_b}`,
-        port_a: route.port_a,
-        port_b: route.port_b,
-        schedules: route.schedules_count || 0,
-        status: route.status || "Active",
+        route_id: route.route_id,
+        portA: route.portA,
+        portB: route.portB,
+        status: "Active", // or use a real status if available
       }));
     } else {
       routes.value = [];
@@ -85,36 +97,6 @@ const fetchRoutes = async () => {
   }
 };
 
-const fetchScheduleForRoute = async (route) => {
-  selectedRoute.value = route;
-  scheduleData.value = null;
-  isScheduleLoading.value = true;
-  try {
-    const token = localStorage.getItem("token");
-    const response = await fetch(`${apiBase}/schedules/${route.id}`, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-    });
-    const data = await response.json();
-    if (response.ok && data.success && data.data) {
-      // Accept both array and single object
-      let scheds = data.data.schedules || data.data.schedule || [];
-      if (!Array.isArray(scheds)) scheds = [scheds];
-      scheduleData.value = scheds;
-    } else {
-      scheduleData.value = [];
-      console.error("Failed to fetch schedule:", data.message || data);
-    }
-  } catch (err) {
-    scheduleData.value = [];
-    console.error("Network error fetching schedule:", err);
-  } finally {
-    isScheduleLoading.value = false;
-  }
-};
-
 onMounted(fetchRoutes);
 
 const getStatusClass = (status) => {
@@ -125,10 +107,13 @@ const getStatusClass = (status) => {
 const isCreateScheduleModalOpen = ref(false);
 
 // Sched modal
+const modalRouteId = ref("");
+const modalPortASchedules = ref([{ departure: "", arrival: "" }]);
+const modalPortBSchedules = ref([{ departure: "", arrival: "" }]);
 
 const handleSaveSchedule = (scheduleData) => {
   if (selectedRoute.value) {
-    fetchScheduleForRoute(selectedRoute.value);
+    fetchRoutes();
   }
 };
 </script>
@@ -283,35 +268,41 @@ const handleSaveSchedule = (scheduleData) => {
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                   <tr
-                    v-for="route in filteredRoutes"
-                    :key="route.id"
+                    v-for="(route, idx) in filteredRoutes"
+                    :key="route.route_id"
                     class="hover:bg-gray-50 cursor-pointer"
-                    @click="fetchScheduleForRoute(route)"
+                    @click="selectedRoute = route"
                     :class="{
                       'bg-blue-50':
-                        selectedRoute && selectedRoute.id === route.id,
+                        selectedRoute &&
+                        selectedRoute.route_id === route.route_id,
                     }"
                   >
                     <td
                       class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-bold"
                     >
-                      {{ route.id }}
+                      {{ idx + 1 }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                       <span
                         :class="
-                          selectedRoute && selectedRoute.id === route.id
+                          selectedRoute &&
+                          selectedRoute.route_id === route.route_id
                             ? 'text-blue-600 font-bold underline'
                             : 'text-gray-900'
                         "
                       >
-                        {{ route.route_name }}
+                        {{ route.portA?.port_name }} -
+                        {{ route.portB?.port_name }}
                       </span>
                     </td>
                     <td
                       class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
                     >
-                      {{ route.schedules }}
+                      {{
+                        (route.portA?.schedules?.length || 0) +
+                        (route.portB?.schedules?.length || 0)
+                      }}
                     </td>
                   </tr>
                 </tbody>
@@ -324,7 +315,11 @@ const handleSaveSchedule = (scheduleData) => {
           <div class="flex justify-between items-center mb-2">
             <h2 class="text-lg font-medium text-gray-900">
               {{
-                selectedRoute ? selectedRoute.route_name : "No port selected"
+                selectedRoute
+                  ? (selectedRoute.portA?.port_name || "") +
+                    " - " +
+                    (selectedRoute.portB?.port_name || "")
+                  : "No route selected"
               }}
             </h2>
             <div v-if="selectedRoute" class="flex gap-2">
@@ -341,23 +336,14 @@ const handleSaveSchedule = (scheduleData) => {
             </div>
           </div>
           <div class="bg-white border rounded-lg p-6 min-h-[200px]">
-            <template v-if="isScheduleLoading">
-              <div class="flex items-center gap-3 justify-center py-12">
-                <span
-                  class="inline-block w-6 h-6 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"
-                ></span>
-                <span class="font-semibold text-blue-700 text-base"
-                  >Loading schedule...</span
-                >
-              </div>
-            </template>
-            <template v-else-if="scheduleData && scheduleData.length">
+            <template v-if="selectedRoute">
               <div class="w-full grid grid-cols-2 gap-4">
+                <!-- Port A Schedules -->
                 <table class="min-w-full bg-white rounded-b-lg">
                   <thead>
                     <tr>
                       <th class="text-sm text-center" :colspan="3">
-                        {{ selectedRoute?.port_a }}
+                        {{ selectedRoute.portA?.port_name || "Port A" }}
                       </th>
                     </tr>
                     <tr>
@@ -368,30 +354,38 @@ const handleSaveSchedule = (scheduleData) => {
                         Vessel
                       </th>
                       <th class="px-4 py-2 text-xs text-gray-500 text-left">
-                        Arrival
+                        Status
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(sched, idx) in scheduleData" :key="idx">
+                    <tr
+                      v-for="sched in selectedRoute.portA?.schedules || []"
+                      :key="sched.sched_id"
+                    >
                       <td class="px-4 py-2 text-sm">
-                        {{ sched.departure_time || sched.departure }}
+                        {{ sched.departure_time }}
                       </td>
                       <td class="px-4 py-2 text-sm">
-                        {{ sched.vessel }}
+                        {{ sched.vessel || "-" }}
                       </td>
-                      <td class="px-4 py-2 text-sm">
-                        {{ sched.arrival_time || sched.arrival }}
+                      <td class="px-4 py-2 text-sm capitalize">
+                        {{ sched.status }}
+                      </td>
+                    </tr>
+                    <tr v-if="!selectedRoute.portA?.schedules?.length">
+                      <td colspan="3" class="text-gray-400 text-center py-2">
+                        No schedules
                       </td>
                     </tr>
                   </tbody>
                 </table>
-                <!-- 2 -->
+                <!-- Port B Schedules -->
                 <table class="min-w-full bg-white rounded-b-lg">
                   <thead>
                     <tr>
                       <th class="text-sm text-center" :colspan="3">
-                        {{ selectedRoute?.port_b }}
+                        {{ selectedRoute.portB?.port_name || "Port B" }}
                       </th>
                     </tr>
                     <tr>
@@ -402,20 +396,28 @@ const handleSaveSchedule = (scheduleData) => {
                         Vessel
                       </th>
                       <th class="px-4 py-2 text-xs text-gray-500 text-left">
-                        Arrival
+                        Status
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(sched, idx) in scheduleData" :key="idx">
+                    <tr
+                      v-for="sched in selectedRoute.portB?.schedules || []"
+                      :key="sched.sched_id"
+                    >
                       <td class="px-4 py-2 text-sm">
-                        {{ sched.departure_time || sched.departure }}
+                        {{ sched.departure_time }}
                       </td>
                       <td class="px-4 py-2 text-sm">
-                        {{ sched.vessel }}
+                        {{ sched.vessel || "-" }}
                       </td>
-                      <td class="px-4 py-2 text-sm">
-                        {{ sched.arrival_time || sched.arrival }}
+                      <td class="px-4 py-2 text-sm capitalize">
+                        {{ sched.status }}
+                      </td>
+                    </tr>
+                    <tr v-if="!selectedRoute.portB?.schedules?.length">
+                      <td colspan="3" class="text-gray-400 text-center py-2">
+                        No schedules
                       </td>
                     </tr>
                   </tbody>
@@ -426,7 +428,7 @@ const handleSaveSchedule = (scheduleData) => {
               <div
                 class="flex items-center justify-center h-full text-gray-500"
               >
-                <span>No schedule found for this route.</span>
+                <span>No route selected.</span>
               </div>
             </template>
           </div>

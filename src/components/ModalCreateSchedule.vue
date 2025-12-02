@@ -5,7 +5,7 @@
     @click.self="$emit('close')"
   >
     <div
-      class="bg-white rounded-lg shadow-xl w-full max-w-2xl mx-4 p-8 relative"
+      class="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 p-8 relative"
     >
       <button
         @click="$emit('close')"
@@ -36,8 +36,12 @@
           class="border border-gray-300 rounded-md px-3 py-2 w-full max-w-xs"
         >
           <option value="" disabled>Select Route</option>
-          <option v-for="route in routes" :key="route.id" :value="route.id">
-            {{ route.route_name }}
+          <option
+            v-for="route in routes"
+            :key="route.route_id"
+            :value="route.route_id"
+          >
+            {{ route.portA?.port_name }} - {{ route.portB?.port_name }}
           </option>
         </select>
         <button
@@ -66,7 +70,7 @@
           <div
             class="bg-gray-100 rounded-t-lg px-4 py-2 font-semibold text-gray-700 text-center"
           >
-            {{ selectedRoute.port_a }}
+            {{ selectedRoute.portA?.port_name || "Port A" }}
           </div>
           <table class="min-w-full bg-white rounded-b-lg">
             <thead>
@@ -123,7 +127,7 @@
           <div
             class="bg-gray-100 rounded-t-lg px-4 py-2 font-semibold text-gray-700 text-center"
           >
-            {{ selectedRoute.port_b }}
+            {{ selectedRoute.portB?.port_name || "Port B" }}
           </div>
           <table class="min-w-full bg-white rounded-b-lg">
             <thead>
@@ -198,6 +202,7 @@
   </div>
 </template>
 
+<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\components\ModalCreateSchedule.vue -->
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
 
@@ -207,7 +212,7 @@ const apiBase = import.meta.env.VITE_API_URL;
 const routes = ref([]);
 const selectedRouteId = ref("");
 const selectedRoute = computed(() =>
-  routes.value.find((r) => r.id === selectedRouteId.value)
+  routes.value.find((r) => r.route_id === selectedRouteId.value)
 );
 
 const portASchedules = ref([{ departure: "", arrival: "", vessel: "" }]);
@@ -228,7 +233,7 @@ const addRow = (port) => {
 const fetchRoutes = async () => {
   try {
     const token = localStorage.getItem("token");
-    const response = await fetch(`${apiBase}/routes`, {
+    const response = await fetch(`${apiBase}/routes/with-schedules`, {
       headers: {
         "Content-Type": "application/json",
         Authorization: token,
@@ -236,11 +241,10 @@ const fetchRoutes = async () => {
     });
     const data = await response.json();
     if (response.ok && data.success && data.data?.routes) {
-      routes.value = data.data.routes.map((route, idx) => ({
-        id: route.route_id || idx + 1,
-        route_name: `${route.port_a} - ${route.port_b}`,
-        port_a: route.port_a,
-        port_b: route.port_b,
+      routes.value = data.data.routes.map((route) => ({
+        route_id: route.route_id,
+        portA: route.portA,
+        portB: route.portB,
       }));
     } else {
       routes.value = [];
@@ -254,44 +258,43 @@ onMounted(fetchRoutes);
 
 const saveSchedule = async () => {
   const token = localStorage.getItem("token");
-  const schedulesToSave = [];
 
-  // Collect schedules from port A
-  portASchedules.value.forEach((row) => {
-    if (row.departure && row.vessel) {
-      schedulesToSave.push({
-        route_id: selectedRouteId.value,
-        port: selectedRoute.value.port_a,
+  // Save schedules for portA
+  for (const row of portASchedules.value) {
+    if (row.departure) {
+      const payload = {
         departure_time: row.departure,
-        arrival_time: row.arrival,
-        vessel: row.vessel,
+        port_id: selectedRoute.value.portA.port_id,
+      };
+      console.log("Sending schedule for portA:", JSON.stringify(payload));
+      await fetch(`${apiBase}/schedules`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify(payload),
       });
     }
-  });
+  }
 
-  // Collect schedules from port B
-  portBSchedules.value.forEach((row) => {
-    if (row.departure && row.vessel) {
-      schedulesToSave.push({
-        route_id: selectedRouteId.value,
-        port: selectedRoute.value.port_b,
+  // Save schedules for portB
+  for (const row of portBSchedules.value) {
+    if (row.departure) {
+      const payload = {
         departure_time: row.departure,
-        arrival_time: row.arrival,
-        vessel: row.vessel,
+        port_id: selectedRoute.value.portB.port_id,
+      };
+      console.log("Sending schedule for portB:", JSON.stringify(payload));
+      await fetch(`${apiBase}/schedules`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify(payload),
       });
     }
-  });
-
-  // POST each schedule
-  for (const sched of schedulesToSave) {
-    await fetch(`${apiBase}/schedules`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-      body: JSON.stringify(sched),
-    });
   }
 
   emit("save");
