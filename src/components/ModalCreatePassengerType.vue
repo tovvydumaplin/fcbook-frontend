@@ -62,14 +62,14 @@
         <!-- Destination Port -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">
-            Destination Port
+            Select Discount
           </label>
           <select
             v-model="route.port_b"
             required
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
-            <option value="" disabled>Select destination port</option>
+            <option value="" disabled>Select discount percentage</option>
             <option value="0">0%</option>
             <option value="0.1">10%</option>
             <option value="0.25">25%</option>
