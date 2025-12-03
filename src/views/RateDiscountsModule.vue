@@ -23,7 +23,7 @@ const rateData = ref(null);
 
 const tabs = [
   { id: "rate", name: "Rates" },
-  { id: "discount", name: "Discounts" },
+  { id: "discount", name: "Passenger Type" },
 ];
 
 const routes = ref([{}]);
@@ -166,12 +166,12 @@ onMounted(fetchRoutes);
       <nav class="text-sm text-gray-500 mb-2">
         <span>Dashboard</span>
         <span class="mx-2">></span>
-        <span class="text-gray-900">Rates/Discounts</span>
+        <span class="text-gray-900">Rates/Passenger Types</span>
       </nav>
 
       <div class="flex justify-between items-center">
         <h1 class="text-2xl font-semibold text-gray-900">
-          Rates/Discounts Management
+          Rates/Passenger Types Management
         </h1>
 
         <button
