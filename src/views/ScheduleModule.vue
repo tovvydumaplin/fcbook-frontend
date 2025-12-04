@@ -192,31 +192,34 @@ const handleSaveSchedule = (scheduleData) => {
     </div>
 
     <!-- Tabs -->
-    <div class="bg-white rounded-lg shadow-sm">
-      <div class="border-b border-gray-200">
-        <nav class="flex space-x-8 px-6">
-          <button
-            v-for="tab in tabs"
-            :key="tab.id"
-            @click="activeTab = tab.id"
-            :class="[
-              'py-4 px-1 border-b-2 font-medium text-sm',
-              activeTab === tab.id
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
-            ]"
-          >
-            {{ tab.name }}
-          </button>
-        </nav>
-      </div>
-
+    <div
+      class="border border-gray-300 mb-2 rounded-lg bg-gray-200 inline-block mb-8"
+    >
+      <nav class="flex space-x-4 px-2 py-2">
+        <button
+          v-for="tab in tabs"
+          :key="tab.id"
+          @click="activeTab = tab.id"
+          :class="[
+            'py-2 px-2  font-medium text-sm rounded-md',
+            activeTab === tab.id
+              ? 'bg-white'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-bold',
+          ]"
+        >
+          {{ tab.name }}
+        </button>
+      </nav>
+    </div>
+    <div class="">
       <!-- List of Route Section -->
-      <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- Left: List of Routes as table -->
-        <div>
-          <h2 class="text-lg font-medium text-gray-900 mb-4">List of Route</h2>
-          <div class="flex items-center mb-4">
+        <div class="border border-gray-300 bg-white rounded-lg">
+          <div class="px-4 py-3 border-b border-gray-200 mb-4">
+            <h2 class="text-lg font-medium text-gray-900">List of Route</h2>
+          </div>
+          <div class="flex items-center mb-4 py-2 px-4">
             <div class="relative w-full">
               <Search
                 class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4"
@@ -225,7 +228,7 @@ const handleSaveSchedule = (scheduleData) => {
                 v-model="searchQuery"
                 type="text"
                 placeholder="Search"
-                class="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full"
+                class="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-full"
               />
             </div>
           </div>
@@ -245,22 +248,22 @@ const handleSaveSchedule = (scheduleData) => {
                 >
               </div>
             </div>
-            <div v-else class="overflow-auto max-h-[400px]">
-              <table class="min-w-full divide-y divide-gray-200">
+            <div v-else class="overflow-auto max-h-[400px] px-4 py-2">
+              <table class="min-w-full">
                 <thead class="bg-gray-50">
                   <tr>
                     <th
-                      class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-l-lg rounded-bl-lg"
                     >
                       #
                     </th>
                     <th
-                      class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
                       Route
                     </th>
                     <th
-                      class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-br-lg rounded-tr-lg"
                     >
                       Schedules
                     </th>

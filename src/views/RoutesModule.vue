@@ -36,8 +36,8 @@ const filteredRoutes = computed(() => {
     const q = searchQuery.value.toLowerCase();
     filtered = filtered.filter(
       (r) =>
-        r.origin_port.toLowerCase().includes(q) ||
-        r.destination_port.toLowerCase().includes(q) ||
+        r.port_a_name.toLowerCase().includes(q) ||
+        r.port_b_name.toLowerCase().includes(q) ||
         r.updated_by.toLowerCase().includes(q)
     );
   }
@@ -63,10 +63,12 @@ const fetchRoutes = async () => {
     if (response.ok && data.success && data.data?.routes) {
       routes.value = data.data.routes.map((route, idx) => ({
         id: route.route_id || idx + 1,
-        origin_port: route.port_a,
-        destination_port: route.port_b,
+        port_a_id: route.port_a_id,
+        port_b_id: route.port_b_id,
+        port_a_name: route.port_a?.port_name || "",
+        port_b_name: route.port_b?.port_name || "",
         status: route.status || "Active",
-        updated_by: route.updatedBy || route.updated_by || "Unknown",
+        updated_by: route.port_a?.last_update_by || "Unknown",
         updated_at: route.updated_at ? route.updated_at.slice(0, 10) : "",
       }));
     } else {
@@ -219,12 +221,12 @@ const handleAction = (route) => {
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
-                  Port Origin
+                  Port A
                 </th>
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
-                  Port Destination
+                  Port B
                 </th>
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -258,10 +260,10 @@ const handleAction = (route) => {
                   {{ route.id }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {{ route.origin_port }}
+                  {{ route.port_a_name }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {{ route.destination_port }}
+                  {{ route.port_b_name }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span

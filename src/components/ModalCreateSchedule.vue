@@ -81,9 +81,6 @@
                 <th class="px-4 py-2 text-xs text-gray-500 text-left">
                   Arrival
                 </th>
-                <th class="px-4 py-2 text-xs text-gray-500 text-left">
-                  Vessel
-                </th>
               </tr>
             </thead>
             <tbody>
@@ -101,14 +98,6 @@
                     v-model="row.arrival"
                     type="text"
                     placeholder="Arrival"
-                    class="border border-gray-300 rounded px-2 py-1 w-full"
-                  />
-                </td>
-                <td class="px-4 py-2">
-                  <input
-                    v-model="row.vessel"
-                    type="text"
-                    placeholder="Vessel"
                     class="border border-gray-300 rounded px-2 py-1 w-full"
                   />
                 </td>
@@ -138,9 +127,6 @@
                 <th class="px-4 py-2 text-xs text-gray-500 text-left">
                   Arrival
                 </th>
-                <th class="px-4 py-2 text-xs text-gray-500 text-left">
-                  Vessel
-                </th>
               </tr>
             </thead>
             <tbody>
@@ -158,14 +144,6 @@
                     v-model="row.arrival"
                     type="text"
                     placeholder="Arrival"
-                    class="border border-gray-300 rounded px-2 py-1 w-full"
-                  />
-                </td>
-                <td class="px-4 py-2">
-                  <input
-                    v-model="row.vessel"
-                    type="text"
-                    placeholder="Vessel"
                     class="border border-gray-300 rounded px-2 py-1 w-full"
                   />
                 </td>

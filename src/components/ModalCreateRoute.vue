@@ -51,15 +51,15 @@
             Origin Port
           </label>
           <select
-            v-model="route.port_a"
+            v-model="route.port_a_id"
             required
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="" disabled>Select origin port</option>
             <option
               v-for="port in ports"
-              :key="port.id"
-              :value="port.port_name"
+              :key="port.port_id"
+              :value="port.port_id"
             >
               {{ port.port_name }}
             </option>
@@ -72,15 +72,15 @@
             Destination Port
           </label>
           <select
-            v-model="route.port_b"
+            v-model="route.port_b_id"
             required
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="" disabled>Select destination port</option>
             <option
               v-for="port in ports"
-              :key="port.id + '-dest'"
-              :value="port.port_name"
+              :key="port.port_id + '-dest'"
+              :value="port.port_id"
             >
               {{ port.port_name }}
             </option>
@@ -130,8 +130,8 @@ const errorMsg = ref("");
 
 const ports = ref([]);
 const route = ref({
-  port_a: "",
-  port_b: "",
+  port_a_id: "",
+  port_b_id: "",
 });
 
 onMounted(async () => {
@@ -161,22 +161,29 @@ const saveRoute = async () => {
   isLoading.value = true;
   try {
     const token = localStorage.getItem("token");
+    const payload = {
+      port_a_id: route.value.port_a_id,
+      port_b_id: route.value.port_b_id,
+    };
+    console.log("Sending route payload:", JSON.stringify(payload));
     const response = await fetch(`${apiBase}/routes`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: token,
       },
-      body: JSON.stringify(route.value),
+      body: JSON.stringify(payload),
     });
     const data = await response.json();
     if (response.ok && data.success) {
-      emit("save", { ...route.value });
+      emit("save", { ...payload });
       route.value = {
-        port_a: "",
-        port_b: "",
+        port_a_id: "",
+        port_b_id: "",
       };
       emit("close");
+    } else if (data.error) {
+      errorMsg.value = data.error;
     } else {
       errorMsg.value = data.message || "Failed to save route.";
     }
