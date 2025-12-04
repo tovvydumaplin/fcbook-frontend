@@ -23,7 +23,7 @@ const rateData = ref(null);
 
 const tabs = [
   { id: "rate", name: "Rates" },
-  { id: "discount", name: "Discounts" },
+  { id: "discount", name: "Passenger Type" },
 ];
 
 const routes = ref([{}]);
@@ -59,6 +59,7 @@ const passengerTypes = [
     id: 1,
     passenger_type: "Standard",
     discount: 0,
+    waived: false,
     status: "active",
     updated_at: "2025-06-09",
     updated_by: "John Doe",
@@ -67,6 +68,7 @@ const passengerTypes = [
     id: 2,
     passenger_type: "Senior Citizen",
     discount: 0.25,
+    waived: false,
     status: "active",
     updated_at: "2025-06-09",
     updated_by: "John Doe",
@@ -75,6 +77,16 @@ const passengerTypes = [
     id: 3,
     passenger_type: "Student",
     discount: 0.3,
+    waived: false,
+    status: "active",
+    updated_at: "2025-06-09",
+    updated_by: "John Doe",
+  },
+  {
+    id: 4,
+    passenger_type: "PWD",
+    discount: 0.3,
+    waived: false,
     status: "active",
     updated_at: "2025-06-09",
     updated_by: "John Doe",
@@ -154,12 +166,12 @@ onMounted(fetchRoutes);
       <nav class="text-sm text-gray-500 mb-2">
         <span>Dashboard</span>
         <span class="mx-2">></span>
-        <span class="text-gray-900">Rates/Discounts</span>
+        <span class="text-gray-900">Rates/Passenger Types</span>
       </nav>
 
       <div class="flex justify-between items-center">
         <h1 class="text-2xl font-semibold text-gray-900">
-          Rates/Discounts Management
+          Rates/Passenger Types Management
         </h1>
 
         <button
@@ -386,8 +398,7 @@ onMounted(fetchRoutes);
                       @click="handleAction(acc)"
                       class="font-medium text-blue-600 hover:text-blue-900 flex items-center"
                     >
-                      <Eye class="w-4 h-4 mr-1" />
-                      View
+                      <Edit class="w-4 h-4 mr-1" />
                     </button>
                   </td>
                 </tr>
@@ -428,6 +439,11 @@ onMounted(fetchRoutes);
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500"
                 >
+                  Waived
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500"
+                >
                   Status
                 </th>
                 <th
@@ -458,7 +474,16 @@ onMounted(fetchRoutes);
                 <td class="px-6 py-4 text-sm">
                   {{ passenger.passenger_type }}
                 </td>
-                <td class="px-6 py-4 text-sm">{{ passenger.discount }}</td>
+                <td class="px-6 py-4 text-sm">
+                  <span v-if="passenger.discount > 0">
+                    {{ passenger.discount * 100 }}%</span
+                  >
+                  <span v-else>0%</span>
+                </td>
+                <td class="px-6 py-4 text-sm">
+                  <span v-if="passenger.waived">✅</span>
+                  <span v-else>❌</span>
+                </td>
                 <td class="px-6 py-4 text-sm">{{ passenger.status }}</td>
                 <td class="px-6 py-4 text-sm">{{ passenger.updated_at }}</td>
                 <td class="px-6 py-4 text-sm">{{ passenger.updated_by }}</td>

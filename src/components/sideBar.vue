@@ -185,7 +185,11 @@ const moduleItems = [
   { name: "Vessels", route: "/vessels", icon: BookingIcon },
   { name: "Routes", route: "/routes", icon: BookingIcon },
   { name: "Schedule", route: "/schedule", icon: BookingIcon },
-  { name: "Rates/Discounts", route: "/rates-discounts", icon: BookingIcon },
+  {
+    name: "Rates/Passenger Types",
+    route: "/rates-discounts",
+    icon: BookingIcon,
+  },
 ];
 
 const bookingItems = [

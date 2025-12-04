@@ -364,8 +364,6 @@ const createVessel = () => {
   // Merge classes safely, ensuring seats is always an array
   const mergedClasses = (seatmapData.value?.classes || []).map((c) => ({
     name: c.name,
-    rows: c.rows ?? 0,
-    columns: c.columns ?? 0,
     aircon: c.aircon ?? false,
     wifi: c.wifi ?? false,
     seats: c.seats ?? 0,
