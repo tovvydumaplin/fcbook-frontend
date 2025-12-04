@@ -53,14 +53,10 @@ const filteredRoutes = computed(() => {
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase();
     filtered = filtered.filter((r) => {
-      // Try to match port names or route id
       return (
         r.portA?.port_name?.toLowerCase().includes(q) ||
-        false ||
         r.portB?.port_name?.toLowerCase().includes(q) ||
-        false ||
-        r.route_id?.toString().includes(q) ||
-        false
+        r.route_id?.toString().includes(q)
       );
     });
   }
@@ -213,9 +209,9 @@ const handleSaveSchedule = (scheduleData) => {
     </div>
     <div class="">
       <!-- List of Route Section -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="grid grid-cols-3 gap-6">
         <!-- Left: List of Routes as table -->
-        <div class="border border-gray-300 bg-white rounded-lg">
+        <div class="col-span-1 border border-gray-300 bg-white rounded-lg">
           <div class="px-4 py-3 border-b border-gray-200 mb-4">
             <h2 class="text-lg font-medium text-gray-900">List of Route</h2>
           </div>
@@ -253,17 +249,17 @@ const handleSaveSchedule = (scheduleData) => {
                 <thead class="bg-gray-50">
                   <tr>
                     <th
-                      class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-l-lg rounded-bl-lg"
+                      class="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-l-lg rounded-bl-lg"
                     >
                       #
                     </th>
                     <th
-                      class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      class="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
                       Route
                     </th>
                     <th
-                      class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-br-lg rounded-tr-lg"
+                      class="px-4 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-br-lg rounded-tr-lg"
                     >
                       Schedules
                     </th>
@@ -282,11 +278,11 @@ const handleSaveSchedule = (scheduleData) => {
                     }"
                   >
                     <td
-                      class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-bold"
+                      class="px-4 py-4 whitespace-nowrap text-sm text-blue-600 font-bold"
                     >
                       {{ idx + 1 }}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    <td class="px-4 py-4 whitespace-nowrap text-sm">
                       <span
                         :class="
                           selectedRoute &&
@@ -300,7 +296,7 @@ const handleSaveSchedule = (scheduleData) => {
                       </span>
                     </td>
                     <td
-                      class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                      class="px-4 py-4 whitespace-nowrap text-sm text-gray-900"
                     >
                       {{
                         (route.portA?.schedules?.length || 0) +
@@ -314,8 +310,10 @@ const handleSaveSchedule = (scheduleData) => {
           </div>
         </div>
         <!-- Right: Schedule Details for selected route -->
-        <div>
-          <div class="flex justify-between items-center mb-2">
+        <div class="col-span-2 bg-white rounded-lg border border-gray-200">
+          <div
+            class="flex justify-between items-center mb-2 px-4 py-3 border-b border-gray-200 mb-4"
+          >
             <h2 class="text-lg font-medium text-gray-900">
               {{
                 selectedRoute
@@ -338,25 +336,34 @@ const handleSaveSchedule = (scheduleData) => {
               </button>
             </div>
           </div>
-          <div class="bg-white border rounded-lg p-6 min-h-[200px]">
+          <div class="rounded-lg p-6 min-h-[200px]">
             <template v-if="selectedRoute">
               <div class="w-full grid grid-cols-2 gap-4">
                 <!-- Port A Schedules -->
                 <table class="min-w-full bg-white rounded-b-lg">
                   <thead>
                     <tr>
-                      <th class="text-sm text-center" :colspan="3">
+                      <th
+                        class="text-sm text-center py-2 border-gray-400 bg-gray-200 rounded-tl-lg rounded-tr-lg"
+                        :colspan="3"
+                      >
                         {{ selectedRoute.portA?.port_name || "Port A" }}
                       </th>
                     </tr>
                     <tr>
-                      <th class="px-4 py-2 text-xs text-gray-500 text-left">
+                      <th
+                        class="px-4 py-2 text-xs text-gray-500 text-left border-l border-r border-t border-b border-gray-200"
+                      >
                         Departure
                       </th>
-                      <th class="px-4 py-2 text-xs text-gray-500 text-left">
+                      <th
+                        class="px-4 py-2 text-xs text-gray-500 text-left border-l border-r border-t border-b border-gray-200"
+                      >
                         Vessel
                       </th>
-                      <th class="px-4 py-2 text-xs text-gray-500 text-left">
+                      <th
+                        class="px-4 py-2 text-xs text-gray-500 text-left border-l border-r border-t border-b border-gray-200"
+                      >
                         Status
                       </th>
                     </tr>
@@ -366,13 +373,19 @@ const handleSaveSchedule = (scheduleData) => {
                       v-for="sched in selectedRoute.portA?.schedules || []"
                       :key="sched.sched_id"
                     >
-                      <td class="px-4 py-2 text-sm">
+                      <td
+                        class="px-4 py-2 text-sm border-l border-r border-t border-b border-gray-200"
+                      >
                         {{ sched.departure_time }}
                       </td>
-                      <td class="px-4 py-2 text-sm">
+                      <td
+                        class="px-4 py-2 text-sm border-l border-r border-t border-b border-gray-200"
+                      >
                         {{ sched.vessel || "-" }}
                       </td>
-                      <td class="px-4 py-2 text-sm capitalize">
+                      <td
+                        class="px-4 py-2 text-sm capitalize border-l border-r border-t border-b border-gray-200"
+                      >
                         {{ sched.status }}
                       </td>
                     </tr>
@@ -387,18 +400,27 @@ const handleSaveSchedule = (scheduleData) => {
                 <table class="min-w-full bg-white rounded-b-lg">
                   <thead>
                     <tr>
-                      <th class="text-sm text-center" :colspan="3">
+                      <th
+                        class="text-sm text-center py-2 border-gray-400 bg-gray-200 rounded-tl-lg rounded-tr-lg"
+                        :colspan="3"
+                      >
                         {{ selectedRoute.portB?.port_name || "Port B" }}
                       </th>
                     </tr>
                     <tr>
-                      <th class="px-4 py-2 text-xs text-gray-500 text-left">
+                      <th
+                        class="px-4 py-2 text-xs text-gray-500 text-left border-l border-r border-t border-b border-gray-200"
+                      >
                         Departure
                       </th>
-                      <th class="px-4 py-2 text-xs text-gray-500 text-left">
+                      <th
+                        class="px-4 py-2 text-xs text-gray-500 text-left border-l border-r border-t border-b border-gray-200"
+                      >
                         Vessel
                       </th>
-                      <th class="px-4 py-2 text-xs text-gray-500 text-left">
+                      <th
+                        class="px-4 py-2 text-xs text-gray-500 text-left border-l border-r border-t border-b border-gray-200"
+                      >
                         Status
                       </th>
                     </tr>
@@ -408,13 +430,19 @@ const handleSaveSchedule = (scheduleData) => {
                       v-for="sched in selectedRoute.portB?.schedules || []"
                       :key="sched.sched_id"
                     >
-                      <td class="px-4 py-2 text-sm">
+                      <td
+                        class="px-4 py-2 text-sm border-l border-r border-t border-b border-gray-200"
+                      >
                         {{ sched.departure_time }}
                       </td>
-                      <td class="px-4 py-2 text-sm">
+                      <td
+                        class="px-4 py-2 text-sm border-l border-r border-t border-b border-gray-200"
+                      >
                         {{ sched.vessel || "-" }}
                       </td>
-                      <td class="px-4 py-2 text-sm capitalize">
+                      <td
+                        class="px-4 py-2 text-sm capitalize border-l border-r border-t border-b border-gray-200"
+                      >
                         {{ sched.status }}
                       </td>
                     </tr>
