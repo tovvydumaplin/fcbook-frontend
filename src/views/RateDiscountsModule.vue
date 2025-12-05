@@ -1,6 +1,6 @@
 <!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\views\RateDiscountsModule.vue -->
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, nextTick, onMounted } from "vue";
 import {
   Plus,
   BarChart3,
@@ -20,7 +20,17 @@ const isTableLoading = ref(false);
 const isRateLoading = ref(false);
 const selectedRoute = ref(null);
 const rateData = ref(null);
-
+const editData = ref(null);
+const handleEditPassenger = (passenger) => {
+  editData.value = passenger; // set first
+  nextTick(() => {
+    isModalOpen.value = true; // open modal after DOM updates
+  });
+};
+const handleModalClose = () => {
+  isModalOpen.value = false;
+  editData.value = null;
+};
 const tabs = [
   { id: "rate", name: "Rates" },
   { id: "discount", name: "Passenger Type" },
@@ -54,45 +64,32 @@ const dummyRoutes = [
     ],
   },
 ];
-const passengerTypes = [
-  {
-    id: 1,
-    passenger_type: "Standard",
-    discount: 0,
-    waived: false,
-    status: "active",
-    updated_at: "2025-06-09",
-    updated_by: "John Doe",
-  },
-  {
-    id: 2,
-    passenger_type: "Senior Citizen",
-    discount: 0.25,
-    waived: false,
-    status: "active",
-    updated_at: "2025-06-09",
-    updated_by: "John Doe",
-  },
-  {
-    id: 3,
-    passenger_type: "Student",
-    discount: 0.3,
-    waived: false,
-    status: "active",
-    updated_at: "2025-06-09",
-    updated_by: "John Doe",
-  },
-  {
-    id: 4,
-    passenger_type: "PWD",
-    discount: 0.3,
-    waived: false,
-    status: "active",
-    updated_at: "2025-06-09",
-    updated_by: "John Doe",
-  },
-];
+const passengerTypes = ref([]);
+const fetchPassengerTypes = async () => {
+  try {
+    const token = localStorage.getItem("token");
 
+    const response = await fetch(`${apiBase}/passenger-types/`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success && data.data?.types) {
+      passengerTypes.value = data.data.types;
+    } else {
+      passengerTypes.value = [];
+      console.error("Failed to fetch passenger types:", data.message || data);
+    }
+  } catch (error) {
+    passengerTypes.value = [];
+    console.error("Network error fetching passenger types:", error);
+  }
+};
+onMounted(fetchPassengerTypes);
 const getStatusClass = (status) => {
   if (status === "Active") return "bg-green-100 text-green-800";
   return "bg-gray-100 text-gray-800";
@@ -155,7 +152,10 @@ const fetchRateForRoute = async (route) => {
     isRateLoading.value = false;
   }, 800);
 };
-
+const handlePassengerTypeSaved = () => {
+  fetchPassengerTypes(); // refresh data
+  isModalOpen.value = false;
+};
 onMounted(fetchRoutes);
 </script>
 
@@ -358,6 +358,11 @@ onMounted(fetchRoutes);
                   <th
                     class="px-6 py-3 text-left text-xs font-medium text-gray-500"
                   >
+                    W/O AC
+                  </th>
+                  <th
+                    class="px-6 py-3 text-left text-xs font-medium text-gray-500"
+                  >
                     Last Updated
                   </th>
                   <th
@@ -390,6 +395,7 @@ onMounted(fetchRoutes);
                     <span v-if="acc.rate === null">—</span>
                     <span v-else>₱{{ acc.rate }}</span>
                   </td>
+                  <td class="px-6 py-4 text-sm text-gray-500">—</td>
                   <td class="px-6 py-4 text-sm text-gray-500">—</td>
                   <td class="px-6 py-4 text-sm text-gray-500">—</td>
                   <td class="px-6 py-4 text-sm text-gray-500">—</td>
@@ -467,30 +473,53 @@ onMounted(fetchRoutes);
             <tbody class="bg-white divide-y divide-gray-200">
               <tr
                 v-for="passenger in passengerTypes"
-                :key="passenger.id"
+                :key="passenger.p_id"
                 class="hover:bg-gray-50"
               >
-                <td class="px-6 py-4 text-sm">{{ passenger.id }}</td>
+                <!-- ID -->
                 <td class="px-6 py-4 text-sm">
-                  {{ passenger.passenger_type }}
+                  {{ passenger.p_id }}
                 </td>
+
+                <!-- Passenger Type -->
                 <td class="px-6 py-4 text-sm">
-                  <span v-if="passenger.discount > 0">
-                    {{ passenger.discount * 100 }}%</span
-                  >
-                  <span v-else>0%</span>
+                  {{ passenger.type }}
                 </td>
+
+                <!-- Discount (convert 0.20 → 20%) -->
                 <td class="px-6 py-4 text-sm">
-                  <span v-if="passenger.waived">✅</span>
+                  <span> {{ Number(passenger.discount) * 100 }}% </span>
+                </td>
+
+                <!-- Waived -->
+                <td class="px-6 py-4 text-sm">
+                  <span v-if="passenger.waived">✔️</span>
                   <span v-else>❌</span>
                 </td>
-                <td class="px-6 py-4 text-sm">{{ passenger.status }}</td>
-                <td class="px-6 py-4 text-sm">{{ passenger.updated_at }}</td>
-                <td class="px-6 py-4 text-sm">{{ passenger.updated_by }}</td>
 
+                <!-- Status -->
+                <td class="px-6 py-4 text-sm">
+                  {{ passenger.status }}
+                </td>
+
+                <!-- Updated At -->
+                <td class="px-6 py-4 text-sm">
+                  {{
+                    passenger.updated_at
+                      ? passenger.updated_at.slice(0, 10)
+                      : ""
+                  }}
+                </td>
+
+                <!-- Updated By (your API does NOT return this) -->
+                <td class="px-6 py-4 text-sm">
+                  {{ passenger.updated_by || "Unknown" }}
+                </td>
+
+                <!-- Action Button -->
                 <td class="px-6 py-4 text-sm">
                   <button
-                    @click="handleAction(passenger)"
+                    @click="handleEditPassenger(passenger)"
                     class="font-medium text-blue-600 hover:text-blue-900 flex items-center"
                   >
                     <Edit class="w-4 h-4 mr-1" />
@@ -502,6 +531,11 @@ onMounted(fetchRoutes);
         </div>
       </div>
     </div>
-    <ModalCreatePassengerType v-if="isModalOpen" @close="isModalOpen = false" />
+    <ModalCreatePassengerType
+      v-if="isModalOpen"
+      :editData="editData"
+      @close="handleModalClose"
+      @save="handlePassengerTypeSaved"
+    />
   </div>
 </template>

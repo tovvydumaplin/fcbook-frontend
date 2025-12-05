@@ -21,10 +21,16 @@
       >
         <div>
           <h2 class="text-lg font-semibold text-gray-900">
-            Create Passenger type
+            {{
+              props.editData ? "Edit Passenger Type" : "Create Passenger type"
+            }}
           </h2>
           <p class="text-sm text-gray-500 mt-1">
-            Create passenger type and assign discount %.
+            {{
+              props.editData
+                ? "Edit Passenger Type and discount percentage."
+                : "Create passenger type and assign percentage."
+            }}
           </p>
         </div>
         <button
@@ -55,6 +61,7 @@
           <input
             placeholder="Input Passenger Type name"
             type="text"
+            v-model="passengerTypeName"
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
@@ -64,18 +71,20 @@
           <label class="block text-sm font-medium text-gray-700 mb-2">
             Select Discount
           </label>
+          <!-- Select Discount -->
           <select
-            v-model="route.port_b"
+            v-model="selectedDiscount"
             required
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="" disabled>Select discount percentage</option>
-            <option value="0">0%</option>
-            <option value="0.1">10%</option>
-            <option value="0.25">25%</option>
-            <option value="0.3">30%</option>
-            <option value="0.5">50%</option>
-            <option value="1">100%</option>
+            <option
+              v-for="discount in discounts"
+              :key="discount.type"
+              :value="discount.value"
+            >
+              {{ discount.type }} — {{ discount.value * 100 }}%
+            </option>
           </select>
         </div>
 
@@ -101,7 +110,9 @@
               ></span>
               Saving...
             </span>
-            <span v-else> Save </span>
+            <span v-else>
+              {{ props.editData ? "Save changes" : "Save" }}
+            </span>
           </button>
         </div>
         <div v-if="errorMsg" class="text-red-500 text-sm mt-2 text-center">
@@ -113,66 +124,178 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, watch, onMounted } from "vue";
 
 const emit = defineEmits(["save", "close"]);
 const apiBase = import.meta.env.VITE_API_URL;
+
 const isLoading = ref(false);
 const errorMsg = ref("");
 
-const ports = ref([]);
-const route = ref({
-  port_a: "",
-  port_b: "",
-});
+// FORM FIELDS
+const passengerTypeName = ref("");
+const selectedDiscount = ref("");
 
-onMounted(async () => {
+// DISCOUNTS LIST
+const discounts = ref([]);
+
+// Fetch discount list
+const fetchDiscounts = async () => {
   try {
     const token = localStorage.getItem("token");
-    const response = await fetch(`${apiBase}/ports`, {
+
+    const res = await fetch(`${apiBase}/discount`, {
       headers: {
         "Content-Type": "application/json",
         Authorization: token,
       },
     });
-    const data = await response.json();
-    if (response.ok && data.success && data.data?.ports) {
-      ports.value = data.data.ports;
+
+    const data = await res.json();
+
+    if (res.ok && data.success && data.data?.discounts) {
+      discounts.value = data.data.discounts.map((d) => ({
+        type: d.discount_type,
+        value: Number(d.discount_percentage) / 100, // convert 20 → 0.2
+      }));
     } else {
-      ports.value = [];
-      console.error("Failed to fetch ports:", data.message || data);
+      discounts.value = [];
+      console.error("Failed to fetch discounts:", data.message);
     }
   } catch (err) {
-    ports.value = [];
-    console.error("Network error fetching ports:", err);
+    discounts.value = [];
+    console.error("Network error fetching discounts:", err);
+  }
+};
+
+const props = defineProps({
+  editData: { type: Object, default: null },
+});
+watch(
+  () => props.editData,
+  (newVal) => {
+    if (newVal) {
+      console.log("Editing passenger type ID:", props.editData?.p_id);
+      passengerTypeName.value = newVal.type || "";
+      selectedDiscount.value = Number(newVal.discount) || "";
+    } else {
+      passengerTypeName.value = "";
+      selectedDiscount.value = "";
+    }
+  },
+  { immediate: true } // optional: populate immediately if already exists
+);
+onMounted(() => {
+  fetchDiscounts();
+
+  if (props.editData) {
+    passengerTypeName.value = props.editData.type;
+    selectedDiscount.value = Number(props.editData.discount) || "";
   }
 });
+// Save or update passenger type
+// const savePassengerType = async () => {
+//   if (!passengerTypeName.value) {
+//     errorMsg.value = "Passenger type name is required.";
+//     return;
+//   }
 
-const saveRoute = async () => {
-  errorMsg.value = "";
+//   isLoading.value = true;
+//   errorMsg.value = "";
+
+//   try {
+//     const token = localStorage.getItem("token");
+
+//     const payload = {
+//       type: passengerTypeName.value,
+//       discount: selectedDiscount.value,
+//     };
+
+//     // Determine if this is a new create or an update
+//     const isEdit = !!props.editData;
+//     const url = isEdit
+//       ? `${apiBase}/passenger-types/${props.editData.p_id}`
+//       : `${apiBase}/passenger-types`;
+
+//     const method = isEdit ? "PUT" : "POST";
+
+//     const res = await fetch(url, {
+//       method,
+//       headers: {
+//         "Content-Type": "application/json",
+//         Authorization: token,
+//       },
+//       body: JSON.stringify(payload),
+//     });
+
+//     const data = await res.json();
+
+//     if (res.ok && data.success) {
+//       emit("save", data.data);
+//       emit("close");
+//     } else {
+//       if (data.error && data.error.toLowerCase().includes("duplicate")) {
+//         errorMsg.value = "This passenger type already exists.";
+//       } else {
+//         // fallback to generic message
+//         errorMsg.value = data.message || "Failed to save passenger type.";
+//       }
+//     }
+//   } catch (err) {
+//     errorMsg.value = "Network error. Please try again.";
+//     console.error(err);
+//   } finally {
+//     isLoading.value = false;
+//   }
+// };
+const savePassengerType = async () => {
+  if (!passengerTypeName.value) {
+    errorMsg.value = "Passenger type name is required.";
+    return;
+  }
+
   isLoading.value = true;
+  errorMsg.value = "";
+
   try {
     const token = localStorage.getItem("token");
-    const response = await fetch(`${apiBase}/routes`, {
-      method: "POST",
+
+    const payload = {
+      type: passengerTypeName.value.trim(),
+      discount: selectedDiscount.value,
+    };
+
+    // Determine if this is create or update
+    const isEdit = !!props.editData;
+    const url = isEdit
+      ? `${apiBase}/passenger-types/${props.editData.p_id}`
+      : `${apiBase}/passenger-types`;
+    const method = isEdit ? "PUT" : "POST";
+
+    const res = await fetch(url, {
+      method,
       headers: {
         "Content-Type": "application/json",
         Authorization: token,
       },
-      body: JSON.stringify(route.value),
+      body: JSON.stringify(payload),
     });
-    const data = await response.json();
-    if (response.ok && data.success) {
-      emit("save", { ...route.value });
-      route.value = {
-        port_a: "",
-        port_b: "",
-      };
+
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      emit("save", data.data);
       emit("close");
     } else {
-      errorMsg.value = data.message || "Failed to save route.";
+      // Handle duplicate error gracefully
+      if (data.error && data.error.includes("Duplicate entry")) {
+        errorMsg.value = "This passenger type already exists.";
+      } else {
+        errorMsg.value = data.message || "Failed to save passenger type.";
+      }
     }
   } catch (err) {
+    console.error("Network or server error:", err);
     errorMsg.value = "Network error. Please try again.";
   } finally {
     isLoading.value = false;
