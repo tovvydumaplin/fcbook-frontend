@@ -194,20 +194,12 @@ const moduleItems = [
 
 const bookingItems = [
   { name: "Teller Booking", route: "/teller-booking", icon: BookingIcon },
-  { name: "Merchant Booking", route: "/merchant-booking", icon: BookingIcon },
-  { name: "VIP Booking", route: "/vip-booking", icon: BookingIcon },
-  { name: "Cancellations/Refunds", route: "/cancellations", icon: BookingIcon },
-  { name: "Cancellations/Refunds", route: "/cancellations", icon: BookingIcon },
-  { name: "Cancellations/Refunds", route: "/cancellations", icon: BookingIcon },
-  { name: "Cancellations/Refunds", route: "/cancellations", icon: BookingIcon },
-  { name: "Cancellations/Refunds", route: "/cancellations", icon: BookingIcon },
-  { name: "Cancellations/Refunds", route: "/cancellations", icon: BookingIcon },
-  { name: "Cancellations/Refunds", route: "/cancellations", icon: BookingIcon },
-  { name: "Cancellations/Refunds", route: "/cancellations", icon: BookingIcon },
-  { name: "Cancellations/Refunds", route: "/cancellations", icon: BookingIcon },
+  // { name: "Merchant Booking", route: "/merchant-booking", icon: BookingIcon },
+  // { name: "VIP Booking", route: "/vip-booking", icon: BookingIcon },
+  // { name: "Cancellations/Refunds", route: "/cancellations", icon: BookingIcon },
 ];
 
-const logsItems = [
-  { name: "Employee Logs", route: "/employee-logs", icon: LogIcon },
-];
+// const logsItems = [
+//   { name: "Employee Logs", route: "/employee-logs", icon: LogIcon },
+// ];
 </script>

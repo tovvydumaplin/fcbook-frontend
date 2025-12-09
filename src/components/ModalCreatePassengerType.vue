@@ -87,7 +87,24 @@
             </option>
           </select>
         </div>
+        <!-- CHECKBOX  -->
+        <div class="flex items-center gap-3">
+          <div class="relative inline-block w-11 h-5">
+            <input
+              type="checkbox"
+              v-model="waived"
+              class="peer appearance-none w-11 h-5 bg-slate-300 rounded-full checked:bg-green-600 cursor-pointer transition-colors duration-300"
+              :disabled="isLoading"
+            />
+            <label
+              class="absolute top-0 left-0 w-5 h-5 bg-white rounded-full border border-slate-300 shadow-sm transition-transform duration-300 peer-checked:translate-x-6 peer-checked:border-green-600 cursor-pointer"
+            ></label>
+          </div>
 
+          <span class="text-sm text-gray-700 select-none">
+            {{ waived ? "Waived" : "Not Waived" }}
+          </span>
+        </div>
         <!-- Modal Footer -->
         <div
           class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200"
@@ -128,7 +145,7 @@ import { ref, watch, onMounted } from "vue";
 
 const emit = defineEmits(["save", "close"]);
 const apiBase = import.meta.env.VITE_API_URL;
-
+const waived = ref(false);
 const isLoading = ref(false);
 const errorMsg = ref("");
 
@@ -175,15 +192,16 @@ watch(
   () => props.editData,
   (newVal) => {
     if (newVal) {
-      console.log("Editing passenger type ID:", props.editData?.p_id);
       passengerTypeName.value = newVal.type || "";
       selectedDiscount.value = Number(newVal.discount) || "";
+      waived.value = newVal.waived ?? false;
     } else {
       passengerTypeName.value = "";
       selectedDiscount.value = "";
+      waived.value = false;
     }
   },
-  { immediate: true } // optional: populate immediately if already exists
+  { immediate: true }
 );
 onMounted(() => {
   fetchDiscounts();
@@ -193,61 +211,7 @@ onMounted(() => {
     selectedDiscount.value = Number(props.editData.discount) || "";
   }
 });
-// Save or update passenger type
-// const savePassengerType = async () => {
-//   if (!passengerTypeName.value) {
-//     errorMsg.value = "Passenger type name is required.";
-//     return;
-//   }
 
-//   isLoading.value = true;
-//   errorMsg.value = "";
-
-//   try {
-//     const token = localStorage.getItem("token");
-
-//     const payload = {
-//       type: passengerTypeName.value,
-//       discount: selectedDiscount.value,
-//     };
-
-//     // Determine if this is a new create or an update
-//     const isEdit = !!props.editData;
-//     const url = isEdit
-//       ? `${apiBase}/passenger-types/${props.editData.p_id}`
-//       : `${apiBase}/passenger-types`;
-
-//     const method = isEdit ? "PUT" : "POST";
-
-//     const res = await fetch(url, {
-//       method,
-//       headers: {
-//         "Content-Type": "application/json",
-//         Authorization: token,
-//       },
-//       body: JSON.stringify(payload),
-//     });
-
-//     const data = await res.json();
-
-//     if (res.ok && data.success) {
-//       emit("save", data.data);
-//       emit("close");
-//     } else {
-//       if (data.error && data.error.toLowerCase().includes("duplicate")) {
-//         errorMsg.value = "This passenger type already exists.";
-//       } else {
-//         // fallback to generic message
-//         errorMsg.value = data.message || "Failed to save passenger type.";
-//       }
-//     }
-//   } catch (err) {
-//     errorMsg.value = "Network error. Please try again.";
-//     console.error(err);
-//   } finally {
-//     isLoading.value = false;
-//   }
-// };
 const savePassengerType = async () => {
   if (!passengerTypeName.value) {
     errorMsg.value = "Passenger type name is required.";
@@ -263,6 +227,7 @@ const savePassengerType = async () => {
     const payload = {
       type: passengerTypeName.value.trim(),
       discount: selectedDiscount.value,
+      waived: waived.value,
     };
 
     // Determine if this is create or update

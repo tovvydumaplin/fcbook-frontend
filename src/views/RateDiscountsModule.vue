@@ -187,17 +187,19 @@ onMounted(fetchRoutes);
     </div>
 
     <!-- TABS -->
-    <div class="bg-white rounded-lg shadow-sm w-fit mb-4">
-      <nav class="flex space-x-8 px-6">
+    <div
+      class="border border-gray-300 mb-2 rounded-lg bg-gray-200 inline-block mb-8"
+    >
+      <nav class="flex space-x-4 px-2 py-2">
         <button
           v-for="tab in tabs"
           :key="tab.id"
           @click="activeTab = tab.id"
           :class="[
-            'py-4 px-1 border-b-2 font-medium text-sm',
+            'py-2 px-2  font-medium text-sm rounded-md',
             activeTab === tab.id
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+              ? 'bg-white'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 font-bold',
           ]"
         >
           {{ tab.name }}
@@ -493,7 +495,7 @@ onMounted(fetchRoutes);
 
                 <!-- Waived -->
                 <td class="px-6 py-4 text-sm">
-                  <span v-if="passenger.waived">✔️</span>
+                  <span v-if="passenger.waived">✅</span>
                   <span v-else>❌</span>
                 </td>
 
