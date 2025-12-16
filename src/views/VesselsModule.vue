@@ -1,94 +1,5 @@
 <!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\views\VesselsModule.vue -->
-<script setup>
-import { ref, computed, onMounted } from "vue";
-import { Plus, BarChart3, AlertCircle, Search, Eye } from "lucide-vue-next";
-import ModalCreateVessel from "../components/ModalCreateVessel.vue";
-import ModalCreateSeatmap from "../components/ModalCreateSeatmap.vue";
 
-const apiBase = import.meta.env.VITE_API_URL;
-const activeTab = ref("all");
-const searchQuery = ref("");
-const isTableLoading = ref(false);
-const isLoading = ref(false);
-const isModalOpen = ref(false);
-const showSeatmapModal = ref(false);
-const seatmapData = ref(null);
-const tabs = [
-  { id: "all", name: "All Vessels" },
-  { id: "available", name: "Available Vessels" },
-  { id: "drydock", name: "Drydock" },
-  { id: "grounded", name: "Grounded" },
-];
-const editVessel = ref(null);
-const vessels = ref([]);
-const openCreateModal = () => {
-  editVessel.value = null; // create mode
-  isModalOpen.value = true;
-};
-const selectedVessel = ref(null);
-
-const openEditModal = (vessel) => {
-  // ensure vessel.classes is always an array to prevent template errors
-  if (!vessel.classes) vessel.classes = [];
-  editVessel.value = vessel; // edit mode
-  isModalOpen.value = true;
-};
-
-const filteredVessels = computed(() => {
-  if (activeTab.value === "all") return vessels.value;
-  if (activeTab.value === "available")
-    return vessels.value.filter((v) => v.status === "Available");
-  if (activeTab.value === "drydock")
-    return vessels.value.filter((v) => v.status === "Drydock");
-  if (activeTab.value === "grounded")
-    return vessels.value.filter((v) => v.status === "Grounded");
-  return [];
-});
-
-const getStatusClass = (status) => {
-  if (status === "Available") return "bg-green-100 text-green-800";
-  return "bg-gray-100 text-gray-800";
-};
-
-const handleSeatmapSave = (seatmapPayload) => {
-  if (!selectedVessel.value) return;
-
-  // Find vessel index
-  const index = vessels.value.findIndex(
-    (v) => v.id === selectedVessel.value.id
-  );
-
-  if (index === -1) return;
-
-  // Merge seats into classes
-  vessels.value[index].classes = vessels.value[index].classes.map((cls) => {
-    const found = seatmapPayload.classes.find((c) => c.name === cls.name);
-
-    return {
-      ...cls,
-      rows: found?.rows || cls.rows,
-      columns: found?.columns || cls.columns,
-      seats: found?.seats || cls.seats, // <--- Save seats here
-    };
-  });
-
-  showSeatmapModal.value = false;
-};
-
-const handleSaveVessel = (vesselData) => {
-  if (editVessel.value) {
-    // Edit mode: update existing vessel
-    Object.assign(editVessel.value, vesselData);
-  } else {
-    // Create mode: add new vessel
-    vessels.value.push({
-      id: vessels.value.length + 1,
-      ...vesselData,
-    });
-  }
-  isModalOpen.value = false;
-};
-</script>
 <template>
   <div class="min-h-screen bg-gray-50 p-6">
     <!-- Header -->
@@ -239,57 +150,100 @@ const handleSaveVessel = (vesselData) => {
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
+              <!-- LOADING -->
+              <tr v-if="isLoading">
+                <td
+                  colspan="8"
+                  class="px-6 py-6 text-center text-sm text-gray-500"
+                >
+                  Loading vessels...
+                </td>
+              </tr>
+
+              <!-- EMPTY -->
+              <tr v-else-if="filteredVessels.length === 0">
+                <td
+                  colspan="8"
+                  class="px-6 py-6 text-center text-sm text-gray-500"
+                >
+                  No vessels found.
+                </td>
+              </tr>
+
+              <!-- DATA -->
               <tr
+                v-else
                 v-for="vessel in filteredVessels"
                 :key="vessel.id"
                 class="hover:bg-gray-50 align-top"
               >
+                <!-- ID -->
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {{ vessel.id }}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {{ vessel.name }}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  <ul>
-                    <li v-for="(clas, index) in vessel.classes" :key="index">
-                      {{ clas.name }}
-                    </li>
-                  </ul>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  <ul>
-                    <li v-for="(clas, index) in vessel.classes" :key="index">
-                      {{ clas.seats }}
-                    </li>
-                  </ul>
+                  {{ vessel.id || "-" }}
                 </td>
 
+                <!-- Vessel Name -->
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  <ul>
-                    <li v-for="(clas, index) in vessel.classes" :key="index">
-                      <span v-if="clas.aircon">✅</span>
-                      <span v-else>❌</span>
-                    </li>
-                  </ul>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  <ul>
-                    <li v-for="(clas, index) in vessel.classes" :key="index">
-                      <span v-if="clas.wifi">✅</span>
-                      <span v-else>❌</span>
-                    </li>
-                  </ul>
+                  {{ vessel.name || "-" }}
                 </td>
 
+                <!-- Class Names -->
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <ul v-if="vessel.classes && vessel.classes.length">
+                    <li v-for="(cls, index) in vessel.classes" :key="index">
+                      {{ cls.name || "-" }}
+                    </li>
+                  </ul>
+                  <span v-else>-</span>
+                </td>
+
+                <!-- Seats -->
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <ul v-if="vessel.classes && vessel.classes.length">
+                    <li v-for="(cls, index) in vessel.classes" :key="index">
+                      {{ cls.seats.length }}
+                    </li>
+                  </ul>
+                  <span v-else>-</span>
+                </td>
+
+                <!-- Aircon -->
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <ul v-if="vessel.classes && vessel.classes.length">
+                    <li v-for="(cls, index) in vessel.classes" :key="index">
+                      <span v-if="cls.aircon === true">✅</span>
+                      <span v-else-if="cls.aircon === false">❌</span>
+                      <span v-else>-</span>
+                    </li>
+                  </ul>
+                  <span v-else>-</span>
+                </td>
+
+                <!-- WiFi -->
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <ul v-if="vessel.classes && vessel.classes.length">
+                    <li v-for="(cls, index) in vessel.classes" :key="index">
+                      <span v-if="cls.wifi === true">✅</span>
+                      <span v-else-if="cls.wifi === false">❌</span>
+                      <span v-else>-</span>
+                    </li>
+                  </ul>
+                  <span v-else>-</span>
+                </td>
+
+                <!-- Status -->
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span
+                    v-if="vessel.status"
                     :class="getStatusClass(vessel.status)"
                     class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
                   >
                     {{ vessel.status }}
                   </span>
+                  <span v-else>-</span>
                 </td>
+
+                <!-- Action -->
                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                   <button
                     @click="openEditModal(vessel)"
@@ -322,3 +276,138 @@ const handleSaveVessel = (vesselData) => {
     />
   </div>
 </template>
+<script setup>
+import { ref, computed, onMounted } from "vue";
+import { Plus, BarChart3, AlertCircle, Search, Eye } from "lucide-vue-next";
+import ModalCreateVessel from "../components/ModalCreateVessel.vue";
+import ModalCreateSeatmap from "../components/ModalCreateSeatmap.vue";
+
+const apiBase = import.meta.env.VITE_API_URL;
+const activeTab = ref("all");
+const searchQuery = ref("");
+const isTableLoading = ref(false);
+const isLoading = ref(false);
+const isModalOpen = ref(false);
+const showSeatmapModal = ref(false);
+const seatmapData = ref(null);
+const editVessel = ref(null);
+const vessels = ref([]);
+const selectedVessel = ref(null);
+const tabs = [
+  { id: "all", name: "All Vessels" },
+  { id: "available", name: "Available Vessels" },
+  { id: "drydock", name: "Drydock" },
+  { id: "grounded", name: "Grounded" },
+];
+
+const fetchVessels = async () => {
+  isLoading.value = true;
+  try {
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${apiBase}/vessels`, {
+      headers: { "Content-Type": "application/json", Authorization: token },
+    });
+    const data = await res.json();
+
+    if (res.ok && data.success && data.data?.vessels) {
+      vessels.value = await Promise.all(
+        data.data.vessels.map(async (v) => {
+          const layoutRes = await fetch(`${apiBase}/vessels/${v.id}/layout`, {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: token,
+            },
+          });
+          const layoutData = await layoutRes.json();
+
+          const classes = (layoutData.classes || []).map((cls) => ({
+            name: cls.name,
+            aircon: cls.aircon,
+            wifi: cls.wifi,
+            seats: cls.seats.filter(
+              (s) => !s.blocked && !s.path && !s.facility
+            ),
+          }));
+
+          return {
+            id: v.id,
+            name: v.vessel_name,
+            status: v.status,
+            classes,
+          };
+        })
+      );
+    } else {
+      vessels.value = [];
+    }
+  } catch (err) {
+    vessels.value = [];
+    console.error("Failed to fetch vessels", err);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+onMounted(fetchVessels);
+
+const openCreateModal = () => {
+  editVessel.value = null;
+  isModalOpen.value = true;
+};
+
+const openEditModal = (vessel) => {
+  if (!vessel.classes) vessel.classes = [];
+  editVessel.value = vessel;
+  isModalOpen.value = true;
+};
+
+const filteredVessels = computed(() => {
+  if (activeTab.value === "all") return vessels.value;
+  if (activeTab.value === "available")
+    return vessels.value.filter((v) => v.status === "Available");
+  if (activeTab.value === "drydock")
+    return vessels.value.filter((v) => v.status === "Drydock");
+  if (activeTab.value === "grounded")
+    return vessels.value.filter((v) => v.status === "Grounded");
+  return [];
+});
+
+const getStatusClass = (status) => {
+  if (status === "Available") return "bg-green-100 text-green-800";
+  return "bg-gray-100 text-gray-800";
+};
+
+const handleSeatmapSave = (seatmapPayload) => {
+  if (!selectedVessel.value) return;
+
+  const index = vessels.value.findIndex(
+    (v) => v.id === selectedVessel.value.id
+  );
+  if (index === -1) return;
+
+  vessels.value[index].classes = vessels.value[index].classes.map((cls) => {
+    const found = seatmapPayload.classes.find((c) => c.name === cls.name);
+    return {
+      ...cls,
+      rows: found?.rows || cls.rows,
+      columns: found?.columns || cls.columns,
+      seats: found?.seats || cls.seats,
+    };
+  });
+
+  showSeatmapModal.value = false;
+};
+const handleSaveVessel = (vesselData) => {
+  // Ensure classes array exists so table shows properly
+  const classes = vesselData.classes || [];
+
+  vessels.value.push({
+    id: vesselData.id,
+    name: vesselData.vessel_name,
+    status: vesselData.status,
+    classes: [], // no seats yet
+  });
+
+  isModalOpen.value = false;
+};
+</script>

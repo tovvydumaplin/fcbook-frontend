@@ -1,163 +1,4 @@
 <!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\views\RateDiscountsModule.vue -->
-<script setup>
-import { ref, computed, nextTick, onMounted } from "vue";
-import {
-  Plus,
-  BarChart3,
-  AlertCircle,
-  Search,
-  Edit,
-  Eye,
-  List,
-} from "lucide-vue-next";
-import ModalCreatePassengerType from "../components/ModalCreatePassengerType.vue";
-
-const apiBase = import.meta.env.VITE_API_URL;
-const isModalOpen = ref(false);
-const activeTab = ref("rate");
-const searchQuery = ref("");
-const isTableLoading = ref(false);
-const isRateLoading = ref(false);
-const selectedRoute = ref(null);
-const rateData = ref(null);
-const editData = ref(null);
-const handleEditPassenger = (passenger) => {
-  editData.value = passenger; // set first
-  nextTick(() => {
-    isModalOpen.value = true; // open modal after DOM updates
-  });
-};
-const handleModalClose = () => {
-  isModalOpen.value = false;
-  editData.value = null;
-};
-const tabs = [
-  { id: "rate", name: "Rates" },
-  { id: "discount", name: "Passenger Type" },
-];
-
-const routes = ref([{}]);
-const dummyRoutes = [
-  {
-    id: 1,
-    route_name: "Batangas – Calapan",
-    accommodations: [
-      { id: 1, class_name: "Business Class", rate: 654 },
-      { id: 2, class_name: "Premium Economy", rate: 452 },
-      { id: 3, class_name: "Economy Class", rate: 351 },
-    ],
-  },
-  {
-    id: 2,
-    route_name: "Bulalacao – Caticlan",
-    accommodations: [
-      { id: 1, class_name: "Business Class", rate: null },
-      { id: 2, class_name: "Premium Economy", rate: null },
-    ],
-  },
-  {
-    id: 3,
-    route_name: "Cebu – Tubigon",
-    accommodations: [
-      { id: 3, class_name: "Economy Class", rate: null },
-      { id: 4, class_name: "Pets ", rate: null },
-    ],
-  },
-];
-const passengerTypes = ref([]);
-const fetchPassengerTypes = async () => {
-  try {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${apiBase}/passenger-types/`, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-    });
-
-    const data = await response.json();
-
-    if (response.ok && data.success && data.data?.types) {
-      passengerTypes.value = data.data.types;
-    } else {
-      passengerTypes.value = [];
-      console.error("Failed to fetch passenger types:", data.message || data);
-    }
-  } catch (error) {
-    passengerTypes.value = [];
-    console.error("Network error fetching passenger types:", error);
-  }
-};
-onMounted(fetchPassengerTypes);
-const getStatusClass = (status) => {
-  if (status === "Active") return "bg-green-100 text-green-800";
-  return "bg-gray-100 text-gray-800";
-};
-
-const filteredRoutes = computed(() => {
-  let filtered = routes.value;
-
-  if (activeTab.value === "active")
-    filtered = filtered.filter((r) => r.status === "Active");
-  else if (activeTab.value === "closed")
-    filtered = filtered.filter((r) => r.status !== "Active");
-
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase();
-    filtered = filtered.filter((r) => r.route_name.toLowerCase().includes(q));
-  }
-  return filtered;
-});
-
-const fetchRoutes = async () => {
-  isTableLoading.value = true;
-  try {
-    const token = localStorage.getItem("token");
-    const response = await fetch(`${apiBase}/routes`, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-    });
-    const data = await response.json();
-    if (response.ok && data.success && data.data?.routes) {
-      routes.value = data.data.routes.map((route, idx) => ({
-        id: route.route_id || idx + 1,
-        route_name: `${route.port_a} - ${route.port_b}`,
-        port_a: route.port_a,
-        port_b: route.port_b,
-        schedules: route.schedules_count || 0,
-        status: route.status || "Active",
-      }));
-    } else {
-      routes.value = [];
-      console.error("Failed to fetch routes:", data.message || data);
-    }
-  } catch (err) {
-    routes.value = [];
-    console.error("Network error fetching routes:", err);
-  } finally {
-    isTableLoading.value = false;
-  }
-};
-
-const fetchRateForRoute = async (route) => {
-  isRateLoading.value = true;
-  selectedRoute.value = null;
-  rateData.value = null;
-
-  setTimeout(() => {
-    selectedRoute.value = route;
-    isRateLoading.value = false;
-  }, 800);
-};
-const handlePassengerTypeSaved = () => {
-  fetchPassengerTypes(); // refresh data
-  isModalOpen.value = false;
-};
-onMounted(fetchRoutes);
-</script>
 
 <template>
   <div class="min-h-screen bg-gray-50 p-6">
@@ -171,7 +12,7 @@ onMounted(fetchRoutes);
 
       <div class="flex justify-between items-center">
         <h1 class="text-2xl font-semibold text-gray-900">
-          Rates/Passenger Types Management
+          Rates/Passenger Types
         </h1>
 
         <button
@@ -268,7 +109,7 @@ onMounted(fetchRoutes);
 
                 <tbody class="bg-white divide-y divide-gray-200">
                   <tr
-                    v-for="route in dummyRoutes"
+                    v-for="route in filteredRoutes"
                     :key="route.id"
                     @click="fetchRateForRoute(route)"
                     class="hover:bg-gray-50 cursor-pointer"
@@ -397,10 +238,19 @@ onMounted(fetchRoutes);
                     <span v-if="acc.rate === null">—</span>
                     <span v-else>₱{{ acc.rate }}</span>
                   </td>
+                  <td class="px-6 py-4 text-sm text-gray-500">
+                    <span v-if="acc.withoutAC === null">—</span>
+                    <span v-else>₱{{ acc.withoutAC }}</span>
+                  </td>
                   <td class="px-6 py-4 text-sm text-gray-500">—</td>
-                  <td class="px-6 py-4 text-sm text-gray-500">—</td>
-                  <td class="px-6 py-4 text-sm text-gray-500">—</td>
-                  <td class="px-6 py-4 text-sm text-gray-500">—</td>
+                  <td class="px-6 py-4 text-sm text-gray-500">
+                    <span v-if="acc.updated_by === null">—</span>
+                    <span v-else>{{ acc.updated_by }}</span>
+                  </td>
+                  <td class="px-6 py-4 text-sm text-gray-500">
+                    <span v-if="acc.status === null">—</span>
+                    <span v-else>{{ acc.status }}</span>
+                  </td>
                   <td class="px-6 py-4 text-sm">
                     <button
                       @click="handleAction(acc)"
@@ -541,3 +391,218 @@ onMounted(fetchRoutes);
     />
   </div>
 </template>
+<script setup>
+import { ref, computed, nextTick, onMounted } from "vue";
+import {
+  Plus,
+  BarChart3,
+  AlertCircle,
+  Search,
+  Edit,
+  Eye,
+  List,
+} from "lucide-vue-next";
+import ModalCreatePassengerType from "../components/ModalCreatePassengerType.vue";
+
+const apiBase = import.meta.env.VITE_API_URL;
+const isModalOpen = ref(false);
+const activeTab = ref("rate");
+const searchQuery = ref("");
+const isTableLoading = ref(false);
+const isRateLoading = ref(false);
+const selectedRoute = ref(null);
+const rateData = ref(null);
+const editData = ref(null);
+const accommodations = ref([]);
+const handleEditPassenger = (passenger) => {
+  editData.value = passenger; // set first
+  nextTick(() => {
+    isModalOpen.value = true; // open modal after DOM updates
+  });
+};
+const handleModalClose = () => {
+  isModalOpen.value = false;
+  editData.value = null;
+};
+const tabs = [
+  { id: "rate", name: "Rates" },
+  { id: "discount", name: "Passenger Type" },
+];
+
+const routes = ref([{}]);
+const passengerTypes = ref([]);
+const fetchPassengerAccommodations = async () => {
+  try {
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(`${apiBase}/passenger-accommodations`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.data) {
+      accommodations.value = data.data;
+    } else {
+      accommodations.value = [];
+    }
+  } catch (err) {
+    accommodations.value = [];
+    console.error("Accommodation fetch error", err);
+  }
+};
+
+const fetchPassengerTypes = async () => {
+  try {
+    const token = localStorage.getItem("token");
+
+    const response = await fetch(`${apiBase}/passenger-types/`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success && data.data?.types) {
+      passengerTypes.value = data.data.types;
+    } else {
+      passengerTypes.value = [];
+      console.error("Failed to fetch passenger types:", data.message || data);
+    }
+  } catch (error) {
+    passengerTypes.value = [];
+    console.error("Network error fetching passenger types:", error);
+  }
+};
+onMounted(fetchPassengerTypes);
+const getStatusClass = (status) => {
+  if (status === "Active") return "bg-green-100 text-green-800";
+  return "bg-gray-100 text-gray-800";
+};
+
+const filteredRoutes = computed(() => {
+  let filtered = routes.value;
+  if (activeTab.value === "active")
+    filtered = filtered.filter((r) => r.status === "Active");
+  else if (activeTab.value === "closed")
+    filtered = filtered.filter((r) => r.status !== "Active");
+
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase();
+    filtered = filtered.filter((r) => {
+      return (
+        r.portA?.port_name?.toLowerCase().includes(q) ||
+        r.portB?.port_name?.toLowerCase().includes(q) ||
+        r.route_id?.toString().includes(q)
+      );
+    });
+  }
+  return filtered;
+});
+
+const fetchRoutes = async () => {
+  isTableLoading.value = true;
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${apiBase}/routes`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+    });
+    const data = await response.json();
+    if (response.ok && data.success && data.data?.routes) {
+      routes.value = data.data.routes.map((route, idx) => ({
+        id: route.route_id || idx + 1,
+        route_name: `${route.port_a.port_name} - ${route.port_b.port_name}`,
+        port_a: route.port_a,
+        port_b: route.port_b,
+        schedules: route.schedules_count || 0,
+        status: route.status || "Active",
+      }));
+    } else {
+      routes.value = [];
+      console.error("Failed to fetch routes:", data.message || data);
+    }
+  } catch (err) {
+    routes.value = [];
+    console.error("Network error fetching routes:", err);
+  } finally {
+    isTableLoading.value = false;
+  }
+};
+
+const fetchRateForRoute = async (route) => {
+  isRateLoading.value = true;
+  selectedRoute.value = null;
+
+  try {
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(`${apiBase}/routes/${route.id}/rates`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+    });
+
+    const data = await res.json();
+
+    const rateMap = {};
+
+    // ✅ Make sure we use the correct array from the response
+    if (res.ok && Array.isArray(data.accommodations)) {
+      data.accommodations.forEach((r) => {
+        // Normalize key: trim and lowercase
+        rateMap[r.accommodation.trim().toLowerCase()] = r;
+      });
+    }
+
+    // Merge with master accommodations
+    selectedRoute.value = {
+      ...route,
+      accommodations: accommodations.value.map((acc) => {
+        const key = acc.accommodation_name.trim().toLowerCase();
+        const rate = rateMap[key];
+
+        return {
+          id: acc.accommodation_id,
+          class_name: acc.accommodation_name,
+          rate: rate ? rate.baseRate : null,
+          withoutAC: rate ? rate.withoutAC ?? null : null,
+          updated_by: rate ? rate.updatedBy ?? null : null,
+          status: rate ? rate.status ?? null : null,
+        };
+      }),
+    };
+  } catch (err) {
+    console.error("Rate fetch error", err);
+
+    // fallback — still show rows
+    selectedRoute.value = {
+      ...route,
+      accommodations: accommodations.value.map((acc) => ({
+        id: acc.accommodation_id,
+        class_name: acc.accommodation_name,
+        rate: null,
+        withoutAC: null,
+        updated_by: null,
+        status: null,
+      })),
+    };
+  } finally {
+    isRateLoading.value = false;
+  }
+};
+
+onMounted(async () => {
+  await fetchPassengerAccommodations(); // MUST BE FIRST
+  await fetchRoutes();
+  fetchPassengerTypes();
+});
+</script>

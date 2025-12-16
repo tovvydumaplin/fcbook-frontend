@@ -112,7 +112,7 @@
               <!-- If no seatmap yet -->
               <tr v-if="!seatmapData || !(seatmapData.classes?.length || 0)">
                 <td colspan="3" class="py-4 text-center text-gray-500">
-                  No class has been added yet.
+                  No seatmap created yet. Please create a seatmap.
                 </td>
               </tr>
 
@@ -123,7 +123,9 @@
                 :key="index"
               >
                 <td class="py-2">
-                  <p class="text-sm">{{ cls.name }}: {{ cls.seats }}</p>
+                  <p class="text-sm">
+                    {{ cls.name }}: {{ cls.seats?.length || 0 }}
+                  </p>
                 </td>
 
                 <!-- Aircon -->
@@ -176,54 +178,6 @@
           </table>
           <!-- TABLE ENDS HERE SWITCHES  -->
         </div>
-        <div class="w-full mt-4">
-          <select
-            v-if="isOpen"
-            v-model="selectedClassIndex"
-            class="mb-4 w-full px-3 py-2 border rounded-md"
-          >
-            <option value="" disabled>Select accommodation</option>
-            <option
-              v-for="seat in availableClasses"
-              :key="seat.name"
-              :value="seat.name"
-            >
-              {{ seat.name }}
-            </option>
-          </select>
-          <input
-            v-if="isOpen"
-            v-model="seats"
-            placeholder="Input seat capacity"
-            type="text"
-            class="mb-4 w-full px-3 py-2 border rounded-md"
-          />
-          <button
-            v-if="!isOpen"
-            @click="isOpen = true"
-            type="button"
-            class="w-full px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
-          >
-            + Add Class
-          </button>
-
-          <div v-if="isOpen" class="grid grid-cols-2 gap-4 w-full">
-            <button
-              @click="cancelAction"
-              type="button"
-              class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
-            >
-              Cancel
-            </button>
-            <button
-              @click="saveChanges"
-              type="button"
-              class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
-            >
-              Save
-            </button>
-          </div>
-        </div>
         <!-- Modal Footer -->
         <div
           class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200"
@@ -257,12 +211,12 @@
 <script setup>
 import { reactive, ref, computed, watch } from "vue";
 import ModalCreateSeatmap from "./ModalCreateSeatmap.vue";
+const apiBase = import.meta.env.VITE_API_URL;
 const isLoading = ref(false);
 const emit = defineEmits(["save"]);
 const prefix = ref("");
 const isOpen = ref(false); // controls the dropdown
 const selectedClassIndex = ref(""); // selected value from dropdown
-const seats = ref(""); // selected value from dropdown
 const addedClasses = ref([]); // track newly added classes
 const seatmapData = ref({ classes: [] });
 const showSeatmapModal = ref(false);
@@ -338,13 +292,12 @@ const saveChanges = () => {
 
   seatmapData.value.classes.push({
     name: selectedClassIndex.value,
-    seats: Number(seats.value),
+    seats: [],
     aircon: false,
     wifi: false,
   });
 
   selectedClassIndex.value = "";
-  seats.value = "";
   isOpen.value = false;
 };
 
@@ -353,54 +306,51 @@ const handleSeatmapSave = (data) => {
   showSeatmapModal.value = false;
 };
 
-const createVessel = () => {
+const createVessel = async () => {
   if (!vesselInfo.name) return alert("Enter vessel code!");
 
-  // Keep the prefix logic
   const fullName = prefix.value
     ? `${prefix.value}${vesselInfo.name}`
     : vesselInfo.name;
 
-  // Merge classes safely, ensuring seats is always an array
-  const mergedClasses = (seatmapData.value?.classes || []).map((c) => ({
-    name: c.name,
-    aircon: c.aircon ?? false,
-    wifi: c.wifi ?? false,
-    seats: c.seats ?? 0,
-  }));
-
-  // Prepare payload
   const payload = {
-    ...vesselInfo,
-    name: fullName,
-    classes: mergedClasses,
+    vessel_name: fullName,
+    description: vesselInfo.details,
     status: "Available",
+    capacity: 0, // required by backend, fixed value
   };
 
-  console.log("Normalized Payload:", JSON.parse(JSON.stringify(payload))); // plain arrays
+  try {
+    isLoading.value = true;
 
-  // Emit payload to parent (create or edit handled in parent)
-  emit("save", payload);
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${apiBase}/vessels`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+      body: JSON.stringify(payload),
+    });
 
-  // Reset only if in create mode (optional)
-  if (!props.vessel?.id) {
-    // CREATE MODE reset only
-    vesselInfo.name = "";
-    vesselInfo.details = "";
-    vesselInfo.status = "Available";
+    const data = await res.json();
 
-    prefix.value = "";
-
-    // Reset seatmap and added classes
-    addedClasses.value = [];
-    seats.value = "";
-
-    // Reset dropdown states
-    selectedClassIndex.value = "";
-    isOpen.value = false;
-
-    // Make sure seatmap modal closes
-    showSeatmapModal.value = false;
+    if (res.ok && data.success) {
+      alert("Vessel created successfully!");
+      emit("save", data.data); // notify parent to update list
+      // Reset form
+      vesselInfo.name = "";
+      vesselInfo.details = "";
+      prefix.value = "";
+      seatmapData.value = { classes: [] };
+    } else {
+      alert("Failed to create vessel: " + (data.message || ""));
+    }
+  } catch (err) {
+    console.error(err);
+    alert("An error occurred while creating vessel.");
+  } finally {
+    isLoading.value = false;
   }
 };
 </script>
