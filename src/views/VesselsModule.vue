@@ -101,52 +101,20 @@
             >
           </div>
         </div>
+
         <!-- Data Table -->
         <div v-else class="overflow-auto max-h-[400px]">
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
-                <th
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  #
-                </th>
-                <th
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Vessel Name
-                </th>
-                <th
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Class
-                </th>
-                <th
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Seats
-                </th>
-
-                <th
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Aircon
-                </th>
-                <th
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  WiFi
-                </th>
-                <th
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Vessel Status
-                </th>
-                <th
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Action
-                </th>
+                <th :class="headerClass">#</th>
+                <th :class="headerClass">Vessel Name</th>
+                <th :class="headerClass">Class</th>
+                <th :class="headerClass">Seats</th>
+                <th :class="headerClass">Aircon</th>
+                <th :class="headerClass">WiFi</th>
+                <th :class="headerClass">Vessel Status</th>
+                <th :class="headerClass">Action</th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
@@ -177,81 +145,83 @@
                 :key="vessel.id"
                 class="hover:bg-gray-50 align-top"
               >
-                <!-- ID -->
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {{ vessel.id || "-" }}
-                </td>
+                <td :class="cellClass">{{ vessel.id || "-" }}</td>
+                <td :class="cellClass">{{ vessel.name || "-" }}</td>
 
-                <!-- Vessel Name -->
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {{ vessel.name || "-" }}
-                </td>
-
-                <!-- Class Names -->
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  <ul v-if="vessel.classes && vessel.classes.length">
-                    <li v-for="(cls, index) in vessel.classes" :key="index">
-                      {{ cls.name || "-" }}
+                <td :class="cellClass">
+                  <ul>
+                    <li
+                      v-for="(item, idx) in renderClassList(vessel, 'name')"
+                      :key="idx"
+                    >
+                      {{ item }}
                     </li>
                   </ul>
-                  <span v-else>-</span>
                 </td>
 
-                <!-- Seats -->
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  <ul v-if="vessel.classes && vessel.classes.length">
-                    <li v-for="(cls, index) in vessel.classes" :key="index">
-                      {{ cls.seats.length }}
+                <td :class="cellClass">
+                  <ul>
+                    <li
+                      v-for="(item, idx) in renderClassList(vessel, 'seats')"
+                      :key="idx"
+                    >
+                      {{ item }}
                     </li>
                   </ul>
-                  <span v-else>-</span>
                 </td>
 
-                <!-- Aircon -->
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  <ul v-if="vessel.classes && vessel.classes.length">
-                    <li v-for="(cls, index) in vessel.classes" :key="index">
-                      <span v-if="cls.aircon === true">✅</span>
-                      <span v-else-if="cls.aircon === false">❌</span>
-                      <span v-else>-</span>
+                <td :class="cellClass">
+                  <ul>
+                    <li
+                      v-for="(item, idx) in renderClassList(vessel, 'aircon')"
+                      :key="idx"
+                    >
+                      {{ item }}
                     </li>
                   </ul>
-                  <span v-else>-</span>
                 </td>
 
-                <!-- WiFi -->
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  <ul v-if="vessel.classes && vessel.classes.length">
-                    <li v-for="(cls, index) in vessel.classes" :key="index">
-                      <span v-if="cls.wifi === true">✅</span>
-                      <span v-else-if="cls.wifi === false">❌</span>
-                      <span v-else>-</span>
+                <td :class="cellClass">
+                  <ul>
+                    <li
+                      v-for="(item, idx) in renderClassList(vessel, 'wifi')"
+                      :key="idx"
+                    >
+                      {{ item }}
                     </li>
                   </ul>
-                  <span v-else>-</span>
                 </td>
 
-                <!-- Status -->
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span
                     v-if="vessel.status"
-                    :class="getStatusClass(vessel.status)"
-                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
+                    :class="[
+                      'px-2 inline-flex text-xs leading-5 font-semibold rounded-full',
+                      getStatusClass(vessel.status),
+                    ]"
                   >
                     {{ vessel.status }}
                   </span>
                   <span v-else>-</span>
                 </td>
 
-                <!-- Action -->
-                <td class="px-6 py-4 whitespace-nowrap text-sm">
-                  <button
-                    @click="openEditModal(vessel)"
-                    class="font-medium text-blue-600 hover:text-blue-900 flex items-center"
-                  >
-                    <Eye class="w-4 h-4 mr-1" />
-                    View
-                  </button>
+                <td :class="cellClass">
+                  <div class="flex gap-3 items-center">
+                    <button
+                      @click="openEditModal(vessel)"
+                      class="font-medium text-blue-600 hover:text-blue-900 flex items-center cursor-pointer"
+                    >
+                      <Eye class="w-4 h-4 mr-1" />
+                    </button>
+                    <button
+                      type="button"
+                      class="font-medium text-blue-600 hover:text-blue-900 flex items-center cursor-pointer"
+                      :disabled="isLoading"
+                      @click="openSeatmapModal(vessel)"
+                    >
+                      <Map class="w-4 h-4 mr-1" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -260,45 +230,103 @@
       </div>
     </div>
 
-    <!-- Modal rendered only when open -->
+    <!-- Modals -->
     <ModalCreateVessel
-      v-if="isModalOpen"
-      :vessel="editVessel || { classes: [] }"
-      @close="isModalOpen = false"
+      v-if="modals.createEdit.open"
+      :vessel="modals.createEdit.vessel || { classes: [] }"
+      @close="modals.createEdit.open = false"
       @save="handleSaveVessel"
     />
-    <!-- Create Seatmap Modal -->
+
     <ModalCreateSeatmap
-      v-if="showSeatmapModal"
-      :seatmap="seatmapData"
-      @close="showSeatmapModal = false"
+      v-if="modals.seatmap.open"
+      :accomodations="accomodations"
+      :seatmap="modals.seatmap.data"
+      @close="modals.seatmap.open = false"
       @save="handleSeatmapSave"
     />
   </div>
 </template>
+
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { Plus, BarChart3, AlertCircle, Search, Eye } from "lucide-vue-next";
+import {
+  Plus,
+  BarChart3,
+  AlertCircle,
+  Search,
+  Eye,
+  Map,
+} from "lucide-vue-next";
 import ModalCreateVessel from "../components/ModalCreateVessel.vue";
 import ModalCreateSeatmap from "../components/ModalCreateSeatmap.vue";
 
+// Constants for classes
+const cellClass = "px-6 py-4 whitespace-nowrap text-sm text-gray-900";
+const headerClass =
+  "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider";
+
+// State
+const accomodations = ref([
+  { id: 1, name: "Business Class" },
+  { id: 2, name: "Premium Economy" },
+  { id: 3, name: "Economy Class" },
+]);
 const apiBase = import.meta.env.VITE_API_URL;
+
 const activeTab = ref("all");
 const searchQuery = ref("");
 const isTableLoading = ref(false);
 const isLoading = ref(false);
-const isModalOpen = ref(false);
-const showSeatmapModal = ref(false);
-const seatmapData = ref(null);
-const editVessel = ref(null);
 const vessels = ref([]);
-const selectedVessel = ref(null);
+
+const modals = ref({
+  createEdit: { open: false, vessel: null },
+  seatmap: { open: false, vessel: null, data: null },
+});
+
 const tabs = [
   { id: "all", name: "All Vessels" },
   { id: "available", name: "Available Vessels" },
   { id: "drydock", name: "Drydock" },
   { id: "grounded", name: "Grounded" },
 ];
+
+// Helpers
+const renderClassList = (vessel, field) => {
+  if (!vessel.classes || vessel.classes.length === 0) return ["-"];
+  return vessel.classes.map((cls) => {
+    switch (field) {
+      case "aircon":
+        return cls.aircon === true ? "✅" : cls.aircon === false ? "❌" : "-";
+      case "wifi":
+        return cls.wifi === true ? "✅" : cls.wifi === false ? "❌" : "-";
+      case "seats":
+        return cls.seats.length;
+      case "name":
+        return cls.name || "-";
+    }
+  });
+};
+
+const getStatusClass = (status) =>
+  status === "Available"
+    ? "bg-green-100 text-green-800"
+    : "bg-gray-100 text-gray-800";
+
+// API
+const fetchVesselLayout = async (vesselId, token) => {
+  const res = await fetch(`${apiBase}/vessels/${vesselId}/layout`, {
+    headers: { "Content-Type": "application/json", Authorization: token },
+  });
+  const data = await res.json();
+  return (data.classes || []).map((cls) => ({
+    name: cls.name,
+    aircon: cls.aircon,
+    wifi: cls.wifi,
+    seats: cls.seats.filter((s) => !s.blocked && !s.path && !s.facility),
+  }));
+};
 
 const fetchVessels = async () => {
   isLoading.value = true;
@@ -311,35 +339,14 @@ const fetchVessels = async () => {
 
     if (res.ok && data.success && data.data?.vessels) {
       vessels.value = await Promise.all(
-        data.data.vessels.map(async (v) => {
-          const layoutRes = await fetch(`${apiBase}/vessels/${v.id}/layout`, {
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: token,
-            },
-          });
-          const layoutData = await layoutRes.json();
-
-          const classes = (layoutData.classes || []).map((cls) => ({
-            name: cls.name,
-            aircon: cls.aircon,
-            wifi: cls.wifi,
-            seats: cls.seats.filter(
-              (s) => !s.blocked && !s.path && !s.facility
-            ),
-          }));
-
-          return {
-            id: v.id,
-            name: v.vessel_name,
-            status: v.status,
-            classes,
-          };
-        })
+        data.data.vessels.map(async (v) => ({
+          id: v.id,
+          name: v.vessel_name,
+          status: v.status,
+          classes: await fetchVesselLayout(v.id, token),
+        }))
       );
-    } else {
-      vessels.value = [];
-    }
+    } else vessels.value = [];
   } catch (err) {
     vessels.value = [];
     console.error("Failed to fetch vessels", err);
@@ -348,44 +355,46 @@ const fetchVessels = async () => {
   }
 };
 
+// Lifecycle
 onMounted(fetchVessels);
 
+// Modal Handlers
 const openCreateModal = () => {
-  editVessel.value = null;
-  isModalOpen.value = true;
+  modals.value.createEdit.vessel = null;
+  modals.value.createEdit.open = true;
 };
 
 const openEditModal = (vessel) => {
   if (!vessel.classes) vessel.classes = [];
-  editVessel.value = vessel;
-  isModalOpen.value = true;
+  modals.value.createEdit.vessel = vessel;
+  modals.value.createEdit.open = true;
 };
 
-const filteredVessels = computed(() => {
-  if (activeTab.value === "all") return vessels.value;
-  if (activeTab.value === "available")
-    return vessels.value.filter((v) => v.status === "Available");
-  if (activeTab.value === "drydock")
-    return vessels.value.filter((v) => v.status === "Drydock");
-  if (activeTab.value === "grounded")
-    return vessels.value.filter((v) => v.status === "Grounded");
-  return [];
-});
-
-const getStatusClass = (status) => {
-  if (status === "Available") return "bg-green-100 text-green-800";
-  return "bg-gray-100 text-gray-800";
+const openSeatmapModal = (vessel) => {
+  modals.value.seatmap.vessel = vessel;
+  modals.value.seatmap.data = vessel.classes;
+  modals.value.seatmap.open = true;
 };
 
+// Computed
+const statusMap = {
+  available: "Available",
+  drydock: "Drydock",
+  grounded: "Grounded",
+};
+
+const filteredVessels = computed(() =>
+  activeTab.value === "all"
+    ? vessels.value
+    : vessels.value.filter((v) => v.status === statusMap[activeTab.value])
+);
+
+// Save seatmap
 const handleSeatmapSave = (seatmapPayload) => {
-  if (!selectedVessel.value) return;
+  const vessel = modals.value.seatmap.vessel;
+  if (!vessel) return;
 
-  const index = vessels.value.findIndex(
-    (v) => v.id === selectedVessel.value.id
-  );
-  if (index === -1) return;
-
-  vessels.value[index].classes = vessels.value[index].classes.map((cls) => {
+  vessel.classes = vessel.classes.map((cls) => {
     const found = seatmapPayload.classes.find((c) => c.name === cls.name);
     return {
       ...cls,
@@ -395,19 +404,6 @@ const handleSeatmapSave = (seatmapPayload) => {
     };
   });
 
-  showSeatmapModal.value = false;
-};
-const handleSaveVessel = (vesselData) => {
-  // Ensure classes array exists so table shows properly
-  const classes = vesselData.classes || [];
-
-  vessels.value.push({
-    id: vesselData.id,
-    name: vesselData.vessel_name,
-    status: vesselData.status,
-    classes: [], // no seats yet
-  });
-
-  isModalOpen.value = false;
+  modals.value.seatmap.open = false;
 };
 </script>

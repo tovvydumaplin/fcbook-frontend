@@ -143,7 +143,7 @@
 <script setup>
 import { ref, watch, onMounted } from "vue";
 
-const emit = defineEmits(["save", "close"]);
+const emit = defineEmits(["saved", "close"]);
 const apiBase = import.meta.env.VITE_API_URL;
 const waived = ref(false);
 const isLoading = ref(false);
@@ -249,7 +249,7 @@ const savePassengerType = async () => {
     const data = await res.json();
 
     if (res.ok && data.success) {
-      emit("save", data.data);
+      emit("saved", data.data);
       emit("close");
     } else {
       // Handle duplicate error gracefully

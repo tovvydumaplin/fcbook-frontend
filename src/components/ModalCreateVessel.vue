@@ -78,24 +78,7 @@
             :disabled="isLoading"
           ></textarea>
         </div>
-        <div>
-          <button
-            v-if="isEditing"
-            type="button"
-            class="px-4 py-2 text-sm font-medium text-blue-600 border border-blue-600 rounded-md hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-            :disabled="isLoading"
-            @click="openSeatmapModal"
-          >
-            Create Seatmap
-          </button>
-          <ModalCreateSeatmap
-            v-if="showSeatmapModal"
-            :accomodations="accomodations"
-            :seatmap="seatmapData"
-            @close="showSeatmapModal = false"
-            @save="handleSeatmapSave"
-          />
-        </div>
+
         <div class="w-full">
           <!-- TABLE SWITCHES  -->
           <table>
@@ -221,31 +204,12 @@ const addedClasses = ref([]); // track newly added classes
 const seatmapData = ref({ classes: [] });
 const showSeatmapModal = ref(false);
 
-const openSeatmapModal = () => {
-  showSeatmapModal.value = true;
-};
-const closeSeatmap = () => {
-  showSeatmapModal.value = false;
-};
 const vesselInfo = reactive({
   name: "",
   details: "",
   status: "Available",
 });
-const accomodations = ref([
-  {
-    id: 1,
-    name: "Business Class",
-  },
-  {
-    id: 2,
-    name: "Premium Economy",
-  },
-  {
-    id: 3,
-    name: "Economy Class",
-  },
-]);
+
 const props = defineProps({
   vessel: {
     type: Object,
@@ -280,31 +244,6 @@ const availableClasses = computed(() =>
     (a) => !seatmapData.value?.classes?.some((c) => c.name === a.name)
   )
 );
-const cancelAction = () => {
-  selectedClassIndex.value = "";
-  isOpen.value = false;
-};
-
-const saveChanges = () => {
-  if (!selectedClassIndex.value) return;
-
-  if (!seatmapData.value?.classes) seatmapData.value = { classes: [] };
-
-  seatmapData.value.classes.push({
-    name: selectedClassIndex.value,
-    seats: [],
-    aircon: false,
-    wifi: false,
-  });
-
-  selectedClassIndex.value = "";
-  isOpen.value = false;
-};
-
-const handleSeatmapSave = (data) => {
-  seatmapData.value = data;
-  showSeatmapModal.value = false;
-};
 
 const createVessel = async () => {
   if (!vesselInfo.name) return alert("Enter vessel code!");

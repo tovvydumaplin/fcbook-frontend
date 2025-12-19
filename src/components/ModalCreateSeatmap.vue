@@ -195,6 +195,21 @@
               >
                 Add Facility
               </button>
+              <button
+                type="button"
+                @click="togglePwdMode"
+                :disabled="!currentSelectedClass"
+                :class="[
+                  'px-4 py-2 rounded-md',
+                  !currentSelectedClass
+                    ? 'opacity-40 cursor-not-allowed'
+                    : pwdMode
+                    ? 'bg-[#016AB3] text-white'
+                    : 'bg-gray-200',
+                ]"
+              >
+                PWD
+              </button>
 
               <button
                 type="button"
@@ -212,78 +227,84 @@
             </div>
           </div>
           <!-- RIGHT SIDE - SEATMAP PREVIEW -->
-          <div
-            class="seatmap_preview border p-3 rounded-lg w-full relative h-[410px] overflow-auto"
-          >
+          <div class="seatmap_preview border p-3 rounded-lg w-full">
             <p class="text-sm text-center font-medium text-gray-700 mb-3">
               Seatmap Preview
             </p>
-
-            <div v-if="!currentSelectedClass" class="text-center text-gray-500">
-              Select a class to preview
-            </div>
-            <div
-              v-else-if="!currentSelectedClass.seats?.length"
-              class="text-center text-gray-500"
-            >
-              No seats generated yet.
-            </div>
-
-            <div v-else class="relative w-full h-full">
-              <!-- Seats -->
+            <div class="relative h-[410px] overflow-auto">
               <div
-                v-for="seat in currentSelectedClass.seats"
-                :key="seat.seat_no"
-                :data-row="seat.row"
-                :data-col="seat.col"
-                class="absolute flex items-center justify-center border rounded-md text-xs font-medium cursor-pointer select-none"
-                :style="{
-                  width: seatSize + 'px',
-                  height: seatSize + 'px',
-                  top: seat.row * seatSize + 'px',
-                  left: seat.col * seatSize + 'px',
-                }"
-                :class="{
-                  'bg-gray-300': seat.path,
-                  'bg-red-700 text-white': seat.blocked,
-                  'bg-gray-100': !seat.path && !seat.blocked && !seat.facility,
-                  'bg-orange-400 text-white': seat.facility,
-                  'ring-2 ring-blue-400': renameMode,
-                }"
-                @mousedown="startDrag(seat, $event)"
-                @mouseover="dragSeats(seat)"
-                @mouseup="endDrag(seat)"
-                @click="onSeatClick(seat)"
+                v-if="!currentSelectedClass"
+                class="text-center text-gray-500"
               >
-                <span v-if="!seat.blocked && !seat.path && !seat.facility">
-                  {{ seat.seat_no }}
-                </span>
-                <span
-                  v-if="seat.facility"
-                  class="pointer-events-none font-bold text-white"
-                  :style="{ opacity: 0.7 }"
-                  >{{ seat.facility }}</span
-                >
-                <span
-                  v-if="seat.blocked"
-                  class="pointer-events-none text-white text-xl font-bold"
-                  >✕</span
-                >
+                Select a class to preview
+              </div>
+              <div
+                v-else-if="!currentSelectedClass.seats?.length"
+                class="text-center text-gray-500"
+              >
+                No seats generated yet.
               </div>
 
-              <!-- Floating Facility Labels -->
-              <div
-                v-for="(f, i) in currentSelectedClass.facilityLabels || []"
-                :key="i"
-                class="facility-label absolute flex items-center justify-center text-white font-bold pointer-events-none bg-orange-500 rounded-md"
-                :style="{
-                  top: f.top + 'px',
-                  left: f.left + 'px',
-                  width: f.width + 'px',
-                  height: f.height + 'px',
-                }"
-              >
-                {{ f.name }}
+              <div v-else class="relative w-full h-full">
+                <!-- Seats -->
+                <div
+                  v-for="seat in currentSelectedClass.seats"
+                  :key="seat.seat_no"
+                  :data-row="seat.row"
+                  :data-col="seat.col"
+                  class="absolute flex items-center justify-center border rounded-md text-xs font-medium cursor-pointer select-none"
+                  :style="{
+                    width: seatSize + 'px',
+                    height: seatSize + 'px',
+                    top: seat.row * seatSize + 'px',
+                    left: seat.col * seatSize + 'px',
+                  }"
+                  :class="{
+                    'bg-gray-300': seat.path,
+                    'bg-red-700 text-white': seat.blocked,
+                    'bg-gray-100':
+                      !seat.path &&
+                      !seat.blocked &&
+                      !seat.facility &&
+                      !seat.renaming,
+                    'bg-orange-400 text-white': seat.facility,
+                    'bg-green-400 text-black': seat.pwd,
+                    'ring-2 ring-blue-400 bg-blue-200': seat.renaming,
+                  }"
+                  @mousedown="startDrag(seat, $event)"
+                  @mouseover="dragSeats(seat)"
+                  @click="onSeatClick(seat)"
+                >
+                  <span v-if="!seat.blocked && !seat.path && !seat.facility">
+                    {{ seat.seat_no }}
+                  </span>
+                  <span
+                    v-if="seat.facility"
+                    class="pointer-events-none font-bold text-white"
+                    :style="{ opacity: 0.7 }"
+                    >{{ seat.facility }}</span
+                  >
+                  <span
+                    v-if="seat.blocked"
+                    class="pointer-events-none text-white text-xl font-bold"
+                    >✕</span
+                  >
+                </div>
+
+                <!-- Floating Facility Labels -->
+                <div
+                  v-for="(f, i) in currentSelectedClass.facilityLabels || []"
+                  :key="i"
+                  class="facility-label absolute flex items-center justify-center text-white font-bold pointer-events-none bg-orange-500 rounded-md"
+                  :style="{
+                    top: f.top + 'px',
+                    left: f.left + 'px',
+                    width: f.width + 'px',
+                    height: f.height + 'px',
+                  }"
+                >
+                  {{ f.name }}
+                </div>
               </div>
             </div>
           </div>
@@ -313,7 +334,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 
 const props = defineProps({ accomodations: Array, seatmap: Object });
 const emit = defineEmits(["save", "close"]);
@@ -326,7 +347,7 @@ const isLoading = ref(false);
 const tempRows = ref(null);
 const tempColumns = ref(null);
 const isDragging = ref(false);
-
+const pwdMode = ref(false);
 const renameMode = ref(false);
 const blockMode = ref(false);
 const pathMode = ref(false);
@@ -334,6 +355,7 @@ const facilityMode = ref(false);
 
 const dragStart = ref(null);
 const dragMode = ref(null);
+const lastHoveredSeat = ref(null);
 const seatSize = 40;
 
 const availableClasses = computed(() =>
@@ -341,6 +363,20 @@ const availableClasses = computed(() =>
     (a) => !addedClasses.value.some((c) => c.name === a.name)
   )
 );
+
+const removeFacilityBySeat = (seat) => {
+  const cls = currentSelectedClass.value;
+  if (!cls || !seat.facility) return;
+  const facilityName = seat.facility;
+  if (!confirm(`Remove facility "${facilityName}"?`)) return;
+  cls.seats.forEach((s) => {
+    if (s.facility === facilityName) s.facility = null;
+  });
+  cls.facilityLabels = cls.facilityLabels.filter(
+    (f) => f.name !== facilityName
+  );
+  facilityMode.value = false;
+};
 
 const selectClass = (item) => {
   currentSelectedClass.value = item;
@@ -360,6 +396,7 @@ const addClass = () => {
   selectedClassIndex.value = null;
   isOpen.value = false;
 };
+
 const cancelAction = () => (isOpen.value = false);
 const saveChanges = () => addClass();
 
@@ -379,13 +416,22 @@ const generateSeats = () => {
         col: c,
         blocked: false,
         path: false,
+        pwd: false,
         facility: null,
+        renaming: false,
       });
     }
   }
 };
 
 const toggleRenameMode = () => (renameMode.value = !renameMode.value);
+const togglePwdMode = () => {
+  pwdMode.value = !pwdMode.value;
+  renameMode.value = false;
+  blockMode.value = false;
+  pathMode.value = false;
+  facilityMode.value = false;
+};
 const toggleBlockMode = () => {
   blockMode.value = !blockMode.value;
   renameMode.value = false;
@@ -406,24 +452,62 @@ const toggleFacilityMode = () => {
   dragStart.value = null;
 };
 
+// ===== START DRAG =====
 const startDrag = (seat, event) => {
+  if (event.button !== 0) return;
+  event.preventDefault();
+
   dragStart.value = seat;
   isDragging.value = false;
+  lastHoveredSeat.value = seat;
 
-  if (facilityMode.value) dragMode.value = "facility";
+  // Determine current drag mode
+  if (renameMode.value) dragMode.value = "rename";
+  else if (facilityMode.value) dragMode.value = "facility";
   else if (blockMode.value) dragMode.value = "block";
   else if (pathMode.value) dragMode.value = "path";
-  else dragMode.value = null;
+  else if (pwdMode.value) dragMode.value = "pwd";
+  else return;
 
-  // For facility mode, temporarily mark seat
-  if (dragMode.value === "facility") seat.facility = "…";
-  if (dragMode.value === "block") seat.initialBlocked = seat.blocked;
-  if (dragMode.value === "path") seat.initialPath = seat.path;
+  // Initialize seat state for drag
+  switch (dragMode.value) {
+    case "rename":
+      seat.renaming = true;
+      break;
+    case "facility":
+      if (seat.facility && seat.facility !== "…") {
+        removeFacilityBySeat(seat);
+        dragStart.value = null;
+        dragMode.value = null;
+        return;
+      }
+      seat.facility = "…";
+      break;
+    case "block":
+      seat.initialBlocked = seat.blocked;
+      seat.blocked = !seat.blocked;
+      seat.path = false;
+      break;
+    case "path":
+      seat.initialPath = seat.path;
+      seat.path = !seat.path;
+      seat.blocked = false;
+      break;
+    case "pwd":
+      seat.initialPwd = seat.pwd;
+      seat.pwd = !seat.pwd;
+      seat.blocked = false;
+      seat.path = false;
+      seat.facility = null;
+      break;
+  }
 };
 
+// ===== DRAG SEATS =====
 const dragSeats = (seat) => {
   if (!dragStart.value || !dragMode.value) return;
-  isDragging.value = true; // mark that a drag occurred
+  isDragging.value = true;
+  lastHoveredSeat.value = seat;
 
   const start = dragStart.value;
   const r1 = Math.min(start.row, seat.row);
@@ -433,78 +517,151 @@ const dragSeats = (seat) => {
 
   currentSelectedClass.value.seats.forEach((s) => {
     if (s.row >= r1 && s.row <= r2 && s.col >= c1 && s.col <= c2) {
+      if (dragMode.value === "rename") s.renaming = true;
       if (dragMode.value === "facility") s.facility = "…";
       if (dragMode.value === "block") s.blocked = !start.initialBlocked;
       if (dragMode.value === "path") s.path = !start.initialPath;
+      if (dragMode.value === "pwd") {
+        s.pwd = !start.initialPwd;
+        s.blocked = false;
+        s.path = false;
+        s.facility = null;
+      }
     } else {
+      if (dragMode.value === "rename") s.renaming = false;
       if (dragMode.value === "facility" && s.facility === "…")
         s.facility = null;
     }
   });
 };
 
-const endDrag = (seat) => {
-  if (dragMode.value === "facility" && dragStart.value && isDragging.value) {
-    // Facility selection logic
-    const start = dragStart.value;
-    const end = seat;
-    const r1 = Math.min(start.row, end.row);
-    const r2 = Math.max(start.row, end.row);
-    const c1 = Math.min(start.col, end.col);
-    const c2 = Math.max(start.col, end.col);
-    const name = prompt("Enter facility name:", "Facility");
-    if (!name) {
-      currentSelectedClass.value.seats.forEach((s) => {
-        if (s.facility === "…") s.facility = null;
-      });
+// ===== END DRAG =====
+const handleGlobalMouseUp = () => {
+  if (dragStart.value) endDrag();
+};
+const endDrag = () => {
+  if (!dragStart.value) return;
+  // Handle rename drag
+  if (dragMode.value === "rename" && isDragging.value) {
+    const baseName = prompt("Enter starting seat number:", "001A");
+    if (!baseName) {
+      currentSelectedClass.value.seats.forEach((s) => (s.renaming = false));
     } else {
-      currentSelectedClass.value.seats.forEach((s) => {
-        if (s.row >= r1 && s.row <= r2 && s.col >= c1 && s.col <= c2) {
+      const match = baseName.match(/^(\d+)([A-Z])$/);
+      if (!match) return alert("Format should be like 001A");
+      let [_, startNum, letter] = match;
+      startNum = parseInt(startNum, 10);
+
+      const seatsToRename = currentSelectedClass.value.seats
+        .filter((s) => s.renaming)
+        .sort((a, b) => a.row - b.row || a.col - b.col);
+
+      seatsToRename.forEach((s, idx) => {
+        s.seat_no = String(startNum + idx).padStart(3, "0") + letter;
+        s.renaming = false;
+      });
+    }
+  }
+  // Handle facility drag
+  if (dragMode.value === "facility" && isDragging.value) {
+    const seatsToLabel = currentSelectedClass.value.seats.filter(
+      (s) => s.facility === "…"
+    );
+    if (seatsToLabel.length) {
+      const r1 = Math.min(...seatsToLabel.map((s) => s.row));
+      const r2 = Math.max(...seatsToLabel.map((s) => s.row));
+      const c1 = Math.min(...seatsToLabel.map((s) => s.col));
+      const c2 = Math.max(...seatsToLabel.map((s) => s.col));
+      const name = prompt("Enter facility name:", "Facility");
+      if (!name) seatsToLabel.forEach((s) => (s.facility = null));
+      else {
+        seatsToLabel.forEach((s) => {
           s.facility = name;
           s.blocked = false;
           s.path = false;
-        }
-      });
-
-      currentSelectedClass.value.facilityLabels.push({
-        name,
-        left: c1 * seatSize,
-        top: r1 * seatSize,
-        width: (c2 - c1 + 1) * seatSize,
-        height: (r2 - r1 + 1) * seatSize,
-      });
+        });
+        currentSelectedClass.value.facilityLabels.push({
+          name,
+          left: c1 * seatSize,
+          top: r1 * seatSize,
+          width: (c2 - c1 + 1) * seatSize,
+          height: (r2 - r1 + 1) * seatSize,
+        });
+      }
     }
   }
   dragStart.value = null;
   dragMode.value = null;
+  // renameMode.value = false;
   facilityMode.value = false;
+  blockMode.value = false;
+  pathMode.value = false;
+  pwdMode.value = false;
   isDragging.value = false;
+  lastHoveredSeat.value = null;
 };
 
+// ===== SEAT CLICK  =====
 const onSeatClick = (seat) => {
-  if (renameMode.value) {
-    const n = prompt("Rename seat:", seat.seat_no);
-    if (n?.trim()) seat.seat_no = n.trim();
+  if (dragStart.value && isDragging.value) return;
+
+  if (facilityMode.value) {
+    if (seat.facility) removeFacilityBySeat(seat);
+    else {
+      seat.facility = "…";
+      const name = prompt("Enter facility name:", "Facility");
+      if (name) {
+        seat.facility = name;
+        seat.blocked = false;
+        seat.path = false;
+      } else seat.facility = null;
+    }
     return;
   }
+
+  if (pwdMode.value) {
+    seat.pwd = !seat.pwd;
+    seat.blocked = false;
+    seat.path = false;
+    seat.facility = null;
+    return;
+  }
+
+  if (renameMode.value) {
+    const n = prompt("Rename seat:", seat.seat_no);
+    if (n?.trim()) {
+      seat.seat_no = n.trim();
+      // Turn off rename mode after confirming
+      renameMode.value = false;
+    }
+    currentSelectedClass.value.seats.forEach((s) => (s.renaming = false));
+    return;
+  }
+
   if (blockMode.value) {
     seat.blocked = !seat.blocked;
     seat.path = false;
+    seat.pwd = false;
     return;
   }
+
   if (pathMode.value) {
     seat.path = !seat.path;
     seat.blocked = false;
+    seat.pwd = false;
     return;
   }
 };
 
+// ===== RESET =====
 const resetSeats = () => {
   if (!currentSelectedClass.value) return;
   currentSelectedClass.value.seats.forEach((s) => {
     s.blocked = false;
     s.path = false;
     s.facility = null;
+    s.renaming = false;
+    s.pwd = false;
   });
   currentSelectedClass.value.facilityLabels = [];
 };
@@ -519,7 +676,7 @@ const saveSeatmap = () => {
   if (!addedClasses.value.length)
     return alert("Add at least one class before saving!");
   const classWithNoSeats = addedClasses.value.find(
-    (c) => !c.seats || c.seats.length === 0
+    (c) => !c.seats || !c.seats.length
   );
   if (classWithNoSeats)
     return alert(
@@ -542,6 +699,9 @@ const saveSeatmap = () => {
     isLoading.value = false;
   }
 };
+
+onMounted(() => window.addEventListener("mouseup", handleGlobalMouseUp));
+onUnmounted(() => window.removeEventListener("mouseup", handleGlobalMouseUp));
 </script>
 
 <style scoped>

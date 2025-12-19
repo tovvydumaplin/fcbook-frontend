@@ -6,7 +6,7 @@ import tellerBooking from "../views/tellerBooking.vue";
 import ScheduleModule from "../views/ScheduleModule.vue";
 import RoutesModule from "../views/RoutesModule.vue";
 import VesselsModule from "../views/VesselsModule.vue";
-import RateDiscountsModule from "../views/RateDiscountsModule.vue";
+import RateDiscountsModule from "../views/RatePassengerLayout.vue";
 
 const routes = [
   { path: "/", component: Login },
