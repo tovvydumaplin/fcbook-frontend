@@ -61,7 +61,7 @@
           <input
             placeholder="Input Passenger Type name"
             type="text"
-            v-model="passengerTypeName"
+            v-model="passengerType.passengerTypeName"
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
@@ -73,7 +73,7 @@
           </label>
           <!-- Select Discount -->
           <select
-            v-model="selectedDiscount"
+            v-model="passengerType.selectedDiscount"
             required
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
@@ -150,9 +150,11 @@ const isLoading = ref(false);
 const errorMsg = ref("");
 
 // FORM FIELDS
-const passengerTypeName = ref("");
-const selectedDiscount = ref("");
 
+const passengerType = ref({
+  passengerTypeName: "",
+  selectedDiscount: "",
+});
 // DISCOUNTS LIST
 const discounts = ref([]);
 
@@ -192,12 +194,12 @@ watch(
   () => props.editData,
   (newVal) => {
     if (newVal) {
-      passengerTypeName.value = newVal.type || "";
-      selectedDiscount.value = Number(newVal.discount) || "";
+      passengerType.value.passengerTypeName = newVal.type || "";
+      passengerType.value.selectedDiscount = Number(newVal.discount) || "";
       waived.value = newVal.waived ?? false;
     } else {
-      passengerTypeName.value = "";
-      selectedDiscount.value = "";
+      passengerType.value.passengerTypeName = "";
+      passengerType.value.selectedDiscount = "";
       waived.value = false;
     }
   },
@@ -213,7 +215,7 @@ onMounted(() => {
 });
 
 const savePassengerType = async () => {
-  if (!passengerTypeName.value) {
+  if (!passengerType.value.passengerTypeName) {
     errorMsg.value = "Passenger type name is required.";
     return;
   }
@@ -225,8 +227,8 @@ const savePassengerType = async () => {
     const token = localStorage.getItem("token");
 
     const payload = {
-      type: passengerTypeName.value.trim(),
-      discount: selectedDiscount.value,
+      type: passengerType.value.passengerTypeName.trim(),
+      discount: passengerType.value.selectedDiscount,
       waived: waived.value,
     };
 

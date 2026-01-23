@@ -7,6 +7,7 @@ import ScheduleModule from "../views/ScheduleModule.vue";
 import RoutesModule from "../views/RoutesModule.vue";
 import VesselsModule from "../views/VesselsModule.vue";
 import RateDiscountsModule from "../views/RatePassengerLayout.vue";
+import PassengerMonitoringModule from "../views/PassengerMonitoringModule.vue";
 
 const routes = [
   { path: "/", component: Login },
@@ -17,6 +18,7 @@ const routes = [
   { path: "/routes", component: RoutesModule },
   { path: "/vessels", component: VesselsModule },
   { path: "/rates-discounts", component: RateDiscountsModule },
+  { path: "/passenger-monitoring", component: PassengerMonitoringModule },
 ];
 
 const router = createRouter({

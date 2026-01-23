@@ -14,7 +14,7 @@
     </div>
     <!-- TABS -->
     <div
-      class="border border-gray-300 mb-2 rounded-lg bg-gray-200 inline-block mb-8"
+      class="border border-gray-300 mb-2 rounded-lg bg-gray-200 inline-block"
     >
       <nav class="flex space-x-4 px-2 py-2">
         <button

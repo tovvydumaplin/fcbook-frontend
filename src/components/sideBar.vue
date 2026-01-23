@@ -190,6 +190,11 @@ const moduleItems = [
     route: "/rates-discounts",
     icon: BookingIcon,
   },
+  {
+    name: "Passenger Monitoring",
+    route: "/passenger-monitoring",
+    icon: BookingIcon,
+  },
 ];
 
 const bookingItems = [
