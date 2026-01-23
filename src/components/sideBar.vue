@@ -186,6 +186,11 @@ const moduleItems = [
   { name: "Routes", route: "/routes", icon: BookingIcon },
   { name: "Schedule", route: "/schedule", icon: BookingIcon },
   {
+    name: "Accommodation",
+    route: "/passenger-accommodation",
+    icon: BookingIcon,
+  },
+  {
     name: "Rates/Passenger Types",
     route: "/rates-discounts",
     icon: BookingIcon,

@@ -19,10 +19,10 @@ const tabs = [
 const routes = ref([]);
 const totalRoutes = computed(() => routes.value.length);
 const activeRoutes = computed(
-  () => routes.value.filter((r) => r.status === "Active").length
+  () => routes.value.filter((r) => r.status === "Active").length,
 );
 const closedRoutes = computed(
-  () => routes.value.filter((r) => r.status !== "Active").length
+  () => routes.value.filter((r) => r.status !== "Active").length,
 );
 
 const filteredRoutes = computed(() => {
@@ -38,7 +38,7 @@ const filteredRoutes = computed(() => {
       (r) =>
         r.port_a_name.toLowerCase().includes(q) ||
         r.port_b_name.toLowerCase().includes(q) ||
-        r.updated_by.toLowerCase().includes(q)
+        r.updated_by.toLowerCase().includes(q),
     );
   }
   return filtered;
