@@ -10,13 +10,14 @@ import {
   List,
 } from "lucide-vue-next";
 import ModalCreateSchedule from "../components/ModalCreateSchedule.vue";
+import ModalScheduleOptions from "../components/ModalScheduleOptions.vue";
 
 const apiBase = import.meta.env.VITE_API_URL;
-const isModalOpen = ref(false);
 const activeTab = ref("all");
 const searchQuery = ref("");
 const isTableLoading = ref(false);
 const selectedRoute = ref(null);
+const vessels = ref([]);
 
 const tabs = [
   { id: "all", name: "All Routes" },
@@ -26,6 +27,23 @@ const tabs = [
 
 const routes = ref([]);
 
+const normalizeRouteStatus = (status) => {
+  if (!status) return "inactive";
+  const s = String(status).toLowerCase();
+  return s === "active" ? "active" : "inactive";
+};
+
+const getRouteStatus = (route) => {
+  if (route?.status) return normalizeRouteStatus(route.status);
+  const schedules = [
+    ...(route?.portA?.schedules || []),
+    ...(route?.portB?.schedules || []),
+  ];
+  return schedules.some((s) => String(s?.status).toLowerCase() === "active")
+    ? "active"
+    : "inactive";
+};
+
 // Summary cards
 const totalSchedules = computed(() =>
   routes.value.reduce(
@@ -33,22 +51,22 @@ const totalSchedules = computed(() =>
       sum +
       (r.portA?.schedules?.length || 0) +
       (r.portB?.schedules?.length || 0),
-    0
-  )
+    0,
+  ),
 );
 const activeSchedules = computed(
-  () => routes.value.filter((r) => r.status === "Active").length
+  () => routes.value.filter((r) => r.status === "active").length,
 );
 const closedSchedules = computed(
-  () => routes.value.filter((r) => r.status !== "Active").length
+  () => routes.value.filter((r) => r.status !== "active").length,
 );
 
 const filteredRoutes = computed(() => {
   let filtered = routes.value;
   if (activeTab.value === "active")
-    filtered = filtered.filter((r) => r.status === "Active");
+    filtered = filtered.filter((r) => r.status === "active");
   else if (activeTab.value === "closed")
-    filtered = filtered.filter((r) => r.status !== "Active");
+    filtered = filtered.filter((r) => r.status !== "active");
 
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase();
@@ -75,12 +93,19 @@ const fetchRoutes = async () => {
     });
     const data = await response.json();
     if (response.ok && data.success && data.data?.routes) {
-      routes.value = data.data.routes.map((route, idx) => ({
+      routes.value = data.data.routes.map((route) => ({
         route_id: route.route_id,
         portA: route.portA,
         portB: route.portB,
-        status: "Active", // or use a real status if available
+        status: getRouteStatus(route),
       }));
+      if (selectedRoute.value) {
+        const selectedId = String(selectedRoute.value.route_id ?? "");
+        const match = routes.value.find(
+          (r) => String(r.route_id ?? "") === selectedId,
+        );
+        selectedRoute.value = match || null;
+      }
     } else {
       routes.value = [];
       console.error("Failed to fetch routes:", data.message || data);
@@ -93,24 +118,218 @@ const fetchRoutes = async () => {
   }
 };
 
-onMounted(fetchRoutes);
+const fetchVessels = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${apiBase}/vessels`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+    });
+    const data = await response.json();
+    if (response.ok && data.success && data.data?.vessels) {
+      vessels.value = data.data.vessels.map((v) => ({
+        id: v.id,
+        name: v.vessel_name,
+        status: v.status,
+      }));
+    } else {
+      vessels.value = [];
+      console.error("Failed to fetch vessels:", data.message || data);
+    }
+  } catch (err) {
+    vessels.value = [];
+    console.error("Network error fetching vessels:", err);
+  }
+};
 
-const getStatusClass = (status) => {
-  if (status === "Active") return "bg-green-100 text-green-800";
-  return "bg-gray-100 text-gray-800";
+onMounted(() => {
+  fetchRoutes();
+  fetchVessels();
+});
+
+const fetchRouteSchedules = async (routeId) => {
+  try {
+    const token = localStorage.getItem("token");
+    console.log("Fetching schedules for route:", routeId);
+    const res = await fetch(`${apiBase}/routes/${routeId}/with-schedules`, {
+      headers: { "Content-Type": "application/json", Authorization: token },
+    });
+    const d = await res.json();
+    console.log("fetchRouteSchedules response:", d);
+    if (res.ok && d.success && d.data?.routes && d.data.routes.length) {
+      return d.data.routes[0];
+    }
+  } catch (err) {
+    console.error("Error fetching route schedules:", err);
+  }
+  return null;
+};
+
+const selectRoute = async (route) => {
+  console.log("Route selected:", route);
+  // If route already contains schedules, use it
+  const hasSchedules =
+    (route.portA && route.portA.schedules && route.portA.schedules.length) ||
+    (route.portB && route.portB.schedules && route.portB.schedules.length);
+
+  if (hasSchedules) {
+    selectedRoute.value = route;
+    console.log("Using existing schedules on selectedRoute", route);
+    return;
+  }
+
+  // otherwise fetch schedules for this route
+  const fullRoute = await fetchRouteSchedules(route.route_id);
+  if (fullRoute) {
+    // merge into route object
+    const updated = {
+      ...route,
+      portA: fullRoute.portA || route.portA,
+      portB: fullRoute.portB || route.portB,
+    };
+    selectedRoute.value = updated;
+    console.log("Selected route with fetched schedules:", updated);
+  } else {
+    // fallback to original route
+    selectedRoute.value = route;
+    console.log("Selected route (no schedules found):", route);
+  }
+};
+
+const getVesselName = (vesselId) => {
+  if (!vesselId) return "-";
+  const vessel = vessels.value.find((v) => v.id === vesselId);
+  return vessel ? vessel.name : "-";
+};
+
+const handleVesselChange = async (scheduleId, vesselId) => {
+  console.log("handleVesselChange called with:", {
+    scheduleId,
+    vesselId,
+    vesselIdType: typeof vesselId,
+  });
+  const normalizedVesselId =
+    vesselId === "" || vesselId === null ? null : Number(vesselId);
+  if (normalizedVesselId !== null && Number.isNaN(normalizedVesselId)) {
+    console.error("Invalid vessel id:", vesselId);
+    return;
+  }
+  try {
+    const token = localStorage.getItem("token");
+    const payload = { vessel_id: normalizedVesselId };
+    console.log("Request payload:", payload);
+    console.log("API endpoint:", `${apiBase}/schedules/${scheduleId}`);
+
+    const response = await fetch(`${apiBase}/schedules/${scheduleId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    console.log("Response data:", data);
+    if (response.ok && data.success) {
+      // Update successful
+      await fetchRoutes();
+    } else {
+      console.error("Failed to update vessel:", data.message || data);
+      alert("Failed to update vessel assignment");
+    }
+  } catch (err) {
+    console.error("Network error updating vessel:", err);
+    alert("Network error updating vessel assignment");
+  }
+};
+
+const handleStatusToggle = async (scheduleId, currentStatus) => {
+  try {
+    const token = localStorage.getItem("token");
+    const normalized = String(currentStatus).toLowerCase();
+    const newStatus = normalized === "active" ? "inactive" : "active";
+    const payload = { status: newStatus };
+    console.log("Toggling status:", { scheduleId, currentStatus, newStatus });
+
+    const response = await fetch(`${apiBase}/schedules/${scheduleId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    console.log("Response data:", data);
+    if (response.ok && data.success) {
+      // Update successful
+      await fetchRoutes();
+    } else {
+      console.error("Failed to update status:", data.message || data);
+      alert("Failed to update schedule status");
+    }
+  } catch (err) {
+    console.error("Network error updating status:", err);
+    alert("Network error updating schedule status");
+  }
 };
 
 const isCreateScheduleModalOpen = ref(false);
+const isOptionsModalOpen = ref(false);
+
+const modalMode = ref("create");
 
 // Sched modal
 const modalRouteId = ref("");
 const modalPortASchedules = ref([{ departure: "", arrival: "" }]);
 const modalPortBSchedules = ref([{ departure: "", arrival: "" }]);
 
+const openCreateModal = () => {
+  modalMode.value = "create";
+  modalRouteId.value = "";
+  modalPortASchedules.value = [{ departure: "", arrival: "" }];
+  modalPortBSchedules.value = [{ departure: "", arrival: "" }];
+  isCreateScheduleModalOpen.value = true;
+};
+
+const openEditModal = () => {
+  if (!selectedRoute.value) return;
+  modalMode.value = "edit";
+  modalRouteId.value = selectedRoute.value.route_id;
+  modalPortASchedules.value = (selectedRoute.value.portA?.schedules || []).map(
+    (s) => ({
+      sched_id: s.sched_id,
+      departure: s.departure_time || "",
+      arrival: s.arrival_time || "",
+      vessel: s.vessel?.id || s.vessel || "",
+    }),
+  );
+  modalPortBSchedules.value = (selectedRoute.value.portB?.schedules || []).map(
+    (s) => ({
+      sched_id: s.sched_id,
+      departure: s.departure_time || "",
+      arrival: s.arrival_time || "",
+      vessel: s.vessel?.id || s.vessel || "",
+    }),
+  );
+  isCreateScheduleModalOpen.value = true;
+};
+
 const handleSaveSchedule = (scheduleData) => {
   if (selectedRoute.value) {
     fetchRoutes();
   }
+};
+
+const handleSaveScheduleOptions = async (scheduleOptions) => {
+  console.log("Saving schedule options:", scheduleOptions);
+  // TODO: Implement API call to save schedule options
+  // For now, just close the modal
+  isOptionsModalOpen.value = false;
+  // Optionally refresh the route data
+  await fetchRoutes();
 };
 </script>
 
@@ -121,11 +340,16 @@ const handleSaveSchedule = (scheduleData) => {
     :selectedRouteId="modalRouteId"
     :portASchedules="modalPortASchedules"
     :portBSchedules="modalPortBSchedules"
+    :mode="modalMode"
     @update:selectedRouteId="modalRouteId = $event"
-    @update:portASchedules="modalPortASchedules = $event"
-    @update:portBSchedules="modalPortBSchedules = $event"
     @close="isCreateScheduleModalOpen = false"
     @save="handleSaveSchedule"
+  />
+  <ModalScheduleOptions
+    v-if="isOptionsModalOpen && selectedRoute"
+    :selectedRoute="selectedRoute"
+    @close="isOptionsModalOpen = false"
+    @save="handleSaveScheduleOptions"
   />
   <div class="min-h-screen bg-gray-50 p-6">
     <!-- Header -->
@@ -140,7 +364,7 @@ const handleSaveSchedule = (scheduleData) => {
           Schedule Management
         </h1>
         <button
-          @click="isCreateScheduleModalOpen = true"
+          @click="openCreateModal"
           type="button"
           class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 flex items-center gap-2 cursor-pointer"
         >
@@ -177,13 +401,13 @@ const handleSaveSchedule = (scheduleData) => {
 
       <div class="bg-white rounded-lg p-6 shadow-sm">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-medium text-gray-600">Inactive Schedules</h3>
+          <h3 class="text-sm font-medium text-gray-600">Inactive Routes</h3>
           <AlertCircle class="w-5 h-5 text-blue-600" />
         </div>
         <div class="text-3xl font-bold text-gray-900 mb-1">
           {{ closedSchedules }}
         </div>
-        <p class="text-sm text-gray-500">Total of inactive schedules</p>
+        <p class="text-sm text-gray-500">Total of inactive routes</p>
       </div>
     </div>
 
@@ -270,7 +494,7 @@ const handleSaveSchedule = (scheduleData) => {
                     v-for="(route, idx) in filteredRoutes"
                     :key="route.route_id"
                     class="hover:bg-gray-50 cursor-pointer"
-                    @click="selectedRoute = route"
+                    @click="selectRoute(route)"
                     :class="{
                       'bg-blue-50':
                         selectedRoute &&
@@ -325,11 +549,13 @@ const handleSaveSchedule = (scheduleData) => {
             </h2>
             <div v-if="selectedRoute" class="flex gap-2">
               <button
+                @click="openEditModal"
                 class="flex items-center gap-1 text-blue-600 hover:underline text-sm font-medium"
               >
                 <Edit class="w-4 h-4" /> Edit
               </button>
               <button
+                @click="isOptionsModalOpen = true"
                 class="flex items-center gap-1 text-gray-600 hover:underline text-sm font-medium"
               >
                 <List class="w-4 h-4" /> Options
@@ -381,12 +607,42 @@ const handleSaveSchedule = (scheduleData) => {
                       <td
                         class="px-4 py-2 text-sm border-l border-r border-t border-b border-gray-200"
                       >
-                        {{ sched.vessel || "-" }}
+                        <select
+                          :value="sched.vessel?.id ?? ''"
+                          @change="
+                            handleVesselChange(
+                              sched.sched_id,
+                              $event.target.value,
+                            )
+                          "
+                          class="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Select Vessel</option>
+                          <option
+                            v-for="vessel in vessels"
+                            :key="vessel.id"
+                            :value="vessel.id"
+                          >
+                            {{ vessel.name }}
+                          </option>
+                        </select>
                       </td>
                       <td
-                        class="px-4 py-2 text-sm capitalize border-l border-r border-t border-b border-gray-200"
+                        @click="
+                          handleStatusToggle(sched.sched_id, sched.status)
+                        "
+                        class="px-4 py-2 text-sm capitalize border-l border-r border-t border-b border-gray-200 cursor-pointer hover:bg-gray-100"
                       >
-                        {{ sched.status }}
+                        <span
+                          :class="[
+                            'px-2 py-1 rounded-full text-xs font-medium',
+                            String(sched.status).toLowerCase() === 'active'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-800',
+                          ]"
+                        >
+                          {{ sched.status }}
+                        </span>
                       </td>
                     </tr>
                     <tr v-if="!selectedRoute.portA?.schedules?.length">
@@ -438,12 +694,42 @@ const handleSaveSchedule = (scheduleData) => {
                       <td
                         class="px-4 py-2 text-sm border-l border-r border-t border-b border-gray-200"
                       >
-                        {{ sched.vessel || "-" }}
+                        <select
+                          :value="sched.vessel?.id ?? ''"
+                          @change="
+                            handleVesselChange(
+                              sched.sched_id,
+                              $event.target.value,
+                            )
+                          "
+                          class="w-full px-2 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Select Vessel</option>
+                          <option
+                            v-for="vessel in vessels"
+                            :key="vessel.id"
+                            :value="vessel.id"
+                          >
+                            {{ vessel.name }}
+                          </option>
+                        </select>
                       </td>
                       <td
-                        class="px-4 py-2 text-sm capitalize border-l border-r border-t border-b border-gray-200"
+                        @click="
+                          handleStatusToggle(sched.sched_id, sched.status)
+                        "
+                        class="px-4 py-2 text-sm capitalize border-l border-r border-t border-b border-gray-200 cursor-pointer hover:bg-gray-100"
                       >
-                        {{ sched.status }}
+                        <span
+                          :class="[
+                            'px-2 py-1 rounded-full text-xs font-medium',
+                            String(sched.status).toLowerCase() === 'active'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-800',
+                          ]"
+                        >
+                          {{ sched.status }}
+                        </span>
                       </td>
                     </tr>
                     <tr v-if="!selectedRoute.portB?.schedules?.length">
