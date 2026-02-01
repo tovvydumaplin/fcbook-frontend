@@ -36,17 +36,25 @@
         <!-- Port A Section -->
         <div class="grid grid-cols-2 gap-4">
           <!-- Left: Schedule Times -->
-          <div class="bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
-            <div class="bg-gray-200 px-4 py-3 font-semibold text-gray-700 text-center">
+          <div
+            class="bg-gray-50 rounded-lg overflow-hidden border border-gray-200"
+          >
+            <div
+              class="bg-gray-200 px-4 py-3 font-semibold text-gray-700 text-center"
+            >
               {{ portAName }}
             </div>
             <table class="min-w-full bg-white">
               <thead>
                 <tr class="border-b border-gray-200">
-                  <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">
+                  <th
+                    class="px-6 py-3 text-left text-sm font-medium text-gray-700"
+                  >
                     Departure
                   </th>
-                  <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">
+                  <th
+                    class="px-6 py-3 text-left text-sm font-medium text-gray-700"
+                  >
                     Arrival
                   </th>
                 </tr>
@@ -69,23 +77,35 @@
           </div>
 
           <!-- Right: Options -->
-          <div class="bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
-            <div class="bg-gray-200 px-4 py-3 font-semibold text-gray-700 text-center">
+          <div
+            class="bg-gray-50 rounded-lg overflow-hidden border border-gray-200"
+          >
+            <div
+              class="bg-gray-200 px-4 py-3 font-semibold text-gray-700 text-center"
+            >
               Options
             </div>
             <table class="min-w-full bg-white">
               <thead>
                 <tr class="border-b border-gray-200">
-                  <th class="px-6 py-3 text-center text-sm font-medium text-gray-700">
+                  <th
+                    class="px-6 py-3 text-center text-sm font-medium text-gray-700"
+                  >
                     Online
                   </th>
-                  <th class="px-6 py-3 text-center text-sm font-medium text-gray-700">
+                  <th
+                    class="px-6 py-3 text-center text-sm font-medium text-gray-700"
+                  >
                     Teller
                   </th>
-                  <th class="px-6 py-3 text-center text-sm font-medium text-gray-700">
+                  <th
+                    class="px-6 py-3 text-center text-sm font-medium text-gray-700"
+                  >
                     Merchant
                   </th>
-                  <th class="px-6 py-3 text-center text-sm font-medium text-gray-700">
+                  <th
+                    class="px-6 py-3 text-center text-sm font-medium text-gray-700"
+                  >
                     All
                   </th>
                 </tr>
@@ -137,17 +157,25 @@
         <!-- Port B Section -->
         <div class="grid grid-cols-2 gap-4">
           <!-- Left: Schedule Times -->
-          <div class="bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
-            <div class="bg-gray-200 px-4 py-3 font-semibold text-gray-700 text-center">
+          <div
+            class="bg-gray-50 rounded-lg overflow-hidden border border-gray-200"
+          >
+            <div
+              class="bg-gray-200 px-4 py-3 font-semibold text-gray-700 text-center"
+            >
               {{ portBName }}
             </div>
             <table class="min-w-full bg-white">
               <thead>
                 <tr class="border-b border-gray-200">
-                  <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">
+                  <th
+                    class="px-6 py-3 text-left text-sm font-medium text-gray-700"
+                  >
                     Departure
                   </th>
-                  <th class="px-6 py-3 text-left text-sm font-medium text-gray-700">
+                  <th
+                    class="px-6 py-3 text-left text-sm font-medium text-gray-700"
+                  >
                     Arrival
                   </th>
                 </tr>
@@ -170,23 +198,35 @@
           </div>
 
           <!-- Right: Options -->
-          <div class="bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
-            <div class="bg-gray-200 px-4 py-3 font-semibold text-gray-700 text-center">
+          <div
+            class="bg-gray-50 rounded-lg overflow-hidden border border-gray-200"
+          >
+            <div
+              class="bg-gray-200 px-4 py-3 font-semibold text-gray-700 text-center"
+            >
               Options
             </div>
             <table class="min-w-full bg-white">
               <thead>
                 <tr class="border-b border-gray-200">
-                  <th class="px-6 py-3 text-center text-sm font-medium text-gray-700">
+                  <th
+                    class="px-6 py-3 text-center text-sm font-medium text-gray-700"
+                  >
                     Online
                   </th>
-                  <th class="px-6 py-3 text-center text-sm font-medium text-gray-700">
+                  <th
+                    class="px-6 py-3 text-center text-sm font-medium text-gray-700"
+                  >
                     Teller
                   </th>
-                  <th class="px-6 py-3 text-center text-sm font-medium text-gray-700">
+                  <th
+                    class="px-6 py-3 text-center text-sm font-medium text-gray-700"
+                  >
                     Merchant
                   </th>
-                  <th class="px-6 py-3 text-center text-sm font-medium text-gray-700">
+                  <th
+                    class="px-6 py-3 text-center text-sm font-medium text-gray-700"
+                  >
                     All
                   </th>
                 </tr>
@@ -347,8 +387,12 @@ const handleAllCheckbox = (schedule) => {
 // Update "All" checkbox based on individual options
 const updateAllCheckbox = (schedule) => {
   // Count how many options are checked
-  const checkedCount = [schedule.online, schedule.teller, schedule.merchant].filter(Boolean).length;
-  
+  const checkedCount = [
+    schedule.online,
+    schedule.teller,
+    schedule.merchant,
+  ].filter(Boolean).length;
+
   // If all 3 options are checked, check "All"
   // Otherwise, uncheck "All"
   schedule.all = checkedCount === 3;

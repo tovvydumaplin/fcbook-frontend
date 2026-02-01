@@ -25,9 +25,15 @@
           />
         </svg>
       </button>
-      <h2 class="text-xl font-semibold text-gray-900 mb-1">{{ mode === 'edit' ? 'Edit Schedule' : 'Create Schedule' }}</h2>
+      <h2 class="text-xl font-semibold text-gray-900 mb-1">
+        {{ mode === "edit" ? "Edit Schedule" : "Create Schedule" }}
+      </h2>
       <p class="text-sm text-gray-500 mb-6">
-        {{ mode === 'edit' ? 'Modify the schedule below and save changes' : 'Provide basic information about the schedule' }}
+        {{
+          mode === "edit"
+            ? "Modify the schedule below and save changes"
+            : "Provide basic information about the schedule"
+        }}
       </p>
       <!-- Route Select -->
       <div class="flex items-center gap-2 mb-6">
@@ -177,7 +183,7 @@
           @click="saveSchedule"
           class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
         >
-          {{ mode === 'edit' ? 'Save Changes' : 'Save Schedule' }}
+          {{ mode === "edit" ? "Save Changes" : "Save Schedule" }}
         </button>
       </div>
     </div>
@@ -196,15 +202,14 @@ const props = defineProps({
   mode: { type: String, default: "create" },
 });
 
-const emit = defineEmits([
-  "close",
-  "save",
-  "update:selectedRouteId",
-]);
+const emit = defineEmits(["close", "save", "update:selectedRouteId"]);
 const apiBase = import.meta.env.VITE_API_URL;
 
 const routes = ref(props.routes || []);
-watch(() => props.routes, (v) => (routes.value = v || []));
+watch(
+  () => props.routes,
+  (v) => (routes.value = v || []),
+);
 
 const mode = props.mode || "create";
 
@@ -267,11 +272,11 @@ watch(
   { immediate: true },
 );
 
-
 const addRow = (port) => {
   if (port === "a")
     localPortASchedules.value.push({ departure: "", arrival: "", vessel: "" });
-  else localPortBSchedules.value.push({ departure: "", arrival: "", vessel: "" });
+  else
+    localPortBSchedules.value.push({ departure: "", arrival: "", vessel: "" });
 };
 
 const fetchRoutes = async () => {
