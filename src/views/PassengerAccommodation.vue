@@ -10,6 +10,13 @@
         <h1 class="text-2xl font-semibold text-gray-900">
           Passenger Accommodation
         </h1>
+        <button
+          type="button"
+          class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 flex items-center gap-2 cursor-pointer"
+        >
+          <Plus class="w-4 h-4" />
+          Create
+        </button>
       </div>
     </div>
 
@@ -86,7 +93,12 @@
               <td class="px-6 py-4 text-sm text-gray-500">Yoshinoya</td>
 
               <td class="px-6 py-4 text-sm">
-                <button class="text-blue-600 hover:underline">Edit</button>
+                <button
+                  type="button"
+                  class="font-medium text-blue-600 hover:text-blue-900 flex items-center cursor-pointer"
+                >
+                  <Edit class="w-4 h-4" />
+                </button>
               </td>
             </tr>
 
@@ -105,8 +117,8 @@
 
 <script setup>
 import { ref, watch, onMounted } from "vue";
-import { Search } from "lucide-vue-next";
-
+import { Search, Edit, Plus } from "lucide-vue-next";
+import ModalCreateAccommodation from "../components/ModalCreateAccommodation.vue";
 /* STATE */
 const apiBase = import.meta.env.VITE_API_URL;
 const accommodations = ref([]);
