@@ -52,7 +52,7 @@
           <input
             placeholder="Input Accommodation"
             type="text"
-            v-model="passengerType.passengerTypeName"
+            v-model="passengerAccommodation"
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
@@ -79,9 +79,7 @@
               ></span>
               Saving...
             </span>
-            <span v-else>
-              {{ props.editData ? "Save changes" : "Save" }}
-            </span>
+            <span v-else> Save </span>
           </button>
         </div>
         <div v-if="errorMsg" class="text-red-500 text-sm mt-2 text-center">
@@ -93,13 +91,49 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from "vue";
+import { ref } from "vue";
 
-const emit = defineEmits(["saved", "close"]);
+const emit = defineEmits(["save", "close"]);
+
 const apiBase = import.meta.env.VITE_API_URL;
-const waived = ref(false);
+
+const passengerAccommodation = ref("");
 const isLoading = ref(false);
 const errorMsg = ref("");
 
-// FORM FIELDS
+const saveAccommodation = async () => {
+  if (!passengerAccommodation.value.trim()) {
+    errorMsg.value = "Accommodation name is required";
+    return;
+  }
+
+  isLoading.value = true;
+  errorMsg.value = "";
+
+  try {
+    const response = await fetch(`${apiBase}/passenger-accommodations`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify({
+        accommodation_name: passengerAccommodation.value,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to save accommodation");
+    }
+
+    emit("save"); // notify parent
+    emit("close"); // close modal
+  } catch (error) {
+    console.error(error);
+    errorMsg.value = "Something went wrong while saving.";
+  } finally {
+    isLoading.value = false;
+  }
+};
 </script>

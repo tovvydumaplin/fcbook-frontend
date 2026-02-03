@@ -11,6 +11,7 @@
           Passenger Accommodation
         </h1>
         <button
+          @click="isModalOpen = true"
           type="button"
           class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 flex items-center gap-2 cursor-pointer"
         >
@@ -112,6 +113,12 @@
         </table>
       </div>
     </div>
+    <!-- Modal rendered only when open -->
+    <ModalCreateAccommodation
+      v-if="isModalOpen"
+      @close="isModalOpen = false"
+      @save="handleSave"
+    />
   </div>
 </template>
 
@@ -120,6 +127,7 @@ import { ref, watch, onMounted } from "vue";
 import { Search, Edit, Plus } from "lucide-vue-next";
 import ModalCreateAccommodation from "../components/ModalCreateAccommodation.vue";
 /* STATE */
+const isModalOpen = ref(false);
 const apiBase = import.meta.env.VITE_API_URL;
 const accommodations = ref([]);
 const search = ref("");
@@ -152,7 +160,9 @@ const fetchAccommodations = async () => {
     loading.value = false;
   }
 };
-
+const handleSave = () => {
+  fetchAccommodations(); // refresh table
+};
 watch(search, fetchAccommodations);
 onMounted(fetchAccommodations);
 </script>
