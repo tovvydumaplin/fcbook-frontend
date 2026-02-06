@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 p-6">
+  <div class="min-h-full bg-gray-50 p-6">
     <!-- Header -->
     <div class="mb-6">
       <nav class="text-sm text-gray-500 mb-2">
@@ -114,11 +114,13 @@
       </div>
     </div>
     <!-- Modal rendered only when open -->
-    <ModalCreateAccommodation
-      v-if="isModalOpen"
-      @close="isModalOpen = false"
-      @save="handleSave"
-    />
+    <transition name="modal-fade">
+      <ModalCreateAccommodation
+        v-if="isModalOpen"
+        @close="isModalOpen = false"
+        @save="handleSave"
+      />
+    </transition>
   </div>
 </template>
 

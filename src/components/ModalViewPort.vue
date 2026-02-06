@@ -1,7 +1,9 @@
 <!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\components\ModalViewPort.vue -->
 <template>
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-7xl p-10 relative">
+    <div
+      class="modal-card bg-white rounded-2xl shadow-2xl w-full max-w-7xl p-10 relative"
+    >
       <!-- Close Button -->
       <button
         @click="$emit('close')"

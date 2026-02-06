@@ -1,9 +1,12 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-  >
-    <div class="bg-white rounded-lg w-full max-w-md mx-4 max-h-[90vh]">
+  <transition name="modal-fade">
+    <div
+      v-if="isOpen"
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+    >
+      <div
+        class="modal-card bg-white rounded-lg w-full max-w-2xl mx-4 max-h-[90vh]"
+      >
       <!-- Header -->
       <div class="flex items-center justify-between p-4 border-b">
         <h2 class="text-lg font-semibold text-gray-900">
@@ -184,12 +187,18 @@
           </div>
         </div>
       </div>
+      </div>
     </div>
-  </div>
+  </transition>
 </template>
 
 <script setup>
 import { ref, computed } from "vue";
+import cashImg from "../assets/payment-method-images/cash.png";
+import gcashImg from "../assets/payment-method-images/gcash.png";
+import paymongoImg from "../assets/payment-method-images/paymongo.png";
+import checkImg from "../assets/payment-method-images/check.png";
+import creditImg from "../assets/payment-method-images/credit.png";
 
 // Icon components
 const CashIcon = {
@@ -243,37 +252,37 @@ const paymentMethods = ref([
   {
     id: "cash",
     name: "Cash",
-    logo: "/assets/payment/cash.png", // Place your SVG in public/assets/payment/
+    logo: cashImg,
     iconColor: "text-green-600",
   },
   {
     id: "gcash",
     name: "Gcash",
-    logo: "/assets/payment/gcash.png",
+    logo: gcashImg,
     iconColor: "text-blue-600",
   },
   {
     id: "paymongo",
     name: "Paymongo",
-    logo: "/assets/payment/paymongo.png",
+    logo: paymongoImg,
     iconColor: "text-purple-600",
   },
   {
     id: "check",
     name: "Check",
-    logo: "/assets/payment/check.png",
+    logo: checkImg,
     iconColor: "text-gray-600",
   },
   {
     id: "prepaid",
     name: "Prepaid",
-    logo: "/assets/payment/card.png",
+    logo: creditImg,
     iconColor: "text-blue-600",
   },
   {
     id: "credit",
     name: "Credit",
-    logo: "/assets/payment/card.png",
+    logo: creditImg,
     iconColor: "text-red-600",
   },
 ]);

@@ -1,7 +1,7 @@
 <!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\views\VesselsModule.vue -->
 
 <template>
-  <div class="min-h-screen bg-gray-50 p-6">
+  <div class="min-h-full bg-gray-50 p-6">
     <!-- Header -->
     <div class="mb-6">
       <nav class="text-sm text-gray-500 mb-2">
@@ -231,20 +231,24 @@
     </div>
 
     <!-- Modals -->
-    <ModalCreateVessel
-      v-if="modals.createEdit.open"
-      :vessel="modals.createEdit.vessel || { classes: [] }"
-      @close="modals.createEdit.open = false"
-      @save="handleSaveVessel"
-    />
+    <transition name="modal-fade">
+      <ModalCreateVessel
+        v-if="modals.createEdit.open"
+        :vessel="modals.createEdit.vessel || { classes: [] }"
+        @close="modals.createEdit.open = false"
+        @save="handleSaveVessel"
+      />
+    </transition>
 
-    <ModalCreateSeatmap
-      v-if="modals.seatmap.open"
-      :accomodations="accomodations"
-      :seatmap="modals.seatmap.data"
-      @close="modals.seatmap.open = false"
-      @save="handleSeatmapSave"
-    />
+    <transition name="modal-fade">
+      <ModalCreateSeatmap
+        v-if="modals.seatmap.open"
+        :accomodations="accomodations"
+        :seatmap="modals.seatmap.data"
+        @close="modals.seatmap.open = false"
+        @save="handleSeatmapSave"
+      />
+    </transition>
   </div>
 </template>
 

@@ -5,7 +5,7 @@
     @click.self="$emit('close')"
   >
     <div
-      class="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 p-8 relative"
+      class="modal-card bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4 p-8 relative"
     >
       <button
         @click="$emit('close')"

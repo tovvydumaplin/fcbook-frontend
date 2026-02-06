@@ -153,11 +153,19 @@ onMounted(async () => {
 
     const result = await response.json();
     if (response.ok && result.success && result.data?.schedules) {
-      schedules.value = result.data.schedules.map((item) => ({
-        time: item.departure_time,
-        code: item.vessel,
-        value: item.departure_time,
-      }));
+      schedules.value = result.data.schedules.map((item) => {
+        const vesselName =
+          item.vessel?.vessel_name ??
+          item.vessel?.name ??
+          item.vessel_name ??
+          (typeof item.vessel === "string" ? item.vessel : "");
+        return {
+          id: item.sched_id ?? item.id ?? null,
+          time: item.departure_time,
+          code: vesselName || "No vessel",
+          value: item.departure_time,
+        };
+      });
     } else {
       console.error("Failed to fetch schedules:", result.message || result);
     }
@@ -403,7 +411,7 @@ const editPassengerFromModal = (passenger) => {
   />
 
   <main>
-    <div class="container grid grid-cols-[0.75fr_1.25fr]">
+    <div class="w-full grid grid-cols-[0.75fr_1.25fr]">
       <div
         class="left-panel h-screen overflow-y-auto scrollbar-hidden bg-white"
       >

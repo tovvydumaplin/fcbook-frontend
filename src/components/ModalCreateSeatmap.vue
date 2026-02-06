@@ -1,6 +1,9 @@
 <template>
   <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-xl w-[900px] mx-4" @click.stop>
+    <div
+      class="modal-card bg-white rounded-lg shadow-xl w-[900px] mx-4"
+      @click.stop
+    >
       <!-- HEADER -->
       <div class="flex items-center justify-between p-6 border-b">
         <h2 class="text-lg font-semibold text-gray-900">Create Seatmap</h2>

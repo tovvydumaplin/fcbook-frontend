@@ -334,24 +334,28 @@ const handleSaveScheduleOptions = async (scheduleOptions) => {
 </script>
 
 <template>
-  <ModalCreateSchedule
-    v-if="isCreateScheduleModalOpen"
-    :routes="routes"
-    :selectedRouteId="modalRouteId"
-    :portASchedules="modalPortASchedules"
-    :portBSchedules="modalPortBSchedules"
-    :mode="modalMode"
-    @update:selectedRouteId="modalRouteId = $event"
-    @close="isCreateScheduleModalOpen = false"
-    @save="handleSaveSchedule"
-  />
-  <ModalScheduleOptions
-    v-if="isOptionsModalOpen && selectedRoute"
-    :selectedRoute="selectedRoute"
-    @close="isOptionsModalOpen = false"
-    @save="handleSaveScheduleOptions"
-  />
-  <div class="min-h-screen bg-gray-50 p-6">
+  <transition name="modal-fade">
+    <ModalCreateSchedule
+      v-if="isCreateScheduleModalOpen"
+      :routes="routes"
+      :selectedRouteId="modalRouteId"
+      :portASchedules="modalPortASchedules"
+      :portBSchedules="modalPortBSchedules"
+      :mode="modalMode"
+      @update:selectedRouteId="modalRouteId = $event"
+      @close="isCreateScheduleModalOpen = false"
+      @save="handleSaveSchedule"
+    />
+  </transition>
+  <transition name="modal-fade">
+    <ModalScheduleOptions
+      v-if="isOptionsModalOpen && selectedRoute"
+      :selectedRoute="selectedRoute"
+      @close="isOptionsModalOpen = false"
+      @save="handleSaveScheduleOptions"
+    />
+  </transition>
+  <div class="min-h-full bg-gray-50 p-6">
     <!-- Header -->
     <div class="mb-6">
       <nav class="text-sm text-gray-500 mb-2">

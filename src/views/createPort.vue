@@ -1,6 +1,6 @@
 <!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\views\createPort.vue -->
 <template>
-  <div class="min-h-screen bg-gray-50 p-6">
+  <div class="min-h-full bg-gray-50 p-6">
     <!-- Header -->
     <div class="mb-6">
       <nav class="text-sm text-gray-500 mb-2">
@@ -220,19 +220,23 @@
     </div>
 
     <!-- Modal rendered only when open -->
-    <ModalCreatePort
-      v-if="isModalOpen"
-      @close="isModalOpen = false"
-      @save="handleSave"
-    />
+    <transition name="modal-fade">
+      <ModalCreatePort
+        v-if="isModalOpen"
+        @close="isModalOpen = false"
+        @save="handleSave"
+      />
+    </transition>
 
     <!-- Port View Modal -->
-    <ModalViewPort
-      v-if="selectedPort"
-      :port="selectedPort"
-      :passengers="selectedPortPassengers"
-      @close="selectedPort = null"
-    />
+    <transition name="modal-fade">
+      <ModalViewPort
+        v-if="selectedPort"
+        :port="selectedPort"
+        :passengers="selectedPortPassengers"
+        @close="selectedPort = null"
+      />
+    </transition>
   </div>
 </template>
 

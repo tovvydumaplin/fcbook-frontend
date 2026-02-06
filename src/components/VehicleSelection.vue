@@ -1,11 +1,12 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-  >
+  <transition name="modal-fade">
     <div
-      class="bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden"
+      v-if="isOpen"
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
     >
+      <div
+        class="modal-card bg-white rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden"
+      >
       <!-- Header -->
       <div class="flex items-center justify-between p-6 border-b">
         <h2 class="text-lg font-semibold text-gray-900">
@@ -234,8 +235,9 @@
           </button>
         </div>
       </div>
+      </div>
     </div>
-  </div>
+  </transition>
 </template>
 
 <script setup>

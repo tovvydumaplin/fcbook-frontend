@@ -15,7 +15,10 @@
       <span class="font-semibold text-blue-700 text-base">Saving data...</span>
     </div>
     <!-- Modal Content -->
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4" @click.stop>
+    <div
+      class="modal-card bg-white rounded-lg shadow-xl w-full max-w-md mx-4"
+      @click.stop
+    >
       <div
         class="flex items-center justify-between p-6 border-b border-gray-200"
       >

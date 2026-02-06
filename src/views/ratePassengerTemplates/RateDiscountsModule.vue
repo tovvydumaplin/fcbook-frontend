@@ -210,13 +210,15 @@
     </div>
   </div>
 
-  <ModalAddEditRate
-    v-if="isRateModalOpen"
-    :accommodation="selectedAccommodation"
-    :route="selectedRoute"
-    @close="isRateModalOpen = false"
-    @save="handleRateSaved"
-  />
+  <transition name="modal-fade">
+    <ModalAddEditRate
+      v-if="isRateModalOpen"
+      :accommodation="selectedAccommodation"
+      :route="selectedRoute"
+      @close="isRateModalOpen = false"
+      @save="handleRateSaved"
+    />
+  </transition>
 </template>
 
 <script setup>

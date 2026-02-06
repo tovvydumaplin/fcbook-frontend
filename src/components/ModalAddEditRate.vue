@@ -64,7 +64,7 @@ const handleSubmit = async () => {
     @click="$emit('close')"
   >
     <div
-      class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6"
+      class="modal-card bg-white rounded-lg shadow-xl w-full max-w-md mx-4 p-6"
       @click.stop
     >
       <h2 class="text-lg font-semibold mb-2">

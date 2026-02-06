@@ -2,20 +2,26 @@
 import HelloWorld from "./components/HelloWorld.vue";
 import MyForm from "./components/MyForm.vue";
 import sideBar from "./components/sideBar.vue";
+import Header from "./components/Header.vue";
 import { useRoute } from "vue-router";
 const route = useRoute();
 </script>
 
 <template>
-  <div class="flex">
-    <!-- Sidebar -->
-    <sideBar
-      v-if="route.path !== '/' && route.path !== '/teller-booking'"
-      class="w-64 bg-gray-100 min-h-screen"
-    />
-    <!-- Main Content -->
-    <div class="flex-1 bg-gray-50">
-      <router-view />
+  <div class="flex flex-col min-h-screen">
+    <!-- Header -->
+    <Header v-if="route.path !== '/' && route.path !== '/teller-booking'" />
+
+    <div class="flex flex-1">
+      <!-- Sidebar -->
+      <sideBar
+        v-if="route.path !== '/' && route.path !== '/teller-booking'"
+        class="w-80 bg-gray-100 min-h-screen"
+      />
+      <!-- Main Content -->
+      <div class="flex-1 bg-gray-50 min-h-0">
+        <router-view />
+      </div>
     </div>
   </div>
 </template>

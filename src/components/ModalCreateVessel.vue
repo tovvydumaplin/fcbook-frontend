@@ -4,7 +4,10 @@
     class="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50"
     @click="$emit('close')"
   >
-    <div class="bg-white rounded-lg shadow-xl w-full max-w-md mx-4" @click.stop>
+    <div
+      class="modal-card bg-white rounded-lg shadow-xl w-full max-w-md mx-4"
+      @click.stop
+    >
       <div
         class="flex items-center justify-between p-6 border-b border-gray-200"
       >

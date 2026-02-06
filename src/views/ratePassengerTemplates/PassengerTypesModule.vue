@@ -49,12 +49,14 @@
       </table>
     </div>
 
-    <ModalCreatePassengerType
-      v-if="isModalOpen"
-      :editData="editData"
-      @close="closeModal"
-      @saved="handleSaved"
-    />
+    <transition name="modal-fade">
+      <ModalCreatePassengerType
+        v-if="isModalOpen"
+        :editData="editData"
+        @close="closeModal"
+        @saved="handleSaved"
+      />
+    </transition>
   </div>
 </template>
 

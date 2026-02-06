@@ -1,10 +1,13 @@
 <!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\components\ViewTellerPassenger.vue -->
 <template>
-  <div
-    v-if="isOpen"
-    class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
-  >
-    <div class="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
+  <transition name="modal-fade">
+    <div
+      v-if="isOpen"
+      class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+    >
+      <div
+        class="modal-card bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden"
+      >
       <div class="flex items-center justify-between p-6 border-b">
         <h2 class="text-lg font-semibold text-gray-900">Passenger Details</h2>
         <button
@@ -62,22 +65,23 @@
           }}</pre>
         </div>
       </div>
+      </div>
+      <div class="flex justify-end mt-6 gap-2">
+        <button
+          class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium"
+          @click="emit('edit', passenger)"
+        >
+          Edit
+        </button>
+        <button
+          class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-medium"
+          @click="emit('close')"
+        >
+          Close
+        </button>
+      </div>
     </div>
-    <div class="flex justify-end mt-6 gap-2">
-      <button
-        class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium"
-        @click="emit('edit', passenger)"
-      >
-        Edit
-      </button>
-      <button
-        class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-medium"
-        @click="emit('close')"
-      >
-        Close
-      </button>
-    </div>
-  </div>
+  </transition>
 </template>
 
 <script setup>

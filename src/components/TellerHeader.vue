@@ -28,7 +28,7 @@
     <!-- User Dropdown -->
     <div class="relative ml-6">
       <button
-        class="flex items-center gap-2 text-sm font-medium focus:outline-none cursor-pointer"
+        class="flex items-center gap-2 text-sm font-medium focus:outline-none cursor-pointer transition-transform duration-150 hover:scale-[1.02] active:scale-[0.98]"
         @click="dropdownOpen = !dropdownOpen"
       >
         {{ userName }}
@@ -46,17 +46,19 @@
           />
         </svg>
       </button>
-      <div
-        v-if="dropdownOpen"
-        class="absolute right-0 mt-2 w-40 bg-white rounded shadow-lg z-10"
-      >
-        <button
-          class="w-full text-left px-4 py-2 text-gray-700 rounded cursor-pointer hover:bg-gray-100"
-          @click="logout"
+      <transition name="teller-dropdown">
+        <div
+          v-if="dropdownOpen"
+          class="absolute right-0 mt-2 w-40 bg-white rounded shadow-lg z-10"
         >
-          Logout
-        </button>
-      </div>
+          <button
+            class="w-full text-left px-4 py-2 text-gray-700 rounded cursor-pointer hover:bg-gray-100 transition-transform duration-150 hover:translate-x-0.5 active:scale-[0.98]"
+            @click="logout"
+          >
+            Logout
+          </button>
+        </div>
+      </transition>
     </div>
   </header>
 </template>
@@ -93,12 +95,24 @@ const logout = async () => {
   }
   localStorage.removeItem("token");
   localStorage.removeItem("user");
-  router.push("/");
+  router.push({ path: "/", query: { loggedOut: "1" } });
 };
 </script>
 
 <style scoped>
 header {
   min-height: 40px;
+}
+
+.teller-dropdown-enter-active,
+.teller-dropdown-leave-active {
+  transition: opacity 160ms ease, transform 160ms ease;
+  transform-origin: top right;
+}
+
+.teller-dropdown-enter-from,
+.teller-dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
 }
 </style>
