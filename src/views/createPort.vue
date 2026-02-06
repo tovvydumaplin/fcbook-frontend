@@ -13,10 +13,11 @@
         <button
           @click="isModalOpen = true"
           type="button"
-          class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 flex items-center gap-2 cursor-pointer"
+          class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          :disabled="isLoading"
         >
           <Plus class="w-4 h-4" />
-          Create
+          {{ isLoading ? "Loading..." : "Create" }}
         </button>
       </div>
     </div>
@@ -28,10 +29,10 @@
           <h3 class="text-sm font-medium text-gray-600">Total Ports</h3>
         </div>
         <div class="text-3xl font-bold text-gray-900 mb-1">
-          {{ totalPorts }}
+          {{ isLoading ? "—" : totalPorts }}
         </div>
         <p class="text-sm text-gray-500">
-          {{ closedPorts }} closed ports as of today
+          {{ isLoading ? "Loading data..." : `${closedPorts} closed ports as of today` }}
         </p>
       </div>
 
@@ -41,7 +42,7 @@
           <BarChart3 class="w-5 h-5 text-blue-600" />
         </div>
         <div class="text-3xl font-bold text-gray-900 mb-1">
-          {{ closedPorts }}
+          {{ isLoading ? "—" : closedPorts }}
         </div>
         <p class="text-sm text-gray-500">Across all available ports</p>
       </div>
@@ -54,7 +55,7 @@
           <AlertCircle class="w-5 h-5 text-blue-600" />
         </div>
         <div class="text-3xl font-bold text-gray-900 mb-1">
-          {{ zeroTransactionPorts }}
+          {{ isLoading ? "—" : zeroTransactionPorts }}
         </div>
         <p class="text-sm text-gray-500">
           Total of active ports without transaction
@@ -154,7 +155,16 @@
                   </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
+                  <tr v-if="isLoading">
+                    <td
+                      colspan="9"
+                      class="px-6 py-8 text-center text-sm text-gray-500"
+                    >
+                      Loading ports...
+                    </td>
+                  </tr>
                   <tr
+                    v-else
                     v-for="port in filteredPorts"
                     :key="port.id"
                     class="hover:bg-gray-50"
@@ -246,7 +256,8 @@ import { Plus, BarChart3, AlertCircle, Search } from "lucide-vue-next";
 import ModalCreatePort from "../components/ModalCreatePort.vue";
 import ModalViewPort from "../components/ModalViewPort.vue";
 
-const isModalOpen = ref(false);
+  const isModalOpen = ref(false);
+  const isLoading = ref(false);
 const activeTab = ref("all");
 const searchQuery = ref("");
 const apiBase = import.meta.env.VITE_API_URL;
@@ -349,15 +360,16 @@ const handleAction = (port) => {
   ];
 };
 
-const fetchPorts = async () => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await fetch(`${apiBase}/ports`, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-    });
+  const fetchPorts = async () => {
+    isLoading.value = true;
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${apiBase}/ports`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+      });
     const data = await response.json();
     if (response.ok && data.success && data.data?.ports) {
       ports.value = data.data.ports.map((port, idx) => ({
@@ -377,10 +389,12 @@ const fetchPorts = async () => {
     } else {
       console.error("Failed to fetch ports:", data.message || data);
     }
-  } catch (err) {
-    console.error("Network error fetching ports:", err);
-  }
-};
+    } catch (err) {
+      console.error("Network error fetching ports:", err);
+    } finally {
+      isLoading.value = false;
+    }
+  };
 
 onMounted(fetchPorts);
 
