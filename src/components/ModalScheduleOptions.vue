@@ -349,7 +349,7 @@ const visibilityToCheckboxes = (visibility) => {
 
 // Convert checkbox states to visibility value
 const checkboxesToVisibility = (online, teller, merchant) => {
-  console.log('checkboxesToVisibility called:', { online, teller, merchant });
+  console.log("checkboxesToVisibility called:", { online, teller, merchant });
   if (online && teller && merchant) return 7; // All
   if (teller && merchant) return 6; // Merchant/Walk-in
   if (online && merchant) return 5; // Online/Merchant
@@ -434,13 +434,13 @@ const updateAllCheckbox = (schedule) => {
     schedule.teller,
     schedule.merchant,
   );
-  
-  console.log('Updated visibility:', {
+
+  console.log("Updated visibility:", {
     sched_id: schedule.sched_id,
     online: schedule.online,
     teller: schedule.teller,
     merchant: schedule.merchant,
-    visibility: schedule.visibility
+    visibility: schedule.visibility,
   });
 
   // Update "All" checkbox if all three are checked

@@ -330,9 +330,9 @@ const handleSaveScheduleOptions = async (scheduleOptions) => {
     // Close modal and refresh
     isOptionsModalOpen.value = false;
     await fetchRoutes();
-    
+
     // Log the updated route to verify data refresh
-    console.log('Selected route after refresh:', selectedRoute.value);
+    console.log("Selected route after refresh:", selectedRoute.value);
   } catch (err) {
     console.error("Error saving schedule options:", err);
     alert("Failed to save schedule options");
