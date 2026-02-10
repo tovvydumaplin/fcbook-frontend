@@ -334,6 +334,32 @@ const portBName = computed(
   () => props.selectedRoute.portB?.port_name || "Port B",
 );
 
+// Convert visibility value to checkbox states
+const visibilityToCheckboxes = (visibility) => {
+  // Default to all (7) if not provided
+  const vis = visibility ?? 7;
+
+  return {
+    online: [1, 3, 5, 7].includes(vis),
+    teller: [2, 3, 6, 7].includes(vis),
+    merchant: [4, 5, 6, 7].includes(vis),
+    all: vis === 7,
+  };
+};
+
+// Convert checkbox states to visibility value
+const checkboxesToVisibility = (online, teller, merchant) => {
+  console.log('checkboxesToVisibility called:', { online, teller, merchant });
+  if (online && teller && merchant) return 7; // All
+  if (teller && merchant) return 6; // Merchant/Walk-in
+  if (online && merchant) return 5; // Online/Merchant
+  if (merchant) return 4; // Merchant only
+  if (online && teller) return 3; // Online/Walk-in
+  if (teller) return 2; // Walk-in only
+  if (online) return 1; // Online only
+  return 0; // None
+};
+
 // Initialize schedules with option flags
 const portASchedules = ref([]);
 const portBSchedules = ref([]);
@@ -344,26 +370,40 @@ watch(
   (newRoute) => {
     if (newRoute) {
       // Initialize Port A schedules
-      portASchedules.value = (newRoute.portA?.schedules || []).map((sched) => ({
-        sched_id: sched.sched_id,
-        departure_time: sched.departure_time,
-        arrival_time: sched.arrival_time,
-        online: sched.online ?? true,
-        teller: sched.teller ?? true,
-        merchant: sched.merchant ?? true,
-        all: sched.all ?? true,
-      }));
+      portASchedules.value = (newRoute.portA?.schedules || []).map((sched) => {
+        console.log(
+          "Port A schedule:",
+          sched.sched_id,
+          "visibility:",
+          sched.visibility,
+        );
+        const checkboxes = visibilityToCheckboxes(sched.visibility);
+        return {
+          sched_id: sched.sched_id,
+          departure_time: sched.departure_time,
+          arrival_time: sched.arrival_time,
+          visibility: sched.visibility ?? 7,
+          ...checkboxes,
+        };
+      });
 
       // Initialize Port B schedules
-      portBSchedules.value = (newRoute.portB?.schedules || []).map((sched) => ({
-        sched_id: sched.sched_id,
-        departure_time: sched.departure_time,
-        arrival_time: sched.arrival_time,
-        online: sched.online ?? true,
-        teller: sched.teller ?? true,
-        merchant: sched.merchant ?? true,
-        all: sched.all ?? true,
-      }));
+      portBSchedules.value = (newRoute.portB?.schedules || []).map((sched) => {
+        console.log(
+          "Port B schedule:",
+          sched.sched_id,
+          "visibility:",
+          sched.visibility,
+        );
+        const checkboxes = visibilityToCheckboxes(sched.visibility);
+        return {
+          sched_id: sched.sched_id,
+          departure_time: sched.departure_time,
+          arrival_time: sched.arrival_time,
+          visibility: sched.visibility ?? 7,
+          ...checkboxes,
+        };
+      });
     }
   },
   { immediate: true },
@@ -376,33 +416,48 @@ const handleAllCheckbox = (schedule) => {
     schedule.online = true;
     schedule.teller = true;
     schedule.merchant = true;
+    schedule.visibility = 7;
   } else {
     // If "All" is unchecked, uncheck all options
     schedule.online = false;
     schedule.teller = false;
     schedule.merchant = false;
+    schedule.visibility = 0;
   }
 };
 
-// Update "All" checkbox based on individual options
+// Update "All" checkbox and visibility based on individual options
 const updateAllCheckbox = (schedule) => {
-  // Count how many options are checked
-  const checkedCount = [
+  // Update visibility based on current checkbox states
+  schedule.visibility = checkboxesToVisibility(
     schedule.online,
     schedule.teller,
     schedule.merchant,
-  ].filter(Boolean).length;
+  );
+  
+  console.log('Updated visibility:', {
+    sched_id: schedule.sched_id,
+    online: schedule.online,
+    teller: schedule.teller,
+    merchant: schedule.merchant,
+    visibility: schedule.visibility
+  });
 
-  // If all 3 options are checked, check "All"
-  // Otherwise, uncheck "All"
-  schedule.all = checkedCount === 3;
+  // Update "All" checkbox if all three are checked
+  schedule.all = schedule.online && schedule.teller && schedule.merchant;
 };
 
 const handleSave = () => {
   const scheduleOptions = {
     route_id: props.selectedRoute.route_id,
-    portA: portASchedules.value,
-    portB: portBSchedules.value,
+    portA: portASchedules.value.map((sched) => ({
+      sched_id: sched.sched_id,
+      visibility: sched.visibility,
+    })),
+    portB: portBSchedules.value.map((sched) => ({
+      sched_id: sched.sched_id,
+      visibility: sched.visibility,
+    })),
   };
 
   emit("save", scheduleOptions);

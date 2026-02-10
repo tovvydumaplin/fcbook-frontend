@@ -149,53 +149,9 @@ onMounted(() => {
   fetchVessels();
 });
 
-const fetchRouteSchedules = async (routeId) => {
-  try {
-    const token = localStorage.getItem("token");
-    console.log("Fetching schedules for route:", routeId);
-    const res = await fetch(`${apiBase}/routes/${routeId}/with-schedules`, {
-      headers: { "Content-Type": "application/json", Authorization: token },
-    });
-    const d = await res.json();
-    console.log("fetchRouteSchedules response:", d);
-    if (res.ok && d.success && d.data?.routes && d.data.routes.length) {
-      return d.data.routes[0];
-    }
-  } catch (err) {
-    console.error("Error fetching route schedules:", err);
-  }
-  return null;
-};
-
 const selectRoute = async (route) => {
   console.log("Route selected:", route);
-  // If route already contains schedules, use it
-  const hasSchedules =
-    (route.portA && route.portA.schedules && route.portA.schedules.length) ||
-    (route.portB && route.portB.schedules && route.portB.schedules.length);
-
-  if (hasSchedules) {
-    selectedRoute.value = route;
-    console.log("Using existing schedules on selectedRoute", route);
-    return;
-  }
-
-  // otherwise fetch schedules for this route
-  const fullRoute = await fetchRouteSchedules(route.route_id);
-  if (fullRoute) {
-    // merge into route object
-    const updated = {
-      ...route,
-      portA: fullRoute.portA || route.portA,
-      portB: fullRoute.portB || route.portB,
-    };
-    selectedRoute.value = updated;
-    console.log("Selected route with fetched schedules:", updated);
-  } else {
-    // fallback to original route
-    selectedRoute.value = route;
-    console.log("Selected route (no schedules found):", route);
-  }
+  selectedRoute.value = route;
 };
 
 const getVesselName = (vesselId) => {
@@ -325,11 +281,62 @@ const handleSaveSchedule = (scheduleData) => {
 
 const handleSaveScheduleOptions = async (scheduleOptions) => {
   console.log("Saving schedule options:", scheduleOptions);
-  // TODO: Implement API call to save schedule options
-  // For now, just close the modal
-  isOptionsModalOpen.value = false;
-  // Optionally refresh the route data
-  await fetchRoutes();
+
+  try {
+    const token = localStorage.getItem("token");
+
+    // Update Port A schedules
+    for (const sched of scheduleOptions.portA) {
+      console.log(
+        `Updating Port A schedule ${sched.sched_id} with visibility:`,
+        sched.visibility,
+      );
+      const response = await fetch(`${apiBase}/schedules/${sched.sched_id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify({ visibility: sched.visibility }),
+      });
+      const data = await response.json();
+      console.log(`Response for schedule ${sched.sched_id}:`, data);
+      if (!response.ok) {
+        console.error("Failed to update schedule:", data);
+      }
+    }
+
+    // Update Port B schedules
+    for (const sched of scheduleOptions.portB) {
+      console.log(
+        `Updating Port B schedule ${sched.sched_id} with visibility:`,
+        sched.visibility,
+      );
+      const response = await fetch(`${apiBase}/schedules/${sched.sched_id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify({ visibility: sched.visibility }),
+      });
+      const data = await response.json();
+      console.log(`Response for schedule ${sched.sched_id}:`, data);
+      if (!response.ok) {
+        console.error("Failed to update schedule:", data);
+      }
+    }
+
+    // Close modal and refresh
+    isOptionsModalOpen.value = false;
+    await fetchRoutes();
+    
+    // Log the updated route to verify data refresh
+    console.log('Selected route after refresh:', selectedRoute.value);
+  } catch (err) {
+    console.error("Error saving schedule options:", err);
+    alert("Failed to save schedule options");
+  }
 };
 </script>
 
