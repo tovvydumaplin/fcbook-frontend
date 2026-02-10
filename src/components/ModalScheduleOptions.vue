@@ -334,9 +334,7 @@ const portBName = computed(
   () => props.selectedRoute.portB?.port_name || "Port B",
 );
 
-// Convert visibility value to checkbox states
 const visibilityToCheckboxes = (visibility) => {
-  // Default to all (7) if not provided
   const vis = visibility ?? 7;
 
   return {
@@ -347,36 +345,25 @@ const visibilityToCheckboxes = (visibility) => {
   };
 };
 
-// Convert checkbox states to visibility value
 const checkboxesToVisibility = (online, teller, merchant) => {
-  console.log("checkboxesToVisibility called:", { online, teller, merchant });
-  if (online && teller && merchant) return 7; // All
-  if (teller && merchant) return 6; // Merchant/Walk-in
-  if (online && merchant) return 5; // Online/Merchant
-  if (merchant) return 4; // Merchant only
-  if (online && teller) return 3; // Online/Walk-in
-  if (teller) return 2; // Walk-in only
-  if (online) return 1; // Online only
-  return 0; // None
+  if (online && teller && merchant) return 7;
+  if (teller && merchant) return 6;
+  if (online && merchant) return 5;
+  if (merchant) return 4;
+  if (online && teller) return 3;
+  if (teller) return 2;
+  if (online) return 1;
+  return 0;
 };
 
-// Initialize schedules with option flags
 const portASchedules = ref([]);
 const portBSchedules = ref([]);
 
-// Watch for selectedRoute changes and initialize schedules
 watch(
   () => props.selectedRoute,
   (newRoute) => {
     if (newRoute) {
-      // Initialize Port A schedules
       portASchedules.value = (newRoute.portA?.schedules || []).map((sched) => {
-        console.log(
-          "Port A schedule:",
-          sched.sched_id,
-          "visibility:",
-          sched.visibility,
-        );
         const checkboxes = visibilityToCheckboxes(sched.visibility);
         return {
           sched_id: sched.sched_id,
@@ -387,14 +374,7 @@ watch(
         };
       });
 
-      // Initialize Port B schedules
       portBSchedules.value = (newRoute.portB?.schedules || []).map((sched) => {
-        console.log(
-          "Port B schedule:",
-          sched.sched_id,
-          "visibility:",
-          sched.visibility,
-        );
         const checkboxes = visibilityToCheckboxes(sched.visibility);
         return {
           sched_id: sched.sched_id,
@@ -411,16 +391,13 @@ watch(
 
 // Handle when "All" checkbox is clicked
 const handleAllCheckbox = (schedule) => {
+const handleAllCheckbox = (schedule) => {
   if (schedule.all) {
-    // If "All" is checked, check all options
     schedule.online = true;
     schedule.teller = true;
     schedule.merchant = true;
     schedule.visibility = 7;
   } else {
-    // If "All" is unchecked, uncheck all options
-    schedule.online = false;
-    schedule.teller = false;
     schedule.merchant = false;
     schedule.visibility = 0;
   }
@@ -428,22 +405,12 @@ const handleAllCheckbox = (schedule) => {
 
 // Update "All" checkbox and visibility based on individual options
 const updateAllCheckbox = (schedule) => {
-  // Update visibility based on current checkbox states
   schedule.visibility = checkboxesToVisibility(
     schedule.online,
     schedule.teller,
     schedule.merchant,
   );
 
-  console.log("Updated visibility:", {
-    sched_id: schedule.sched_id,
-    online: schedule.online,
-    teller: schedule.teller,
-    merchant: schedule.merchant,
-    visibility: schedule.visibility,
-  });
-
-  // Update "All" checkbox if all three are checked
   schedule.all = schedule.online && schedule.teller && schedule.merchant;
 };
 

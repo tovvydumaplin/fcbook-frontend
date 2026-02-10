@@ -150,7 +150,6 @@ onMounted(() => {
 });
 
 const selectRoute = async (route) => {
-  console.log("Route selected:", route);
   selectedRoute.value = route;
 };
 
@@ -280,17 +279,10 @@ const handleSaveSchedule = (scheduleData) => {
 };
 
 const handleSaveScheduleOptions = async (scheduleOptions) => {
-  console.log("Saving schedule options:", scheduleOptions);
-
   try {
     const token = localStorage.getItem("token");
 
-    // Update Port A schedules
     for (const sched of scheduleOptions.portA) {
-      console.log(
-        `Updating Port A schedule ${sched.sched_id} with visibility:`,
-        sched.visibility,
-      );
       const response = await fetch(`${apiBase}/schedules/${sched.sched_id}`, {
         method: "PUT",
         headers: {
@@ -300,18 +292,12 @@ const handleSaveScheduleOptions = async (scheduleOptions) => {
         body: JSON.stringify({ visibility: sched.visibility }),
       });
       const data = await response.json();
-      console.log(`Response for schedule ${sched.sched_id}:`, data);
       if (!response.ok) {
         console.error("Failed to update schedule:", data);
       }
     }
 
-    // Update Port B schedules
     for (const sched of scheduleOptions.portB) {
-      console.log(
-        `Updating Port B schedule ${sched.sched_id} with visibility:`,
-        sched.visibility,
-      );
       const response = await fetch(`${apiBase}/schedules/${sched.sched_id}`, {
         method: "PUT",
         headers: {
@@ -321,18 +307,13 @@ const handleSaveScheduleOptions = async (scheduleOptions) => {
         body: JSON.stringify({ visibility: sched.visibility }),
       });
       const data = await response.json();
-      console.log(`Response for schedule ${sched.sched_id}:`, data);
       if (!response.ok) {
         console.error("Failed to update schedule:", data);
       }
     }
 
-    // Close modal and refresh
     isOptionsModalOpen.value = false;
     await fetchRoutes();
-
-    // Log the updated route to verify data refresh
-    console.log("Selected route after refresh:", selectedRoute.value);
   } catch (err) {
     console.error("Error saving schedule options:", err);
     alert("Failed to save schedule options");
