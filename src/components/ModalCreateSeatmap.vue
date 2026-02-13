@@ -144,8 +144,8 @@
                   !currentSelectedClass
                     ? 'opacity-40 cursor-not-allowed'
                     : renameMode
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-200',
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-200',
                 ]"
               >
                 Rename Seat
@@ -160,8 +160,8 @@
                   !currentSelectedClass
                     ? 'opacity-40 cursor-not-allowed'
                     : blockMode
-                    ? 'bg-red-500 text-white'
-                    : 'bg-gray-200',
+                      ? 'bg-red-500 text-white'
+                      : 'bg-gray-200',
                 ]"
               >
                 Block/Unblock
@@ -176,8 +176,8 @@
                   !currentSelectedClass
                     ? 'opacity-40 cursor-not-allowed'
                     : pathMode
-                    ? 'bg-yellow-400 text-white'
-                    : 'bg-gray-200',
+                      ? 'bg-yellow-400 text-white'
+                      : 'bg-gray-200',
                 ]"
               >
                 Walk Path
@@ -192,8 +192,8 @@
                   !currentSelectedClass
                     ? 'opacity-40 cursor-not-allowed'
                     : facilityMode
-                    ? 'bg-orange-500 text-white'
-                    : 'bg-gray-200',
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-gray-200',
                 ]"
               >
                 Add Facility
@@ -207,8 +207,8 @@
                   !currentSelectedClass
                     ? 'opacity-40 cursor-not-allowed'
                     : pwdMode
-                    ? 'bg-[#016AB3] text-white'
-                    : 'bg-gray-200',
+                      ? 'bg-[#016AB3] text-white'
+                      : 'bg-gray-200',
                 ]"
               >
                 PWD
@@ -363,10 +363,22 @@ const seatSize = 40;
 
 const availableClasses = computed(() =>
   props.accomodations.filter(
-    (a) => !addedClasses.value.some((c) => c.name === a.name)
-  )
+    (a) => !addedClasses.value.some((c) => c.name === a.name),
+  ),
 );
+// Initialize addedClasses from seatmap prop
+if (props.seatmap?.length) {
+  addedClasses.value = props.seatmap.map((cls) => ({
+    name: cls.name,
+    rows: cls.rows || null,
+    columns: cls.columns || null,
+    seats: cls.seats || [],
+    facilityLabels: cls.facilityLabels || [],
+  }));
 
+  // Auto-select the first class
+  currentSelectedClass.value = addedClasses.value[0];
+}
 const removeFacilityBySeat = (seat) => {
   const cls = currentSelectedClass.value;
   if (!cls || !seat.facility) return;
@@ -376,7 +388,7 @@ const removeFacilityBySeat = (seat) => {
     if (s.facility === facilityName) s.facility = null;
   });
   cls.facilityLabels = cls.facilityLabels.filter(
-    (f) => f.name !== facilityName
+    (f) => f.name !== facilityName,
   );
   facilityMode.value = false;
 };
@@ -568,7 +580,7 @@ const endDrag = () => {
   // Handle facility drag
   if (dragMode.value === "facility" && isDragging.value) {
     const seatsToLabel = currentSelectedClass.value.seats.filter(
-      (s) => s.facility === "…"
+      (s) => s.facility === "…",
     );
     if (seatsToLabel.length) {
       const r1 = Math.min(...seatsToLabel.map((s) => s.row));
@@ -679,11 +691,11 @@ const saveSeatmap = () => {
   if (!addedClasses.value.length)
     return alert("Add at least one class before saving!");
   const classWithNoSeats = addedClasses.value.find(
-    (c) => !c.seats || !c.seats.length
+    (c) => !c.seats || !c.seats.length,
   );
   if (classWithNoSeats)
     return alert(
-      `Class "${classWithNoSeats.name}" has no seats. Please add seats before saving.`
+      `Class "${classWithNoSeats.name}" has no seats. Please add seats before saving.`,
     );
   isLoading.value = true;
   try {

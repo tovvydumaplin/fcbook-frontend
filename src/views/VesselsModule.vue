@@ -283,6 +283,7 @@ const searchQuery = ref("");
 const isTableLoading = ref(false);
 const isLoading = ref(false);
 const vessels = ref([]);
+const isSeatmapLoading = ref(false);
 
 const modals = ref({
   createEdit: { open: false, vessel: null },
@@ -306,7 +307,7 @@ const renderClassList = (vessel, field) => {
       case "wifi":
         return cls.wifi === true ? "✅" : cls.wifi === false ? "❌" : "-";
       case "seats":
-        return cls.seats.length;
+        return cls.seats ? cls.seats.length : 0;
       case "name":
         return cls.name || "-";
     }
@@ -348,7 +349,7 @@ const fetchVessels = async () => {
           name: v.vessel_name,
           status: v.status,
           classes: await fetchVesselLayout(v.id, token),
-        }))
+        })),
       );
     } else vessels.value = [];
   } catch (err) {
@@ -374,10 +375,24 @@ const openEditModal = (vessel) => {
   modals.value.createEdit.open = true;
 };
 
-const openSeatmapModal = (vessel) => {
-  modals.value.seatmap.vessel = vessel;
-  modals.value.seatmap.data = vessel.classes;
-  modals.value.seatmap.open = true;
+const openSeatmapModal = async (vessel) => {
+  try {
+    isSeatmapLoading.value = true; // ONLY for seatmap
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${apiBase}/vessels/${vessel.id}/layout`, {
+      headers: { "Content-Type": "application/json", Authorization: token },
+    });
+    const data = await res.json();
+
+    modals.value.seatmap.vessel = vessel;
+    modals.value.seatmap.data = data.classes || [];
+    modals.value.seatmap.open = true;
+  } catch (err) {
+    console.error("Failed to load seatmap:", err);
+    alert("Failed to load seatmap. Please try again.");
+  } finally {
+    isSeatmapLoading.value = false;
+  }
 };
 
 // Computed
@@ -390,7 +405,7 @@ const statusMap = {
 const filteredVessels = computed(() =>
   activeTab.value === "all"
     ? vessels.value
-    : vessels.value.filter((v) => v.status === statusMap[activeTab.value])
+    : vessels.value.filter((v) => v.status === statusMap[activeTab.value]),
 );
 
 // Save seatmap

@@ -390,7 +390,7 @@ watch(
 );
 
 // Handle when "All" checkbox is clicked
-const handleAllCheckbox = (schedule) => {
+
 const handleAllCheckbox = (schedule) => {
   if (schedule.all) {
     schedule.online = true;
