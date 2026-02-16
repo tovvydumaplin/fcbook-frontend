@@ -66,8 +66,8 @@
                     <option value="" disabled>Select accommodation</option>
                     <option
                       v-for="seat in availableClasses"
-                      :key="seat.name"
-                      :value="seat.name"
+                      :key="seat.id"
+                      :value="seat.id"
                     >
                       {{ seat.name }}
                     </option>
@@ -93,6 +93,7 @@
                     <button
                       @click="saveChanges"
                       type="button"
+                      :disabled="!selectedClassIndex"
                       class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
                     >
                       Save
@@ -344,7 +345,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
 
-const props = defineProps({ accomodations: Array, seatmap: Object });
+const props = defineProps({ seatmap: Object });
 const emit = defineEmits(["save", "close"]);
 const apiBase = import.meta.env.VITE_API_URL;
 const currentSelectedClass = ref(null);
@@ -374,7 +375,7 @@ const availableClasses = computed(() =>
 // Initialize addedClasses from seatmap prop
 if (props.seatmap?.length) {
   addedClasses.value = props.seatmap.map((cls) => ({
-    name: cls.name,
+    name: cls.name || cls.accommodation_name,
     rows: cls.rows || null,
     columns: cls.columns || null,
     seats: cls.seats || [],
@@ -410,14 +411,29 @@ const openAddClass = async () => {
   await fetchAccommodations();
 };
 const addClass = () => {
-  if (!selectedClassIndex.value) return;
+  if (!selectedClassIndex.value) {
+    alert("Please select accommodation first");
+    return;
+  }
+
+  const selected = accomodations.value.find(
+    (a) => a.id === selectedClassIndex.value,
+  );
+
+  if (!selected) {
+    alert("Invalid accommodation selected");
+    return;
+  }
+
   addedClasses.value.push({
-    name: selectedClassIndex.value,
+    id: selected.id,
+    name: selected.name,
     rows: null,
     columns: null,
     seats: [],
     facilityLabels: [],
   });
+
   selectedClassIndex.value = null;
   isOpen.value = false;
 };
@@ -725,6 +741,8 @@ const fetchAccommodations = async () => {
 const saveSeatmap = () => {
   if (!addedClasses.value.length)
     return alert("Add at least one class before saving!");
+
+  // Check if any class has no seats
   const classWithNoSeats = addedClasses.value.find(
     (c) => !c.seats || !c.seats.length,
   );
@@ -732,23 +750,28 @@ const saveSeatmap = () => {
     return alert(
       `Class "${classWithNoSeats.name}" has no seats. Please add seats before saving.`,
     );
+
   isLoading.value = true;
+
   try {
     const payload = addedClasses.value.map((c) => {
-      const source = props.accomodations.find((a) => a.name === c.name) || {};
+      const source = accomodations.value.find((a) => a.name === c.name) || {};
 
       return {
         name: c.name,
-        rows: c.rows || 0,
-        columns: c.columns || 0,
-        seats: c.seats || [],
+        rows: c.rows ?? 0,
+        columns: c.columns ?? 0,
+        seats: c.seats ?? [],
         aircon: source.aircon ?? true,
         wifi: source.wifi ?? false,
-        facilityLabels: c.facilityLabels || [],
+        facilityLabels: c.facilityLabels ?? [],
       };
     });
 
     emit("save", payload);
+  } catch (err) {
+    console.error("Failed to build seatmap payload", err);
+    alert("Failed to save seatmap. Check console for details.");
   } finally {
     isLoading.value = false;
   }
