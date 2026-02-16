@@ -307,7 +307,7 @@ const renderClassList = (vessel, field) => {
       case "wifi":
         return cls.wifi === true ? "✅" : cls.wifi === false ? "❌" : "-";
       case "seats":
-        return cls.seats ? cls.seats.length : 0;
+        return cls.seats || 0;
       case "name":
         return cls.name || "-";
     }
@@ -332,7 +332,6 @@ const fetchVesselLayout = async (vesselId, token) => {
     seats: cls.seats.filter((s) => !s.blocked && !s.path && !s.facility),
   }));
 };
-
 const fetchVessels = async () => {
   isLoading.value = true;
   try {
@@ -343,15 +342,24 @@ const fetchVessels = async () => {
     const data = await res.json();
 
     if (res.ok && data.success && data.data?.vessels) {
-      vessels.value = await Promise.all(
-        data.data.vessels.map(async (v) => ({
-          id: v.id,
-          name: v.vessel_name,
-          status: v.status,
-          classes: await fetchVesselLayout(v.id, token),
+      vessels.value = data.data.vessels.map((v) => ({
+        id: v.id,
+        name: v.name,
+        status: v.status,
+        // Transform accommodations into "classes" format your front-end expects
+        classes: v.accommodations.map((a) => ({
+          name: a.name || "Unknown", // use 'name' from backend mapping
+          rows: a.rows || 0,
+          columns: a.columns || 0,
+          seats: a.seats || 0, // now a number from backend
+          facilityLabels: a.facilityLabels || [],
+          aircon: !!a.aircon,
+          wifi: !!a.wifi,
         })),
-      );
-    } else vessels.value = [];
+      }));
+    } else {
+      vessels.value = [];
+    }
   } catch (err) {
     vessels.value = [];
     console.error("Failed to fetch vessels", err);
@@ -409,20 +417,27 @@ const filteredVessels = computed(() =>
 );
 
 // Save seatmap
-const handleSeatmapSave = (seatmapPayload) => {
+const handleSeatmapSave = async (payload) => {
   const vessel = modals.value.seatmap.vessel;
   if (!vessel) return;
 
-  vessel.classes = vessel.classes.map((cls) => {
-    const found = seatmapPayload.classes.find((c) => c.name === cls.name);
-    return {
-      ...cls,
-      rows: found?.rows || cls.rows,
-      columns: found?.columns || cls.columns,
-      seats: found?.seats || cls.seats,
-    };
-  });
+  try {
+    const token = localStorage.getItem("token");
 
-  modals.value.seatmap.open = false;
+    await fetch(`${apiBase}/vessels/${vessel.id}/layout`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+      body: JSON.stringify(payload), // 🔥 send array directly
+    });
+
+    modals.value.seatmap.open = false;
+    fetchVessels(); // reload table
+  } catch (err) {
+    console.error("Failed saving seatmap:", err);
+    alert("Failed to save seatmap");
+  }
 };
 </script>

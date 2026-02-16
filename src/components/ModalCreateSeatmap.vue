@@ -24,289 +24,294 @@
 
       <!-- BODY -->
       <form class="p-6 space-y-6">
-        <div class="grid grid-cols-[0.9fr_1.1fr] gap-6">
-          <!-- LEFT SIDE -->
-          <div class="seatmap_tools h-[410px] overflow-y-auto">
-            <!-- CLASS LIST -->
-            <div class="mb-4">
-              <p class="text-sm font-medium text-gray-700 mb-3">
-                List of Class
-              </p>
-              <div class="mb-2 space-y-2">
-                <div
-                  v-for="(item, i) in addedClasses"
-                  :key="i"
-                  @click="selectClass(item)"
-                  class="flex justify-between p-1 rounded cursor-pointer"
+        <div v-if="isSeatmapLoading">Loading seatmap...</div>
+
+        <div v-else>
+          <!-- seatmap layout here -->
+          <div class="grid grid-cols-[0.9fr_1.1fr] gap-6">
+            <!-- LEFT SIDE -->
+            <div class="seatmap_tools h-[410px] overflow-y-auto">
+              <!-- CLASS LIST -->
+              <div class="mb-4">
+                <p class="text-sm font-medium text-gray-700 mb-3">
+                  List of Class
+                </p>
+                <div class="mb-2 space-y-2">
+                  <div
+                    v-for="(item, i) in addedClasses"
+                    :key="i"
+                    @click="selectClass(item)"
+                    class="flex justify-between p-1 rounded cursor-pointer"
+                    :class="
+                      currentSelectedClass?.name === item.name
+                        ? 'bg-blue-200'
+                        : 'hover:bg-gray-200'
+                    "
+                  >
+                    <span class="text-sm font-medium">{{ item.name }}</span>
+                    <span
+                      class="text-sm font-medium text-red-500 cursor-pointer"
+                      @click.stop="removeClass(i)"
+                      >DEL</span
+                    >
+                  </div>
+                </div>
+
+                <div class="w-full mt-4">
+                  <select
+                    v-if="isOpen"
+                    v-model="selectedClassIndex"
+                    class="mb-4 w-full px-3 py-2 border rounded-md"
+                  >
+                    <option value="" disabled>Select accommodation</option>
+                    <option
+                      v-for="seat in availableClasses"
+                      :key="seat.name"
+                      :value="seat.name"
+                    >
+                      {{ seat.name }}
+                    </option>
+                  </select>
+
+                  <button
+                    v-if="!isOpen"
+                    @click="isOpen = true"
+                    type="button"
+                    class="w-full px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
+                  >
+                    + Add Class
+                  </button>
+
+                  <div v-if="isOpen" class="grid grid-cols-2 gap-4 w-full">
+                    <button
+                      @click="cancelAction"
+                      type="button"
+                      class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      @click="saveChanges"
+                      type="button"
+                      class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- GENERATE SEATS -->
+              <div v-if="currentSelectedClass">
+                <div class="flex gap-4 w-80 mb-4">
+                  <div>
+                    <label class="block text-sm mb-2 text-gray-700"
+                      >Row Seats</label
+                    >
+                    <input
+                      type="number"
+                      v-model.number="tempRows"
+                      class="w-full px-3 py-2 border rounded-md"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm mb-2 text-gray-700"
+                      >Column Seats</label
+                    >
+                    <input
+                      type="number"
+                      v-model.number="tempColumns"
+                      class="w-full px-3 py-2 border rounded-md"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  @click="generateSeats"
+                  class="w-full px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400 mb-4"
                   :class="
-                    currentSelectedClass?.name === item.name
-                      ? 'bg-blue-200'
-                      : 'hover:bg-gray-200'
+                    !currentSelectedClass ? 'opacity-50 cursor-not-allowed' : ''
                   "
                 >
-                  <span class="text-sm font-medium">{{ item.name }}</span>
-                  <span
-                    class="text-sm font-medium text-red-500 cursor-pointer"
-                    @click.stop="removeClass(i)"
-                    >DEL</span
-                  >
-                </div>
+                  Generate Seats
+                </button>
               </div>
 
-              <div class="w-full mt-4">
-                <select
-                  v-if="isOpen"
-                  v-model="selectedClassIndex"
-                  class="mb-4 w-full px-3 py-2 border rounded-md"
-                >
-                  <option value="" disabled>Select accommodation</option>
-                  <option
-                    v-for="seat in availableClasses"
-                    :key="seat.name"
-                    :value="seat.name"
-                  >
-                    {{ seat.name }}
-                  </option>
-                </select>
-
+              <!-- MODE BUTTONS -->
+              <div class="grid grid-cols-2 gap-4">
                 <button
-                  v-if="!isOpen"
-                  @click="isOpen = true"
                   type="button"
-                  class="w-full px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
+                  @click="toggleRenameMode"
+                  :disabled="!currentSelectedClass"
+                  :class="[
+                    'px-4 py-2 rounded-md',
+                    !currentSelectedClass
+                      ? 'opacity-40 cursor-not-allowed'
+                      : renameMode
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-200',
+                  ]"
                 >
-                  + Add Class
+                  Rename Seat
                 </button>
 
-                <div v-if="isOpen" class="grid grid-cols-2 gap-4 w-full">
-                  <button
-                    @click="cancelAction"
-                    type="button"
-                    class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    @click="saveChanges"
-                    type="button"
-                    class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- GENERATE SEATS -->
-            <div v-if="currentSelectedClass">
-              <div class="flex gap-4 w-80 mb-4">
-                <div>
-                  <label class="block text-sm mb-2 text-gray-700"
-                    >Row Seats</label
-                  >
-                  <input
-                    type="number"
-                    v-model.number="tempRows"
-                    class="w-full px-3 py-2 border rounded-md"
-                  />
-                </div>
-                <div>
-                  <label class="block text-sm mb-2 text-gray-700"
-                    >Column Seats</label
-                  >
-                  <input
-                    type="number"
-                    v-model.number="tempColumns"
-                    class="w-full px-3 py-2 border rounded-md"
-                  />
-                </div>
-              </div>
-              <button
-                type="button"
-                @click="generateSeats"
-                class="w-full px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400 mb-4"
-                :class="
-                  !currentSelectedClass ? 'opacity-50 cursor-not-allowed' : ''
-                "
-              >
-                Generate Seats
-              </button>
-            </div>
-
-            <!-- MODE BUTTONS -->
-            <div class="grid grid-cols-2 gap-4">
-              <button
-                type="button"
-                @click="toggleRenameMode"
-                :disabled="!currentSelectedClass"
-                :class="[
-                  'px-4 py-2 rounded-md',
-                  !currentSelectedClass
-                    ? 'opacity-40 cursor-not-allowed'
-                    : renameMode
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-200',
-                ]"
-              >
-                Rename Seat
-              </button>
-
-              <button
-                type="button"
-                @click="toggleBlockMode"
-                :disabled="!currentSelectedClass"
-                :class="[
-                  'px-4 py-2 rounded-md',
-                  !currentSelectedClass
-                    ? 'opacity-40 cursor-not-allowed'
-                    : blockMode
-                      ? 'bg-red-500 text-white'
-                      : 'bg-gray-200',
-                ]"
-              >
-                Block/Unblock
-              </button>
-
-              <button
-                type="button"
-                @click="togglePathMode"
-                :disabled="!currentSelectedClass"
-                :class="[
-                  'px-4 py-2 rounded-md',
-                  !currentSelectedClass
-                    ? 'opacity-40 cursor-not-allowed'
-                    : pathMode
-                      ? 'bg-yellow-400 text-white'
-                      : 'bg-gray-200',
-                ]"
-              >
-                Walk Path
-              </button>
-
-              <button
-                type="button"
-                @click="toggleFacilityMode"
-                :disabled="!currentSelectedClass"
-                :class="[
-                  'px-4 py-2 rounded-md',
-                  !currentSelectedClass
-                    ? 'opacity-40 cursor-not-allowed'
-                    : facilityMode
-                      ? 'bg-orange-500 text-white'
-                      : 'bg-gray-200',
-                ]"
-              >
-                Add Facility
-              </button>
-              <button
-                type="button"
-                @click="togglePwdMode"
-                :disabled="!currentSelectedClass"
-                :class="[
-                  'px-4 py-2 rounded-md',
-                  !currentSelectedClass
-                    ? 'opacity-40 cursor-not-allowed'
-                    : pwdMode
-                      ? 'bg-[#016AB3] text-white'
-                      : 'bg-gray-200',
-                ]"
-              >
-                PWD
-              </button>
-
-              <button
-                type="button"
-                @click="resetSeats"
-                :disabled="!currentSelectedClass"
-                :class="[
-                  'px-4 py-2 rounded-md',
-                  !currentSelectedClass
-                    ? 'opacity-40 cursor-not-allowed'
-                    : 'bg-gray-200',
-                ]"
-              >
-                Reset Changes
-              </button>
-            </div>
-          </div>
-          <!-- RIGHT SIDE - SEATMAP PREVIEW -->
-          <div class="seatmap_preview border p-3 rounded-lg w-full">
-            <p class="text-sm text-center font-medium text-gray-700 mb-3">
-              Seatmap Preview
-            </p>
-            <div class="relative h-[410px] overflow-auto">
-              <div
-                v-if="!currentSelectedClass"
-                class="text-center text-gray-500"
-              >
-                Select a class to preview
-              </div>
-              <div
-                v-else-if="!currentSelectedClass.seats?.length"
-                class="text-center text-gray-500"
-              >
-                No seats generated yet.
-              </div>
-
-              <div v-else class="relative w-full h-full">
-                <!-- Seats -->
-                <div
-                  v-for="seat in currentSelectedClass.seats"
-                  :key="seat.seat_no"
-                  :data-row="seat.row"
-                  :data-col="seat.col"
-                  class="absolute flex items-center justify-center border rounded-md text-xs font-medium cursor-pointer select-none"
-                  :style="{
-                    width: seatSize + 'px',
-                    height: seatSize + 'px',
-                    top: seat.row * seatSize + 'px',
-                    left: seat.col * seatSize + 'px',
-                  }"
-                  :class="{
-                    'bg-gray-300': seat.path,
-                    'bg-red-700 text-white': seat.blocked,
-                    'bg-gray-100':
-                      !seat.path &&
-                      !seat.blocked &&
-                      !seat.facility &&
-                      !seat.renaming,
-                    'bg-orange-400 text-white': seat.facility,
-                    'bg-green-400 text-black': seat.pwd,
-                    'ring-2 ring-blue-400 bg-blue-200': seat.renaming,
-                  }"
-                  @mousedown="startDrag(seat, $event)"
-                  @mouseover="dragSeats(seat)"
-                  @click="onSeatClick(seat)"
+                <button
+                  type="button"
+                  @click="toggleBlockMode"
+                  :disabled="!currentSelectedClass"
+                  :class="[
+                    'px-4 py-2 rounded-md',
+                    !currentSelectedClass
+                      ? 'opacity-40 cursor-not-allowed'
+                      : blockMode
+                        ? 'bg-red-500 text-white'
+                        : 'bg-gray-200',
+                  ]"
                 >
-                  <span v-if="!seat.blocked && !seat.path && !seat.facility">
-                    {{ seat.seat_no }}
-                  </span>
-                  <span
-                    v-if="seat.facility"
-                    class="pointer-events-none font-bold text-white"
-                    :style="{ opacity: 0.7 }"
-                    >{{ seat.facility }}</span
-                  >
-                  <span
-                    v-if="seat.blocked"
-                    class="pointer-events-none text-white text-xl font-bold"
-                    >✕</span
-                  >
+                  Block/Unblock
+                </button>
+
+                <button
+                  type="button"
+                  @click="togglePathMode"
+                  :disabled="!currentSelectedClass"
+                  :class="[
+                    'px-4 py-2 rounded-md',
+                    !currentSelectedClass
+                      ? 'opacity-40 cursor-not-allowed'
+                      : pathMode
+                        ? 'bg-yellow-400 text-white'
+                        : 'bg-gray-200',
+                  ]"
+                >
+                  Walk Path
+                </button>
+
+                <button
+                  type="button"
+                  @click="toggleFacilityMode"
+                  :disabled="!currentSelectedClass"
+                  :class="[
+                    'px-4 py-2 rounded-md',
+                    !currentSelectedClass
+                      ? 'opacity-40 cursor-not-allowed'
+                      : facilityMode
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-gray-200',
+                  ]"
+                >
+                  Add Facility
+                </button>
+                <button
+                  type="button"
+                  @click="togglePwdMode"
+                  :disabled="!currentSelectedClass"
+                  :class="[
+                    'px-4 py-2 rounded-md',
+                    !currentSelectedClass
+                      ? 'opacity-40 cursor-not-allowed'
+                      : pwdMode
+                        ? 'bg-[#016AB3] text-white'
+                        : 'bg-gray-200',
+                  ]"
+                >
+                  PWD
+                </button>
+
+                <button
+                  type="button"
+                  @click="resetSeats"
+                  :disabled="!currentSelectedClass"
+                  :class="[
+                    'px-4 py-2 rounded-md',
+                    !currentSelectedClass
+                      ? 'opacity-40 cursor-not-allowed'
+                      : 'bg-gray-200',
+                  ]"
+                >
+                  Reset Changes
+                </button>
+              </div>
+            </div>
+            <!-- RIGHT SIDE - SEATMAP PREVIEW -->
+            <div class="seatmap_preview border p-3 rounded-lg w-full">
+              <p class="text-sm text-center font-medium text-gray-700 mb-3">
+                Seatmap Preview
+              </p>
+              <div class="relative h-[410px] overflow-auto">
+                <div
+                  v-if="!currentSelectedClass"
+                  class="text-center text-gray-500"
+                >
+                  Select a class to preview
+                </div>
+                <div
+                  v-else-if="!currentSelectedClass.seats?.length"
+                  class="text-center text-gray-500"
+                >
+                  No seats generated yet.
                 </div>
 
-                <!-- Floating Facility Labels -->
-                <div
-                  v-for="(f, i) in currentSelectedClass.facilityLabels || []"
-                  :key="i"
-                  class="facility-label absolute flex items-center justify-center text-white font-bold pointer-events-none bg-orange-500 rounded-md"
-                  :style="{
-                    top: f.top + 'px',
-                    left: f.left + 'px',
-                    width: f.width + 'px',
-                    height: f.height + 'px',
-                  }"
-                >
-                  {{ f.name }}
+                <div v-else class="relative w-full h-full">
+                  <!-- Seats -->
+                  <div
+                    v-for="seat in currentSelectedClass.seats"
+                    :key="seat.seat_no"
+                    :data-row="seat.row"
+                    :data-col="seat.col"
+                    class="absolute flex items-center justify-center border rounded-md text-xs font-medium cursor-pointer select-none"
+                    :style="{
+                      width: seatSize + 'px',
+                      height: seatSize + 'px',
+                      top: seat.row * seatSize + 'px',
+                      left: seat.col * seatSize + 'px',
+                    }"
+                    :class="{
+                      'bg-gray-300': seat.path,
+                      'bg-red-700 text-white': seat.blocked,
+                      'bg-gray-100':
+                        !seat.path &&
+                        !seat.blocked &&
+                        !seat.facility &&
+                        !seat.renaming,
+                      'bg-orange-400 text-white': seat.facility,
+                      'bg-green-400 text-black': seat.pwd,
+                      'ring-2 ring-blue-400 bg-blue-200': seat.renaming,
+                    }"
+                    @mousedown="startDrag(seat, $event)"
+                    @mouseover="dragSeats(seat)"
+                    @click="onSeatClick(seat)"
+                  >
+                    <span v-if="!seat.blocked && !seat.path && !seat.facility">
+                      {{ seat.seat_no }}
+                    </span>
+                    <span
+                      v-if="seat.facility"
+                      class="pointer-events-none font-bold text-white"
+                      :style="{ opacity: 0.7 }"
+                      >{{ seat.facility }}</span
+                    >
+                    <span
+                      v-if="seat.blocked"
+                      class="pointer-events-none text-white text-xl font-bold"
+                      >✕</span
+                    >
+                  </div>
+
+                  <!-- Floating Facility Labels -->
+                  <div
+                    v-for="(f, i) in currentSelectedClass.facilityLabels || []"
+                    :key="i"
+                    class="facility-label absolute flex items-center justify-center text-white font-bold pointer-events-none bg-orange-500 rounded-md"
+                    :style="{
+                      top: f.top + 'px',
+                      left: f.left + 'px',
+                      width: f.width + 'px',
+                      height: f.height + 'px',
+                    }"
+                  >
+                    {{ f.name }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -360,7 +365,6 @@ const dragStart = ref(null);
 const dragMode = ref(null);
 const lastHoveredSeat = ref(null);
 const seatSize = 40;
-
 const availableClasses = computed(() =>
   props.accomodations.filter(
     (a) => !addedClasses.value.some((c) => c.name === a.name),
@@ -699,16 +703,20 @@ const saveSeatmap = () => {
     );
   isLoading.value = true;
   try {
-    const payload = {
-      classes: addedClasses.value.map((c) => ({
+    const payload = addedClasses.value.map((c) => {
+      const source = props.accomodations.find((a) => a.name === c.name) || {};
+
+      return {
         name: c.name,
         rows: c.rows || 0,
         columns: c.columns || 0,
         seats: c.seats || [],
+        aircon: source.aircon ?? true,
+        wifi: source.wifi ?? false,
         facilityLabels: c.facilityLabels || [],
-      })),
-    };
-    console.log("Seatmap payload:", payload);
+      };
+    });
+
     emit("save", payload);
   } finally {
     isLoading.value = false;
