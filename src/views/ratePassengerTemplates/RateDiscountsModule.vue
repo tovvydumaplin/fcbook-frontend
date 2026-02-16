@@ -98,6 +98,13 @@
                 : "No Route Selected"
             }}
           </h2>
+          <button
+            @click="openCreateModal"
+            class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 flex items-center gap-2"
+          >
+            <Plus class="w-4 h-4" />
+            Create
+          </button>
         </div>
 
         <!-- LOADING -->
@@ -150,22 +157,22 @@
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500"
                 >
-                  Last Updated
+                  Updated
                 </th>
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500"
                 >
-                  Updated by
+                  User
                 </th>
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500"
                 >
-                  Updated Status
+                  Status
                 </th>
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500"
                 >
-                  Action
+                  Actions
                 </th>
               </tr>
             </thead>
@@ -196,7 +203,7 @@
                 </td>
                 <td class="px-6 py-4 text-sm">
                   <button
-                    @click="handleAction(acc)"
+                    @click="openRateModal(acc)"
                     class="font-medium text-blue-600 hover:text-blue-900 flex items-center"
                   >
                     <Edit class="w-4 h-4 mr-1" />
@@ -219,15 +226,24 @@
       @save="handleRateSaved"
     />
   </transition>
+  <transition name="modal-fade">
+    <ModalCreateAddOn
+      v-if="isModalOpen"
+      @close="closeModal"
+      @saved="handleSaved"
+    />
+  </transition>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { Search, Edit } from "lucide-vue-next";
-import ModalAddEditRate from "../../components/modaladdeditrate.vue";
+import { Plus, Search, Edit } from "lucide-vue-next";
+import ModalAddEditRate from "../../components/ModalAddEditRate.vue";
+import ModalCreateAddOn from "../../components/ModalCreateAddOn.vue";
 
 const apiBase = import.meta.env.VITE_API_URL;
 
+const isModalOpen = ref(false);
 const routes = ref([]);
 const accommodations = ref([]);
 const selectedRoute = ref(null);
@@ -308,9 +324,21 @@ const openRateModal = (acc) => {
   isRateModalOpen.value = true;
 };
 
+const openCreateModal = () => {
+  isModalOpen.value = true;
+};
+
+const handleSaved = () => {
+  closeModal();
+};
+
+const closeModal = () => {
+  isModalOpen.value = false;
+};
+
 const handleRateSaved = (updated) => {
   const idx = selectedRoute.value.accommodations.findIndex(
-    (a) => a.class_name === updated.seat_class
+    (a) => a.class_name === updated.seat_class,
   );
   if (idx !== -1) {
     selectedRoute.value.accommodations[idx] = {

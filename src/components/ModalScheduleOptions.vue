@@ -390,7 +390,6 @@ watch(
 );
 
 // Handle when "All" checkbox is clicked
-
 const handleAllCheckbox = (schedule) => {
   if (schedule.all) {
     schedule.online = true;
@@ -398,6 +397,8 @@ const handleAllCheckbox = (schedule) => {
     schedule.merchant = true;
     schedule.visibility = 7;
   } else {
+    schedule.online = false;
+    schedule.teller = false;
     schedule.merchant = false;
     schedule.visibility = 0;
   }
