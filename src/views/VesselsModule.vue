@@ -243,10 +243,9 @@
     <transition name="modal-fade">
       <ModalCreateSeatmap
         v-if="modals.seatmap.open"
-        :accomodations="accomodations"
         :seatmap="modals.seatmap.data"
-        @close="modals.seatmap.open = false"
         @save="handleSeatmapSave"
+        @close="modals.seatmap.open = false"
       />
     </transition>
   </div>
@@ -270,13 +269,8 @@ const cellClass = "px-6 py-4 whitespace-nowrap text-sm text-gray-900";
 const headerClass =
   "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider";
 
-// State
-const accomodations = ref([
-  { id: 1, name: "Business Class" },
-  { id: 2, name: "Premium Economy" },
-  { id: 3, name: "Economy Class" },
-]);
 const apiBase = import.meta.env.VITE_API_URL;
+// State
 
 const activeTab = ref("all");
 const searchQuery = ref("");
@@ -320,18 +314,31 @@ const getStatusClass = (status) =>
     : "bg-gray-100 text-gray-800";
 
 // API
-const fetchVesselLayout = async (vesselId, token) => {
-  const res = await fetch(`${apiBase}/vessels/${vesselId}/layout`, {
-    headers: { "Content-Type": "application/json", Authorization: token },
-  });
-  const data = await res.json();
-  return (data.classes || []).map((cls) => ({
-    name: cls.name,
-    aircon: cls.aircon,
-    wifi: cls.wifi,
-    seats: cls.seats.filter((s) => !s.blocked && !s.path && !s.facility),
-  }));
-};
+// const fetchAccommodations = async () => {
+//   try {
+//     const token = localStorage.getItem("token");
+//     const res = await fetch(`${apiBase}/passenger-accommodations`, {
+//       headers: {
+//         "Content-Type": "application/json",
+//         Authorization: token,
+//       },
+//     });
+
+//     const data = await res.json();
+
+//     if (res.ok && data.success && data.data) {
+//       accomodations.value = data.data.map((a) => ({
+//         id: a.id,
+//         name: a.accommodation_name,
+//       }));
+//     } else {
+//       accomodations.value = [];
+//     }
+//   } catch (err) {
+//     console.error("Failed to fetch accommodations", err);
+//     accomodations.value = [];
+//   }
+// };
 const fetchVessels = async () => {
   isLoading.value = true;
   try {
@@ -368,8 +375,10 @@ const fetchVessels = async () => {
   }
 };
 
-// Lifecycle
-onMounted(fetchVessels);
+onMounted(() => {
+  fetchVessels();
+  // fetchAccommodations();
+});
 
 // Modal Handlers
 const openCreateModal = () => {

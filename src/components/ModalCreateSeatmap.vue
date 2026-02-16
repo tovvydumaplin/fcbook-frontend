@@ -75,7 +75,7 @@
 
                   <button
                     v-if="!isOpen"
-                    @click="isOpen = true"
+                    @click="openAddClass"
                     type="button"
                     class="w-full px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
                   >
@@ -346,7 +346,7 @@ import { ref, computed, onMounted, onUnmounted } from "vue";
 
 const props = defineProps({ accomodations: Array, seatmap: Object });
 const emit = defineEmits(["save", "close"]);
-
+const apiBase = import.meta.env.VITE_API_URL;
 const currentSelectedClass = ref(null);
 const addedClasses = ref([]);
 const isOpen = ref(false);
@@ -360,13 +360,14 @@ const renameMode = ref(false);
 const blockMode = ref(false);
 const pathMode = ref(false);
 const facilityMode = ref(false);
-
+const accomodations = ref([]);
+const isSeatmapLoading = ref(false);
 const dragStart = ref(null);
 const dragMode = ref(null);
 const lastHoveredSeat = ref(null);
 const seatSize = 40;
 const availableClasses = computed(() =>
-  props.accomodations.filter(
+  accomodations.value.filter(
     (a) => !addedClasses.value.some((c) => c.name === a.name),
   ),
 );
@@ -402,7 +403,12 @@ const selectClass = (item) => {
   tempRows.value = item.rows || null;
   tempColumns.value = item.columns || null;
 };
+const openAddClass = async () => {
+  isOpen.value = true;
 
+  // fetch only when button is clicked
+  await fetchAccommodations();
+};
 const addClass = () => {
   if (!selectedClassIndex.value) return;
   addedClasses.value.push({
@@ -690,6 +696,31 @@ const removeClass = (index) => {
     currentSelectedClass.value = null;
   addedClasses.value.splice(index, 1);
 };
+const fetchAccommodations = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${apiBase}/passenger-accommodations`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.data) {
+      accomodations.value = data.data.map((a) => ({
+        id: a.accommodation_id, // FIXED
+        name: a.accommodation_name,
+      }));
+    } else {
+      accomodations.value = [];
+    }
+  } catch (err) {
+    console.error("Failed to fetch accommodations", err);
+    accomodations.value = [];
+  }
+};
 
 const saveSeatmap = () => {
   if (!addedClasses.value.length)
@@ -722,7 +753,6 @@ const saveSeatmap = () => {
     isLoading.value = false;
   }
 };
-
 onMounted(() => window.addEventListener("mouseup", handleGlobalMouseUp));
 onUnmounted(() => window.removeEventListener("mouseup", handleGlobalMouseUp));
 </script>
