@@ -44,11 +44,14 @@ const handleEdit = (item) => {
   addOnName.value = item.add_on_name;
   value_type.value = Number(item.value_type);
 
+  const signedValue =
+    Number(item.operator) === 0 ? -Number(item.value) : Number(item.value);
+
   if (value_type.value === 0) {
-    percentageValue.value = item.value;
+    percentageValue.value = signedValue;
     fixedValue.value = "";
   } else {
-    fixedValue.value = item.value;
+    fixedValue.value = signedValue;
     percentageValue.value = "";
   }
 };
