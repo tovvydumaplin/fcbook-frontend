@@ -19,7 +19,6 @@
             />
           </div>
         </div>
-
         <!-- ROUTE TABLE -->
         <div>
           <div
@@ -157,6 +156,11 @@
                 <th
                   class="px-6 py-3 text-left text-xs font-medium text-gray-500"
                 >
+                  Wifi
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500"
+                >
                   Updated
                 </th>
                 <th
@@ -192,7 +196,6 @@
                   <span v-if="acc.withoutAC === null">—</span>
                   <span v-else>₱{{ acc.withoutAC }}</span>
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-500">—</td>
                 <td class="px-6 py-4 text-sm text-gray-500">
                   <span v-if="acc.updated_by === null">—</span>
                   <span v-else>{{ acc.updated_by }}</span>
@@ -353,7 +356,7 @@ const handleRateSaved = (updated) => {
 };
 
 onMounted(async () => {
-  await fetchPassengerAccommodations(); // MUST BE FIRST
+  await fetchPassengerAccommodations();
   await fetchRoutes();
 });
 </script>

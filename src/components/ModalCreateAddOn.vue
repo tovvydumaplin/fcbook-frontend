@@ -1,7 +1,6 @@
 <script setup>
 import { Edit, Trash2 } from "lucide-vue-next";
 import { onMounted, ref, computed } from "vue";
-
 const emit = defineEmits("close");
 const isLoading = ref(false);
 const errorMsg = ref("");
@@ -15,19 +14,16 @@ const value_type = ref(null);
 const addOnName = ref("");
 const isEditMode = ref(false);
 const editingId = ref(null);
-
 const addOns = ref([]);
+
 const setValue = (type, newValue) => {
-  // If input is cleared
   if (newValue === "" || newValue === null) {
     value_type.value = null;
     percentageValue.value = "";
     fixedValue.value = "";
     return;
   }
-
   value_type.value = type;
-
   if (type === 0) {
     percentageValue.value = newValue;
     fixedValue.value = "";
@@ -40,10 +36,8 @@ const setValue = (type, newValue) => {
 const handleEdit = (item) => {
   isEditMode.value = true;
   editingId.value = item.id;
-
   addOnName.value = item.add_on_name;
   value_type.value = Number(item.value_type);
-
   if (value_type.value === 0) {
     percentageValue.value = item.value;
     fixedValue.value = "";
@@ -240,7 +234,6 @@ onMounted(async () => {
                 </div>
               </div>
             </div>
-
             <!-- MODAL FOOTER -->
             <div
               class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200"
@@ -305,7 +298,6 @@ onMounted(async () => {
                 </svg>
               </button>
             </div>
-
             <!-- ADD ONS LIST TABLE -->
             <div
               v-if="isTableLoading"
