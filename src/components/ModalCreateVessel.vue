@@ -199,13 +199,9 @@ import { reactive, ref, computed, watch } from "vue";
 import ModalCreateSeatmap from "./ModalCreateSeatmap.vue";
 const apiBase = import.meta.env.VITE_API_URL;
 const isLoading = ref(false);
-const emit = defineEmits(["save"]);
+const emit = defineEmits(["save", "close"]);
 const prefix = ref("");
-const isOpen = ref(false); // controls the dropdown
-const selectedClassIndex = ref(""); // selected value from dropdown
-const addedClasses = ref([]); // track newly added classes
 const seatmapData = ref({ classes: [] });
-const showSeatmapModal = ref(false);
 
 const vesselInfo = reactive({
   name: "",
@@ -239,13 +235,13 @@ watch(
       seatmapData.value = { classes: [] };
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 const isEditing = computed(() => !!props.vessel?.id);
 const availableClasses = computed(() =>
   accomodations.value.filter(
-    (a) => !seatmapData.value?.classes?.some((c) => c.name === a.name)
-  )
+    (a) => !seatmapData.value?.classes?.some((c) => c.name === a.name),
+  ),
 );
 
 const createVessel = async () => {
@@ -279,7 +275,7 @@ const createVessel = async () => {
 
     if (res.ok && data.success) {
       alert("Vessel created successfully!");
-      emit("save", data.data); // notify parent to update list
+      emit("save", data.data);
       // Reset form
       vesselInfo.name = "";
       vesselInfo.details = "";
