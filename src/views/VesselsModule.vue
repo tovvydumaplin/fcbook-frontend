@@ -208,8 +208,9 @@
                 <td :class="cellClass">
                   <div class="flex gap-3 items-center">
                     <button
-                      @click="openEditModal(vessel)"
-                      class="font-medium text-blue-600 hover:text-blue-900 flex items-center cursor-pointer"
+                      disabled
+                      title="not working yet"
+                      class="font-medium text-gray-400 flex items-center cursor-not-allowed opacity-60"
                     >
                       <Eye class="w-4 h-4 mr-1" />
                     </button>
@@ -234,9 +235,8 @@
     <transition name="modal-fade">
       <ModalCreateVessel
         v-if="modals.createEdit.open"
-        :vessel="modals.createEdit.vessel || { classes: [] }"
         @close="modals.createEdit.open = false"
-        @save="handleSaveVessel"
+        @save="fetchVessels"
       />
     </transition>
 
@@ -276,7 +276,7 @@ const vessels = ref([]);
 const isSeatmapLoading = ref(false);
 
 const modals = ref({
-  createEdit: { open: false, vessel: null },
+  createEdit: { open: false },
   seatmap: { open: false, vessel: null, data: null },
 });
 
@@ -358,11 +358,11 @@ const openCreateModal = () => {
   modals.value.createEdit.open = true;
 };
 
-const openEditModal = (vessel) => {
-  if (!vessel.classes) vessel.classes = [];
-  modals.value.createEdit.vessel = vessel;
-  modals.value.createEdit.open = true;
-};
+// const openEditModal = (vessel) => {
+//   if (!vessel.classes) vessel.classes = [];
+//   modals.value.createEdit.vessel = vessel;
+//   modals.value.createEdit.open = true;
+// };
 
 const openSeatmapModal = async (vessel) => {
   try {
