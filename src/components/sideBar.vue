@@ -252,6 +252,11 @@ const moduleItems = [
     route: "/passenger-monitoring",
     icon: vehiclesIcon,
   },
+  {
+    name: "Vehicles",
+    route: "/vehicles",
+    icon: vehiclesIcon,
+  },
 ];
 
 const bookingItems = [
