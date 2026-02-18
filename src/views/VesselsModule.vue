@@ -264,14 +264,10 @@ import {
 import ModalCreateVessel from "../components/ModalCreateVessel.vue";
 import ModalCreateSeatmap from "../components/ModalCreateSeatmap.vue";
 
-// Constants for classes
 const cellClass = "px-6 py-4 whitespace-nowrap text-sm text-gray-900";
 const headerClass =
   "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider";
-
 const apiBase = import.meta.env.VITE_API_URL;
-// State
-
 const activeTab = ref("all");
 const searchQuery = ref("");
 const isTableLoading = ref(false);
@@ -314,31 +310,7 @@ const getStatusClass = (status) =>
     : "bg-gray-100 text-gray-800";
 
 // API
-// const fetchAccommodations = async () => {
-//   try {
-//     const token = localStorage.getItem("token");
-//     const res = await fetch(`${apiBase}/passenger-accommodations`, {
-//       headers: {
-//         "Content-Type": "application/json",
-//         Authorization: token,
-//       },
-//     });
 
-//     const data = await res.json();
-
-//     if (res.ok && data.success && data.data) {
-//       accomodations.value = data.data.map((a) => ({
-//         id: a.id,
-//         name: a.accommodation_name,
-//       }));
-//     } else {
-//       accomodations.value = [];
-//     }
-//   } catch (err) {
-//     console.error("Failed to fetch accommodations", err);
-//     accomodations.value = [];
-//   }
-// };
 const fetchVessels = async () => {
   isLoading.value = true;
   try {
@@ -353,12 +325,12 @@ const fetchVessels = async () => {
         id: v.id,
         name: v.name,
         status: v.status,
-        // Transform accommodations into "classes" format your front-end expects
+
         classes: v.accommodations.map((a) => ({
-          name: a.name || "Unknown", // use 'name' from backend mapping
+          name: a.name || "Unknown",
           rows: a.rows || 0,
           columns: a.columns || 0,
-          seats: a.seats || 0, // now a number from backend
+          seats: a.seats || 0,
           facilityLabels: a.facilityLabels || [],
           aircon: !!a.aircon,
           wifi: !!a.wifi,
@@ -439,7 +411,7 @@ const handleSeatmapSave = async (payload) => {
         "Content-Type": "application/json",
         Authorization: token,
       },
-      body: JSON.stringify(payload), // 🔥 send array directly
+      body: JSON.stringify(payload),
     });
 
     modals.value.seatmap.open = false;
