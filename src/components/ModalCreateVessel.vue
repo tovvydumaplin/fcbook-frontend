@@ -1,4 +1,4 @@
-<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\components\ModalCreateVessel.vue -->
+<!-- filepath: src/components/ModalCreateVessel.vue -->
 <template>
   <div
     class="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50"
@@ -12,9 +12,7 @@
         class="flex items-center justify-between p-6 border-b border-gray-200"
       >
         <div>
-          <h2 class="text-lg font-semibold text-gray-900">
-            {{ isEditing ? "Edit Vessel" : "Create Vessel" }}
-          </h2>
+          <h2 class="text-lg font-semibold text-gray-900">Create Vessel</h2>
           <p class="text-sm text-gray-500 mt-1">
             Provide basic information about the vessel
           </p>
@@ -23,22 +21,11 @@
           @click="$emit('close')"
           class="text-gray-400 hover:text-gray-600 transition-colors"
         >
-          <svg
-            class="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
+          ✕
         </button>
       </div>
-      <form @submit.prevent="createVessel" class="p-6 space-y-6">
+
+      <form @submit.prevent="saveVessel" class="p-6 space-y-6">
         <div class="flex gap-5">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -69,6 +56,7 @@
             />
           </div>
         </div>
+
         <div class="w-full">
           <label class="block text-sm font-medium text-gray-700 mb-2">
             Vessel Details
@@ -82,8 +70,8 @@
           ></textarea>
         </div>
 
+        <!-- UI kept (visual only, no backend usage) -->
         <div class="w-full">
-          <!-- TABLE SWITCHES  -->
           <table>
             <thead>
               <tr>
@@ -95,89 +83,30 @@
               </tr>
             </thead>
             <tbody>
-              <!-- If no seatmap yet -->
-              <tr v-if="!seatmapData || !(seatmapData.classes?.length || 0)">
+              <tr>
                 <td colspan="3" class="py-4 text-center text-gray-500">
-                  No seatmap created yet. Please create a seatmap.
-                </td>
-              </tr>
-
-              <!-- Loop through all classes in the seatmap -->
-              <tr
-                v-else
-                v-for="(cls, index) in seatmapData.classes"
-                :key="index"
-              >
-                <td class="py-2">
-                  <p class="text-sm">
-                    {{ cls.name }}: {{ cls.seats?.length || 0 }}
-                  </p>
-                </td>
-
-                <!-- Aircon -->
-                <td class="p-1">
-                  <div class="flex items-center gap-3">
-                    <div class="relative inline-block w-11 h-5">
-                      <input
-                        :id="`switch-${cls.name}-aircon`"
-                        type="checkbox"
-                        v-model="cls.aircon"
-                        class="peer appearance-none w-11 h-5 bg-slate-300 rounded-full checked:bg-green-600 cursor-pointer transition-colors duration-300"
-                        :disabled="isLoading"
-                      />
-                      <label
-                        :for="`switch-${cls.name}-aircon`"
-                        class="absolute top-0 left-0 w-5 h-5 bg-white rounded-full border border-slate-300 shadow-sm transition-transform duration-300 peer-checked:translate-x-6 peer-checked:border-green-600 cursor-pointer"
-                      ></label>
-                    </div>
-
-                    <span class="text-sm text-gray-700 select-none"
-                      >Inactive</span
-                    >
-                  </div>
-                </td>
-
-                <!-- Wifi -->
-                <td class="p-1">
-                  <div class="flex items-center gap-3">
-                    <div class="relative inline-block w-11 h-5">
-                      <input
-                        :id="`switch-${cls.name}-wifi`"
-                        type="checkbox"
-                        v-model="cls.wifi"
-                        class="peer appearance-none w-11 h-5 bg-slate-300 rounded-full checked:bg-green-600 cursor-pointer transition-colors duration-300"
-                        :disabled="isLoading"
-                      />
-                      <label
-                        :for="`switch-${cls.name}-wifi`"
-                        class="absolute top-0 left-0 w-5 h-5 bg-white rounded-full border border-slate-300 shadow-sm transition-transform duration-300 peer-checked:translate-x-6 peer-checked:border-green-600 cursor-pointer"
-                      ></label>
-                    </div>
-
-                    <span class="text-sm text-gray-700 select-none"
-                      >Inactive</span
-                    >
-                  </div>
+                  Seatmap will be configured after vessel creation.
                 </td>
               </tr>
             </tbody>
           </table>
-          <!-- TABLE ENDS HERE SWITCHES  -->
         </div>
-        <!-- Modal Footer -->
+
+        <!-- Footer -->
         <div
           class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200"
         >
           <button
             type="button"
             @click="$emit('close')"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
           >
             Cancel
           </button>
+
           <button
             type="submit"
-            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 transition-colors"
             :disabled="isLoading"
           >
             <span v-if="isLoading" class="flex items-center gap-2">
@@ -186,7 +115,7 @@
               ></span>
               Saving...
             </span>
-            <span v-else> Save Vessel </span>
+            <span v-else>Save Vessel</span>
           </button>
         </div>
       </form>
@@ -195,13 +124,13 @@
 </template>
 
 <script setup>
-import { reactive, ref, computed, watch } from "vue";
-import ModalCreateSeatmap from "./ModalCreateSeatmap.vue";
+import { reactive, ref } from "vue";
+
 const apiBase = import.meta.env.VITE_API_URL;
-const isLoading = ref(false);
 const emit = defineEmits(["save", "close"]);
+
+const isLoading = ref(false);
 const prefix = ref("");
-const seatmapData = ref({ classes: [] });
 
 const vesselInfo = reactive({
   name: "",
@@ -209,42 +138,7 @@ const vesselInfo = reactive({
   status: "Available",
 });
 
-const props = defineProps({
-  vessel: {
-    type: Object,
-    default: () => ({ classes: [] }), // default empty vessel
-  },
-});
-watch(
-  () => props.vessel,
-  (newVal) => {
-    if (newVal) {
-      vesselInfo.name = newVal.name;
-      vesselInfo.details = newVal.details;
-      vesselInfo.status = newVal.status;
-
-      // Normalize seatmapData to object with classes array
-      seatmapData.value = {
-        classes: JSON.parse(JSON.stringify(newVal.classes || [])),
-      };
-    } else {
-      // Reset for create
-      vesselInfo.name = "";
-      vesselInfo.details = "";
-      vesselInfo.status = "Available";
-      seatmapData.value = { classes: [] };
-    }
-  },
-  { immediate: true },
-);
-const isEditing = computed(() => !!props.vessel?.id);
-const availableClasses = computed(() =>
-  accomodations.value.filter(
-    (a) => !seatmapData.value?.classes?.some((c) => c.name === a.name),
-  ),
-);
-
-const createVessel = async () => {
+const saveVessel = async () => {
   if (!vesselInfo.name) return alert("Enter vessel code!");
 
   const fullName = prefix.value
@@ -255,13 +149,14 @@ const createVessel = async () => {
     vessel_name: fullName,
     description: vesselInfo.details,
     status: "Available",
-    capacity: 0, // required by backend, fixed value
+    capacity: 0,
   };
 
   try {
     isLoading.value = true;
 
     const token = localStorage.getItem("token");
+
     const res = await fetch(`${apiBase}/vessels`, {
       method: "POST",
       headers: {
@@ -276,17 +171,17 @@ const createVessel = async () => {
     if (res.ok && data.success) {
       alert("Vessel created successfully!");
       emit("save", data.data);
-      // Reset form
+      emit("close");
+
       vesselInfo.name = "";
       vesselInfo.details = "";
       prefix.value = "";
-      seatmapData.value = { classes: [] };
     } else {
-      alert("Failed to create vessel: " + (data.message || ""));
+      alert(data.message || "Failed to create vessel.");
     }
   } catch (err) {
     console.error(err);
-    alert("An error occurred while creating vessel.");
+    alert("Server error while creating vessel.");
   } finally {
     isLoading.value = false;
   }

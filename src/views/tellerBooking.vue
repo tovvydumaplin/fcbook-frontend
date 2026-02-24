@@ -71,40 +71,76 @@ const ports = [
   { id: 3, name: "San Carlos Port" },
 ];
 
+const routes = ref([]);
+const selectedRoute = ref(null);
+const returnTrip = ref(false);
+
 const originPort = ref("Batangas Port");
 const destinationPort = ref("Calapan Port");
-const returnTrip = ref(false);
 
 const selectedDate = ref(""); // Add date selection
 
-watch(returnTrip, (checked) => {
-  if (checked) {
-    const temp = originPort.value;
-    originPort.value = destinationPort.value;
-    destinationPort.value = temp;
-  } else {
-    originPort.value = "Batangas Port";
-    destinationPort.value = "Calapan Port";
-  }
-});
-
 const passengers = ref([]);
 
-// const selectedSchedule = ref("12:00 AM");
-// const selectedCategory = ref("Passenger");
-// const selectedType = ref("Regular Passenger");
-// const selectedAccommodation = ref("Business Class");
-// const selectedGender = ref("Male");
-// const selectedDiscount = ref("No Discount");
-// const fullname = ref("");
-
-const selectedSchedule = ref("");
+const selectedSchedule = ref(null); // Now stores the entire schedule object
 const selectedCategory = ref("");
 const selectedType = ref("");
 const selectedAccommodation = ref("");
 const selectedGender = ref("");
 const selectedDiscount = ref("");
 const fullname = ref("");
+
+// Clear selected schedule when route changes
+watch(selectedRoute, (newRoute) => {
+  selectedSchedule.value = null;
+  if (newRoute) {
+    if (returnTrip.value) {
+      originPort.value =
+        newRoute.portB?.port_name || newRoute.portB?.name || "";
+      destinationPort.value =
+        newRoute.portA?.port_name || newRoute.portA?.name || "";
+    } else {
+      originPort.value =
+        newRoute.portA?.port_name || newRoute.portA?.name || "";
+      destinationPort.value =
+        newRoute.portB?.port_name || newRoute.portB?.name || "";
+    }
+  }
+});
+
+// Handle return trip toggle
+watch(returnTrip, () => {
+  selectedSchedule.value = null;
+  if (selectedRoute.value) {
+    if (returnTrip.value) {
+      originPort.value =
+        selectedRoute.value.portB?.port_name ||
+        selectedRoute.value.portB?.name ||
+        "";
+      destinationPort.value =
+        selectedRoute.value.portA?.port_name ||
+        selectedRoute.value.portA?.name ||
+        "";
+    } else {
+      originPort.value =
+        selectedRoute.value.portA?.port_name ||
+        selectedRoute.value.portA?.name ||
+        "";
+      destinationPort.value =
+        selectedRoute.value.portB?.port_name ||
+        selectedRoute.value.portB?.name ||
+        "";
+    }
+  }
+});
+
+// Update origin/destination when schedule is selected
+watch(selectedSchedule, (newSchedule) => {
+  if (newSchedule) {
+    originPort.value = newSchedule.departurePort || originPort.value;
+    destinationPort.value = newSchedule.arrivalPort || destinationPort.value;
+  }
+});
 
 // const schedules = [
 //   { time: "12:00 AM", code: "FCM 19", value: "12:00 AM" },
@@ -117,7 +153,8 @@ const fullname = ref("");
 //   { time: "9:00 PM", code: "FCM 19", value: "9:00 PM" },
 // ];
 
-const schedules = ref([]);
+const allSchedules = ref([]); // Store raw schedule data with port info
+const schedules = ref([]); // Will be deprecated, kept for compatibility
 
 onMounted(async () => {
   try {
@@ -135,7 +172,7 @@ onMounted(async () => {
       ? stored
       : `Bearer ${stored}`;
 
-    const response = await fetch(`${apiBase}/schedules/`, {
+    const response = await fetch(`${apiBase}/routes/with-schedules`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -143,7 +180,7 @@ onMounted(async () => {
       },
     });
 
-    console.log("schedules response status:", response.status);
+    console.log("routes response status:", response.status);
 
     if (response.status === 401 || response.status === 403) {
       localStorage.removeItem("token");
@@ -152,25 +189,64 @@ onMounted(async () => {
     }
 
     const result = await response.json();
-    if (response.ok && result.success && result.data?.schedules) {
-      schedules.value = result.data.schedules.map((item) => {
-        const vesselName =
-          item.vessel?.vessel_name ??
-          item.vessel?.name ??
-          item.vessel_name ??
-          (typeof item.vessel === "string" ? item.vessel : "");
-        return {
-          id: item.sched_id ?? item.id ?? null,
-          time: item.departure_time,
-          code: vesselName || "No vessel",
-          value: item.departure_time,
-        };
+    if (response.ok && result.success && result.data?.routes) {
+      routes.value = result.data.routes;
+
+      // Extract all schedules from routes keeping port separation
+      const allScheds = [];
+      result.data.routes.forEach((route) => {
+        const portASchedules = route.portA?.schedules || [];
+        const portBSchedules = route.portB?.schedules || [];
+
+        portASchedules.forEach((item) => {
+          const vesselName =
+            item.vessel?.vessel_name ??
+            item.vessel?.name ??
+            item.vessel_name ??
+            (typeof item.vessel === "string" ? item.vessel : "");
+          allScheds.push({
+            id: item.sched_id ?? item.id ?? null,
+            time: item.departure_time,
+            code: vesselName || "No vessel",
+            value: item.departure_time,
+            port: item.port,
+            routeId: route.route_id,
+            departurePort: route.portA?.port_name || route.portA?.name,
+            arrivalPort: route.portB?.port_name || route.portB?.name,
+          });
+        });
+
+        portBSchedules.forEach((item) => {
+          const vesselName =
+            item.vessel?.vessel_name ??
+            item.vessel?.name ??
+            item.vessel_name ??
+            (typeof item.vessel === "string" ? item.vessel : "");
+          allScheds.push({
+            id: item.sched_id ?? item.id ?? null,
+            time: item.departure_time,
+            code: vesselName || "No vessel",
+            value: item.departure_time,
+            port: item.port,
+            routeId: route.route_id,
+            departurePort: route.portB?.port_name || route.portB?.name,
+            arrivalPort: route.portA?.port_name || route.portA?.name,
+          });
+        });
       });
+
+      allSchedules.value = allScheds;
+      schedules.value = allScheds;
+
+      // Set default route if available
+      if (routes.value.length > 0) {
+        selectedRoute.value = routes.value[0];
+      }
     } else {
-      console.error("Failed to fetch schedules:", result.message || result);
+      console.error("Failed to fetch routes:", result.message || result);
     }
   } catch (err) {
-    console.error("Failed to fetch schedules:", err);
+    console.error("Failed to fetch routes:", err);
   }
 });
 
@@ -198,7 +274,7 @@ const bookEntry = () => {
   const entry = {
     date: selectedDate.value,
     route: `${originPort.value} - ${destinationPort.value}`,
-    schedule: selectedSchedule.value,
+    schedule: selectedSchedule.value?.time || selectedSchedule.value,
     category: selectedCategory.value,
     type: selectedType.value,
     accommodation: selectedAccommodation.value,
@@ -270,34 +346,56 @@ const handlePrintingSelected = (option) => {
 
 import { computed } from "vue";
 
+// Filter and group schedules based on selected route
+const filteredSchedules = computed(() => {
+  if (!selectedRoute.value || allSchedules.value.length === 0) {
+    return { portA: [], portB: [] };
+  }
+
+  const schedules = allSchedules.value.filter((schedule) => {
+    return schedule.routeId === selectedRoute.value.route_id;
+  });
+
+  // Group by departure port
+  const portAName =
+    selectedRoute.value.portA?.port_name || selectedRoute.value.portA?.name;
+  const portBName =
+    selectedRoute.value.portB?.port_name || selectedRoute.value.portB?.name;
+
+  return {
+    portA: schedules.filter((s) => s.departurePort === portAName),
+    portB: schedules.filter((s) => s.departurePort === portBName),
+  };
+});
+
 const totalOriginalFare = computed(() =>
   passengers.value.reduce(
     (sum, p) => sum + Number(p.fare) + Number(p.discountAmount),
-    0
-  )
+    0,
+  ),
 );
 
 const totalFare = computed(() =>
-  passengers.value.reduce((sum, p) => sum + parseFloat(p.fare), 0)
+  passengers.value.reduce((sum, p) => sum + parseFloat(p.fare), 0),
 );
 const totalCargo = computed(() =>
-  passengers.value.reduce((sum, p) => sum + parseFloat(p.cargoFare), 0)
+  passengers.value.reduce((sum, p) => sum + parseFloat(p.cargoFare), 0),
 );
 const totalAdmin = computed(() =>
-  passengers.value.reduce((sum, p) => sum + parseFloat(p.adminFee || 0), 0)
+  passengers.value.reduce((sum, p) => sum + parseFloat(p.adminFee || 0), 0),
 );
 const totalDiscount = computed(() =>
   passengers.value.reduce(
     (sum, p) => sum + parseFloat(p.discountAmount || 0),
-    0
-  )
+    0,
+  ),
 );
 const totalAmount = computed(
   () =>
     totalOriginalFare.value +
     totalCargo.value +
     totalAdmin.value -
-    totalDiscount.value
+    totalDiscount.value,
 );
 
 const stepInstruction = computed(() => {
@@ -350,7 +448,7 @@ const editingIndex = ref(null);
 const editPassengerFromModal = (passenger) => {
   // Find the index of the passenger in the array
   const idx = passengers.value.findIndex(
-    (p) => p.seat === passenger.seat && p.fullname === passenger.fullname
+    (p) => p.seat === passenger.seat && p.fullname === passenger.fullname,
   );
   if (idx !== -1) {
     selectedDate.value = passenger.date;
@@ -445,7 +543,7 @@ const editPassengerFromModal = (passenger) => {
                 <div class="description__box">
                   <p class="text-gray-400 text-sm">Schedule</p>
                   <p class="text-neutral-700 text-base font-semibold">
-                    {{ selectedSchedule || "00:00 AM" }}
+                    {{ selectedSchedule?.time || "00:00 AM" }}
                   </p>
                 </div>
               </div>
@@ -671,7 +769,7 @@ const editPassengerFromModal = (passenger) => {
             </div>
             <div>
               <h3 class="text-base font-medium text-gray-700 mb-3">
-                Select Port
+                Select Route
               </h3>
               <div class="flex items-center gap-5">
                 <div
@@ -679,35 +777,30 @@ const editPassengerFromModal = (passenger) => {
                 >
                   <div class="flex items-center">
                     <select
-                      v-model="originPort"
-                      class="hide-select-icon w-32 text-center text-base"
+                      v-model="selectedRoute"
+                      class="hide-select-icon text-center text-base min-w-[280px]"
                     >
                       <option
-                        v-for="port in ports"
-                        :key="port.id"
-                        :value="port.name"
+                        v-for="route in routes"
+                        :key="route.route_id"
+                        :value="route"
                       >
-                        {{ port.name }}
-                      </option>
-                    </select>
-                  </div>
-                  <span class="text-gray-400">→</span>
-                  <div class="flex items-center">
-                    <select
-                      v-model="destinationPort"
-                      class="hide-select-icon w-full w-32 text-center text-base"
-                    >
-                      <option
-                        v-for="port in ports"
-                        :key="port.id"
-                        :value="port.name"
-                      >
-                        {{ port.name }}
+                        {{
+                          route.portA?.port_name ||
+                          route.portA?.name ||
+                          "Port A"
+                        }}
+                        →
+                        {{
+                          route.portB?.port_name ||
+                          route.portB?.name ||
+                          "Port B"
+                        }}
                       </option>
                     </select>
                   </div>
                 </div>
-                <label class="flex items-center gap-5">
+                <label class="flex items-center gap-2">
                   <input
                     type="checkbox"
                     v-model="returnTrip"
@@ -734,23 +827,76 @@ const editPassengerFromModal = (passenger) => {
               </span>
             </div>
 
-            <div class="grid grid-cols-4 gap-5">
-              <button
-                v-for="time in schedules"
-                :key="time.value"
-                @click="selectedSchedule = time.value"
-                :class="[
-                  'p-3 text-center rounded-lg text-base border-2  transition-all duration-300',
-                  !selectedSchedule
-                    ? 'bg-white  text-gray-700 border-gray-300 hover:shadow-[0_0_0_2px_#3b3b3b]'
-                    : selectedSchedule === time.value
-                    ? 'border-2  bg-blue-900 text-white'
-                    : 'hidden',
-                ]"
-              >
-                <div class="font-medium">{{ time.time }}</div>
-                <div class="text-xs opacity-75">{{ time.code }}</div>
-              </button>
+            <!-- Port A Schedules -->
+            <div v-if="filteredSchedules.portA.length > 0" class="mb-8">
+              <h4 class="text-sm font-semibold text-gray-600 mb-3">
+                {{
+                  selectedRoute.portA?.port_name || selectedRoute.portA?.name
+                }}
+                →
+                {{
+                  selectedRoute.portB?.port_name || selectedRoute.portB?.name
+                }}
+              </h4>
+              <div class="grid grid-cols-4 gap-5">
+                <button
+                  v-for="time in filteredSchedules.portA"
+                  :key="time.id"
+                  @click="selectedSchedule = time"
+                  :class="[
+                    'p-3 text-center rounded-lg text-base border-2 transition-all duration-300',
+                    selectedSchedule?.id === time.id
+                      ? 'border-2 bg-blue-900 text-white'
+                      : 'bg-white text-gray-700 border-gray-300 hover:shadow-[0_0_0_2px_#3b3b3b]',
+                  ]"
+                >
+                  <div class="font-medium">{{ time.time }}</div>
+                  <div class="text-xs opacity-75">{{ time.code }}</div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Port B Schedules -->
+            <div v-if="filteredSchedules.portB.length > 0" class="mb-8">
+              <h4 class="text-sm font-semibold text-gray-600 mb-3">
+                {{
+                  selectedRoute.portB?.port_name || selectedRoute.portB?.name
+                }}
+                →
+                {{
+                  selectedRoute.portA?.port_name || selectedRoute.portA?.name
+                }}
+              </h4>
+              <div class="grid grid-cols-4 gap-5">
+                <button
+                  v-for="time in filteredSchedules.portB"
+                  :key="time.id"
+                  @click="selectedSchedule = time"
+                  :class="[
+                    'p-3 text-center rounded-lg text-base border-2 transition-all duration-300',
+                    selectedSchedule?.id === time.id
+                      ? 'border-2 bg-blue-900 text-white'
+                      : 'bg-white text-gray-700 border-gray-300 hover:shadow-[0_0_0_2px_#3b3b3b]',
+                  ]"
+                >
+                  <div class="font-medium">{{ time.time }}</div>
+                  <div class="text-xs opacity-75">{{ time.code }}</div>
+                </button>
+              </div>
+            </div>
+
+            <!-- No schedules message -->
+            <div
+              v-if="
+                filteredSchedules.portA.length === 0 &&
+                filteredSchedules.portB.length === 0
+              "
+              class="text-center py-8 text-gray-500"
+            >
+              <span v-if="selectedRoute">
+                No schedules available for this route
+              </span>
+              <span v-else> Please select a route to view schedules </span>
             </div>
           </div>
 
