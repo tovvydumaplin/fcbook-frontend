@@ -9,7 +9,7 @@ const props = defineProps({
 const emit = defineEmits(["close", "save"]);
 
 const form = reactive({
-  rate: props.accommodation?.rate ?? 0,
+  accRate: props.accommodation?.accRate ?? 0,
   withoutAC: props.accommodation?.withoutAC ?? 0,
 });
 
@@ -17,8 +17,7 @@ watch(
   () => props.accommodation,
   (newVal) => {
     if (newVal) {
-      form.rate = newVal.rate ?? 0;
-      form.withoutAC = newVal.withoutAC ?? 0;
+      form.accRate = newVal.accRate ?? 0;
     }
   },
 );
@@ -26,9 +25,8 @@ watch(
 const handleSubmit = async () => {
   try {
     const payload = {
-      seat_class: props.accommodation.class_name,
-      base_rate: form.rate,
-      without_ac: form.withoutAC,
+      accommodation_name: props.accommodation.accommodation_name,
+      accRate: form.accRate,
       status: "Active",
       updated_by: localStorage.getItem("username") || "unknown",
     };
@@ -36,7 +34,7 @@ const handleSubmit = async () => {
     const res = await fetch(
       `${import.meta.env.VITE_API_URL}/routes/${props.route.id}/rates`,
       {
-        method: "POST", // or PUT if your API distinguishes create/update
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -47,7 +45,7 @@ const handleSubmit = async () => {
 
     const data = await res.json();
     if (res.ok) {
-      emit("save", data); // send saved data back to parent
+      emit("save", data);
       emit("close");
     } else {
       console.error("Error saving rate:", data);
@@ -71,7 +69,7 @@ const handleSubmit = async () => {
         class="flex items-center justify-between border-b p-6 border-gray-200"
       >
         <h2 class="text-lg font-semibold text-gray-900">
-          Edit Rate: {{ accommodation.class_name }}
+          Edit Rate: {{ accommodation.accommodation_name }}
         </h2>
         <button
           @click="$emit('close')"
@@ -99,7 +97,7 @@ const handleSubmit = async () => {
           </label>
           <input
             type="number"
-            v-model="form.rate"
+            v-model="form.accRate"
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>

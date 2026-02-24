@@ -1,8 +1,9 @@
 <script setup>
 import { Edit, Trash2 } from "lucide-vue-next";
 import { onMounted, ref, computed } from "vue";
+import Swal from "sweetalert2";
 
-const emit = defineEmits("close");
+const emit = defineEmits(["close", "saved"]);
 const isLoading = ref(false);
 const errorMsg = ref("");
 const isTableLoading = ref(false);
@@ -74,6 +75,21 @@ const submitAddOn = async () => {
     return;
   }
 
+  const actionText = isEditMode.value ? "update" : "create";
+
+  // SweetAlert2 confirmation
+  const result = await Swal.fire({
+    title: `Are you sure?`,
+    text: `Do you want to ${actionText} this add on?`,
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: actionText.charAt(0).toUpperCase() + actionText.slice(1),
+    cancelButtonText: "Cancel",
+    reverseButtons: true,
+  });
+
+  if (!result.isConfirmed) return; // Stop if user cancels
+
   errorMsg.value = "";
   isLoading.value = true;
 
@@ -116,6 +132,15 @@ const submitAddOn = async () => {
       throw new Error("Failed to save add on");
     }
 
+    Swal.fire({
+      icon: "success",
+      title: `Add On ${actionText}d!`,
+      showConfirmButton: false,
+      timer: 1500,
+    });
+
+    emit("saved");
+
     resetForm();
     isEditMode.value = false;
     editingId.value = null;
@@ -123,6 +148,12 @@ const submitAddOn = async () => {
   } catch (err) {
     console.error(err);
     errorMsg.value = "Failed to save add on.";
+
+    Swal.fire({
+      icon: "error",
+      title: "Oops...",
+      text: "Failed to save add on.",
+    });
   } finally {
     isLoading.value = false;
   }

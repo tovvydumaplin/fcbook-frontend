@@ -58,7 +58,7 @@
                 <tr
                   v-for="route in filteredRoutes"
                   :key="route.id"
-                  @click="fetchRateForRoute(route)"
+                  @click="fetchRouteAccRates(route)"
                   class="hover:bg-gray-50 cursor-pointer"
                   :class="{
                     'bg-blue-50':
@@ -183,20 +183,20 @@
                 class="hover:bg-gray-50"
               >
                 <td class="px-6 py-4 text-sm">{{ index + 1 }}</td>
-                <td class="px-6 py-4 text-sm">{{ acc.class_name }}</td>
+                <td class="px-6 py-4 text-sm">{{ acc.accommodation_name }}</td>
                 <td class="px-6 py-4 text-sm">
-                  <span v-if="acc.rate === null">—</span>
-                  <span v-else>₱{{ acc.rate }}</span>
+                  <span v-if="acc.accRate === null">—</span>
+                  <span v-else>₱{{ acc.accRate }}</span>
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-500">
                   <span v-if="acc.withoutAC === null">—</span>
                   <span v-else>₱{{ acc.withoutAC }}</span>
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-500">—</td>
                 <td class="px-6 py-4 text-sm text-gray-500">
-                  <span v-if="acc.updated_by === null">—</span>
-                  <span v-else>{{ acc.updated_by }}</span>
+                  <span v-if="acc.updated_at === null">—</span>
+                  <span v-else>{{ acc.updated_at }}</span>
                 </td>
+                <td class="px-6 py-4 text-sm text-gray-500">—</td>
                 <td class="px-6 py-4 text-sm text-gray-500">
                   <span v-if="acc.status === null">—</span>
                   <span v-else>{{ acc.status }}</span>
@@ -230,7 +230,7 @@
     <ModalCreateAddOn
       v-if="isModalOpen"
       @close="closeModal"
-      @saved="handleSaved"
+      @saved="handleAddOnSaved"
     />
   </transition>
 </template>
@@ -238,6 +238,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { Plus, Search, Edit } from "lucide-vue-next";
+
 import ModalAddEditRate from "../../components/ModalAddEditRate.vue";
 import ModalCreateAddOn from "../../components/ModalCreateAddOn.vue";
 
@@ -284,39 +285,53 @@ const fetchRoutes = async () => {
   isTableLoading.value = false;
 };
 
-const fetchRateForRoute = async (route) => {
+const fetchRouteAccRates = async (route) => {
   isRateLoading.value = true;
   selectedRoute.value = null;
 
   const token = localStorage.getItem("token");
-  const res = await fetch(`${apiBase}/routes/${route.id}/rates`, {
+  const res = await fetch(`${apiBase}/accommodation-rates/route/${route.id}`, {
     headers: { Authorization: token },
   });
-  const data = await res.json();
 
-  const rateMap = {};
-  if (Array.isArray(data.accommodations)) {
-    data.accommodations.forEach((r) => {
-      rateMap[r.accommodation.toLowerCase()] = r;
-    });
-  }
+  const result = await res.json();
+
+  const accRates = result?.data?.accRates || [];
+
+  const accRateMap = {};
+  accRates.forEach((r) => {
+    accRateMap[r.accommodation_id] = r;
+  });
 
   selectedRoute.value = {
     ...route,
     accommodations: accommodations.value.map((acc) => {
-      const rate = rateMap[acc.accommodation_name.toLowerCase()];
+      const accRate = accRateMap[acc.accommodation_id];
+
       return {
         id: acc.accommodation_id,
-        class_name: acc.accommodation_name,
-        rate: rate?.baseRate ?? null,
-        withoutAC: rate?.withoutAC ?? null,
-        updated_by: rate?.updatedBy ?? null,
-        status: rate?.status ?? null,
+        accommodation_name: acc.accommodation_name,
+        accRate: accRate ? parseFloat(accRate.base_rate).toFixed(2) : null,
+        withoutAC:
+          accRate?.final_rates?.length > 0
+            ? parseFloat(accRate.final_rates[0].final_rate).toFixed(2)
+            : null,
+        updated_at: formatDate(accRate?.updated_at),
+        status: accRate?.status ?? null,
       };
     }),
   };
 
   isRateLoading.value = false;
+};
+
+const formatDate = (date) => {
+  if (!date) return null;
+  return new Date(date).toLocaleDateString("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "2-digit",
+  });
 };
 
 const openRateModal = (acc) => {
@@ -328,8 +343,12 @@ const openCreateModal = () => {
   isModalOpen.value = true;
 };
 
-const handleSaved = () => {
+const handleAddOnSaved = async () => {
   closeModal();
+  await fetchPassengerAccommodations();
+  if (selectedRoute.value) {
+    await fetchRouteAccRates(selectedRoute.value);
+  }
 };
 
 const closeModal = () => {
@@ -345,7 +364,7 @@ const handleRateSaved = (updated) => {
       ...selectedRoute.value.accommodations[idx],
       rate: updated.base_rate,
       withoutAC: updated.without_ac,
-      updated_by: updated.updated_by,
+      updated_at: updated.updated_at,
       status: updated.status,
     };
   }
