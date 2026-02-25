@@ -1,14 +1,52 @@
 <script setup>
-import { Plus, Search } from "lucide-vue-next";
+import { Edit, Plus, Search, Trash2 } from "lucide-vue-next";
 import { ref, watch, onMounted } from "vue";
 import ModalCreateVehicle from "../components/ModalCreateVehicle.vue";
+const isTableLoading = ref(false);
 const isModalOpen = ref(false);
+const vehicles = ref([]);
+const apiBase = import.meta.env.VITE_API_URL;
+
 const openCreateVehicle = () => {
   isModalOpen.value = true;
 };
 const closeModal = () => {
   isModalOpen.value = false;
 };
+
+const fetchVehicles = async () => {
+  try {
+    isTableLoading.value = true;
+    const res = await fetch(`${apiBase}/vehicles`, {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to fetch vehicles");
+    }
+    const data = await res.json();
+    console.log(data);
+
+    vehicles.value = data.data.vehicles.map((v) => ({
+      id: v.vehicle_id,
+      vehicleType: v.vehicle_type,
+      vehicleClass: v.vehicle_class,
+      updatedAt: new Date(v.updated_at).toLocaleDateString(),
+    }));
+  } catch (err) {
+    console.error("Fetch error:", err);
+  } finally {
+    isTableLoading.value = false;
+  }
+};
+
+onMounted(async () => {
+  await fetchVehicles();
+});
 </script>
 
 <template>
@@ -61,9 +99,6 @@ const closeModal = () => {
             <tr>
               <th class="px-6 py-3 text-left text-xs text-gray-500">#</th>
               <th class="px-6 py-3 text-left text-xs text-gray-500">
-                Vehicle Name
-              </th>
-              <th class="px-6 py-3 text-left text-xs text-gray-500">
                 Vehicle Type
               </th>
 
@@ -71,9 +106,6 @@ const closeModal = () => {
                 Vehicle Class
               </th>
 
-              <th class="px-6 py-3 text-left text-xs text-gray-500">
-                Rolling Cargo
-              </th>
               <th class="px-6 py-3 text-left text-xs text-gray-500">Updated</th>
               <th class="px-6 py-3 text-left text-xs text-gray-500">User</th>
               <th class="px-6 py-3 text-left text-xs text-gray-500">Action</th>
@@ -82,30 +114,61 @@ const closeModal = () => {
 
           <tbody class="bg-white divide-y divide-gray-200">
             <!-- Loading -->
-            <tr v-if="loading">
-              <td colspan="10" class="text-center py-6 text-gray-500">
-                Loading passengers...
+            <tr v-if="isTableLoading">
+              <td colspan="6" class="text-center py-6 text-gray-500">
+                Loading vehicles...
               </td>
             </tr>
 
             <!-- Data -->
-            <tr class="hover:bg-gray-50">
+            <tr
+              v-else-if="vehicles.length > 0"
+              v-for="(vehicle, index) in vehicles"
+              :key="vehicle.id"
+              class="hover:bg-gray-50"
+            >
+              <td class="px-6 py-4 text-sm">
+                {{ index + 1 }}
+              </td>
+
+              <td class="px-6 py-4 text-sm">
+                {{ vehicle.vehicleType }}
+              </td>
+
+              <td class="px-6 py-4 text-sm">
+                {{ vehicle.vehicleClass }}
+              </td>
+
+              <td class="px-6 py-4 text-sm">
+                {{ vehicle.updatedAt }}
+              </td>
+
               <td class="px-6 py-4 text-sm">-</td>
-              <td class="px-6 py-4 text-sm">-</td>
-              <td class="px-6 py-4 text-sm">-</td>
-              <td class="px-6 py-4 text-sm">-</td>
-              <td class="px-6 py-4 text-sm">-</td>
-              <td class="px-6 py-4 text-sm">-</td>
-              <td class="px-6 py-4 text-sm">-</td>
-              <td class="px-6 py-4 text-sm">-</td>
+
+              <!-- ACTIONS -->
+              <td class="px-6 py-4 text-sm flex items-start gap-1">
+                <button
+                  @click="handleEdit(item)"
+                  class="font-medium text-blue-600 hover:text-blue-900 flex items-center"
+                >
+                  <Edit class="w-4 h-4 mr-1" />
+                </button>
+
+                <button
+                  @click="handleDelete(item)"
+                  class="font-medium text-red-600 hover:text-red-900 flex items-center"
+                >
+                  <Trash2 class="w-4 h-4 mr-1" />
+                </button>
+              </td>
             </tr>
 
             <!-- Empty -->
-            <!-- <tr v-if="!loading && passengers.length === 0">
-              <td colspan="10" class="text-center py-6 text-gray-500">
-                No passengers found.
+            <tr v-else>
+              <td colspan="6" class="text-center py-6 text-gray-500">
+                No vehicles found.
               </td>
-            </tr> -->
+            </tr>
           </tbody>
         </table>
       </div>
