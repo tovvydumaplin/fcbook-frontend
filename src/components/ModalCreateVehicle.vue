@@ -1,6 +1,34 @@
 <script setup>
-import { Edit, Trash2 } from "lucide-vue-next";
-const emit = defineEmits("close");
+import { Plus, Trash2 } from "lucide-vue-next";
+import { ref, watch } from "vue";
+
+const emit = defineEmits(["close"]);
+
+const selectedType = ref("");
+const vehicleClasses = ref([]); // array of input fields
+
+const isLoading = ref(false);
+const errorMsg = ref("");
+
+// Reset classes when vehicle type changes
+watch(selectedType, () => {
+  vehicleClasses.value = [];
+});
+
+// Add new empty input field
+const addClassField = () => {
+  vehicleClasses.value.push("");
+};
+
+// Remove specific input field
+const removeClassField = (index) => {
+  vehicleClasses.value.splice(index, 1);
+};
+
+const saveVehicle = () => {
+  console.log("Vehicle Type:", selectedType.value);
+  console.log("Vehicle Classes:", vehicleClasses.value);
+};
 </script>
 
 <template>
@@ -50,51 +78,62 @@ const emit = defineEmits("close");
       </div>
       <form @submit.prevent="saveVehicle" class="p-6 space-y-6">
         <!-- Origin Port -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Vehicle Name
-          </label>
-          <input
-            placeholder="Input Vehicle Name"
-            type="text"
-            v-model="vehicleName"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-        <div>
+
+        <div class="">
           <label class="block text-sm font-medium text-gray-700 mb-2">
             Vehicle Type
           </label>
+
           <select
-            class="border border-gray-300 rounded-md px-3 py-2 w-full max-w-xs"
+            v-model="selectedType"
+            class="border border-gray-300 rounded-md px-3 py-2 w-full"
           >
             <option value="" disabled>Select Vehicle Type</option>
-            <option value="">Vehicle Type 1</option>
+            <option value="type1">Type 1</option>
+            <option value="type2">Type 2</option>
+            <option value="type3">Type 3</option>
+            <option value="type4">Type 4</option>
+            <option value="type5">Type 5</option>
           </select>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Vehicle Class
-          </label>
-          <select
-            class="border border-gray-300 rounded-md px-3 py-2 w-full max-w-xs"
-          >
-            <option value="" disabled>Select Vehicle Class</option>
-            <option value="">Vehicle Class 1</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Rolling Cargo
-          </label>
-          <select
-            class="border border-gray-300 rounded-md px-3 py-2 w-full max-w-xs"
-          >
-            <option value="" disabled>Select Rolling Cargo</option>
-            <option value="">Rolling Cargo 1</option>
-          </select>
-        </div>
 
+          <!-- Show only if type selected -->
+          <div v-if="selectedType" class="mt-4 space-y-3">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Vehicle Class
+            </label>
+            <!-- Generated Input Fields -->
+            <div
+              v-for="(item, index) in vehicleClasses"
+              :key="index"
+              class="flex gap-2"
+            >
+              <input
+                v-model="vehicleClasses[index]"
+                type="text"
+                placeholder="Enter vehicle class name"
+                class="border border-gray-300 rounded-md px-3 py-2 w-full"
+              />
+              <button
+                type="button"
+                @click="removeClassField(index)"
+                class="font-medium text-red-600 hover:text-red-900 flex items-center"
+              >
+                <Trash2 class="w-4 h-4 mr-1" />
+              </button>
+            </div>
+
+            <!-- Button stays at bottom -->
+            <div class="w-full flex justify-center items-center">
+              <button
+                type="button"
+                @click="addClassField"
+                class="w-full py-2 text-sm flex justify-center items-center border-2 border-dashed border-blue-300 gap-3 font-medium text-blue-500 rounded-md hover:bg-blue-500 hover:text-white hover:border-blue-500 transition"
+              >
+                <Plus class="w-4 h-4" /> Add Vehicle Class
+              </button>
+            </div>
+          </div>
+        </div>
         <!-- Modal Footer -->
         <div
           class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200"
