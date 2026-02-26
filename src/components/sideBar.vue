@@ -243,7 +243,7 @@ const moduleItems = [
     icon: seatAllocationIcon,
   },
   {
-    name: "Rates/Passenger Types",
+    name: "Rates",
     route: "/rates-discounts",
     icon: ratesIcon,
   },

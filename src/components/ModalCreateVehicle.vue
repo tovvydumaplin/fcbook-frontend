@@ -2,32 +2,74 @@
 import { Plus, Trash2 } from "lucide-vue-next";
 import { ref, watch } from "vue";
 
-const emit = defineEmits(["close"]);
+const emit = defineEmits(["close", "save"]);
+
+const apiBase = import.meta.env.VITE_API_URL;
 
 const selectedType = ref("");
-const vehicleClasses = ref([]); // array of input fields
+const vehicleClasses = ref([]);
 
 const isLoading = ref(false);
 const errorMsg = ref("");
 
-// Reset classes when vehicle type changes
 watch(selectedType, () => {
   vehicleClasses.value = [];
 });
 
-// Add new empty input field
 const addClassField = () => {
   vehicleClasses.value.push("");
 };
 
-// Remove specific input field
 const removeClassField = (index) => {
   vehicleClasses.value.splice(index, 1);
 };
 
-const saveVehicle = () => {
-  console.log("Vehicle Type:", selectedType.value);
-  console.log("Vehicle Classes:", vehicleClasses.value);
+const saveVehicle = async () => {
+  errorMsg.value = "";
+
+  if (!selectedType.value) {
+    errorMsg.value = "Vehicle Type is required.";
+    return;
+  }
+
+  const validClasses = vehicleClasses.value.filter((c) => c !== "");
+
+  if (validClasses.length === 0) {
+    errorMsg.value = "At least one Vehicle Class is required.";
+    return;
+  }
+
+  isLoading.value = true;
+
+  try {
+    const payload = {
+      vehicle_type: Number(selectedType.value),
+      vehicle_classes: validClasses.map((c) => ({ vehicle_class: c })),
+    };
+
+    const response = await fetch(`${apiBase}/vehicles`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to save vehicle");
+    }
+
+    emit("save");
+    emit("close");
+  } catch (error) {
+    console.error(error);
+    errorMsg.value = error.message || "Something went wrong while saving.";
+  } finally {
+    isLoading.value = false;
+  }
 };
 </script>
 
@@ -89,19 +131,18 @@ const saveVehicle = () => {
             class="border border-gray-300 rounded-md px-3 py-2 w-full"
           >
             <option value="" disabled>Select Vehicle Type</option>
-            <option value="type1">Type 1</option>
-            <option value="type2">Type 2</option>
-            <option value="type3">Type 3</option>
-            <option value="type4">Type 4</option>
-            <option value="type5">Type 5</option>
+            <option :value="1">Type 1</option>
+            <option :value="2">Type 2</option>
+            <option :value="3">Type 3</option>
+            <option :value="4">Type 4</option>
+            <option :value="5">Type 5</option>
           </select>
 
-          <!-- Show only if type selected -->
           <div v-if="selectedType" class="mt-4 space-y-3">
             <label class="block text-sm font-medium text-gray-700 mb-2">
               Vehicle Class
             </label>
-            <!-- Generated Input Fields -->
+
             <div
               v-for="(item, index) in vehicleClasses"
               :key="index"
@@ -110,6 +151,7 @@ const saveVehicle = () => {
               <input
                 v-model="vehicleClasses[index]"
                 type="text"
+                required
                 placeholder="Enter vehicle class name"
                 class="border border-gray-300 rounded-md px-3 py-2 w-full"
               />
@@ -122,7 +164,6 @@ const saveVehicle = () => {
               </button>
             </div>
 
-            <!-- Button stays at bottom -->
             <div class="w-full flex justify-center items-center">
               <button
                 type="button"
