@@ -1,22 +1,51 @@
 <script setup>
-import { Edit, Plus, Search, Trash2 } from "lucide-vue-next";
-import { ref, watch, onMounted } from "vue";
+import { Edit, Plus, Search } from "lucide-vue-next";
+import { ref, computed, onMounted } from "vue";
 import ModalCreateVehicle from "../components/ModalCreateVehicle.vue";
+import ModalEditVehicle from "../components/ModalEditVehicle.vue";
+
 const isTableLoading = ref(false);
-const isModalOpen = ref(false);
+const isEditModalOpen = ref(false);
+const isCreateModalOpen = ref(false);
+
 const vehicles = ref([]);
+const search = ref("");
+const activeType = ref(1);
+const selectedVehicle = ref(null);
 const apiBase = import.meta.env.VITE_API_URL;
 
+const vehicleTypes = [1, 2, 3, 4, 5];
+
 const openCreateVehicle = () => {
-  isModalOpen.value = true;
+  isCreateModalOpen.value = true;
 };
-const closeModal = () => {
-  isModalOpen.value = false;
+
+const openEditVehicle = (vehicle) => {
+  selectedVehicle.value = vehicle;
+  isEditModalOpen.value = true;
+};
+
+const closeEditModal = () => {
+  isEditModalOpen.value = false;
+};
+const closeCreateModal = () => {
+  isCreateModalOpen.value = false;
+};
+
+const handleCreateSaved = async () => {
+  closeCreateModal();
+  await fetchVehicles();
+};
+
+const handleEditSaved = async () => {
+  closeEditModal();
+  await fetchVehicles();
 };
 
 const fetchVehicles = async () => {
   try {
     isTableLoading.value = true;
+
     const res = await fetch(`${apiBase}/vehicles`, {
       headers: {
         "Content-Type": "application/json",
@@ -25,15 +54,13 @@ const fetchVehicles = async () => {
       },
     });
 
-    if (!res.ok) {
-      throw new Error("Failed to fetch vehicles");
-    }
+    if (!res.ok) throw new Error("Failed to fetch vehicles");
+
     const data = await res.json();
-    console.log(data);
 
     vehicles.value = data.data.vehicles.map((v) => ({
-      id: v.vehicle_id,
-      vehicleType: v.vehicle_type,
+      vehicle_id: v.vehicle_id,
+      vehicleType: Number(v.vehicle_type),
       vehicleClass: v.vehicle_class,
       updatedAt: new Date(v.updated_at).toLocaleDateString(),
     }));
@@ -44,9 +71,15 @@ const fetchVehicles = async () => {
   }
 };
 
-onMounted(async () => {
-  await fetchVehicles();
+const filteredVehicles = computed(() => {
+  return vehicles.value
+    .filter((v) => v.vehicleType === activeType.value)
+    .filter((v) =>
+      v.vehicleClass.toLowerCase().includes(search.value.toLowerCase()),
+    );
 });
+
+onMounted(fetchVehicles);
 </script>
 
 <template>
@@ -62,7 +95,7 @@ onMounted(async () => {
           Vehicles Management
         </h1>
         <button
-          @click="isModalOpen = true"
+          @click="openCreateVehicle"
           type="button"
           class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 flex items-center gap-2 cursor-pointer"
         >
@@ -94,21 +127,39 @@ onMounted(async () => {
       </div>
 
       <div class="p-4">
-        <table class="min-w-full divide-y divide-gray-200">
+        <!-- TABS -->
+        <div class="flex gap-2 mb-4">
+          <button
+            v-for="type in vehicleTypes"
+            :key="type"
+            @click="activeType = type"
+            class="px-4 py-2 rounded-md text-sm font-medium transition"
+            :class="
+              activeType === type
+                ? 'bg-blue-600 text-white'
+                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-100'
+            "
+          >
+            Type {{ type }}
+          </button>
+        </div>
+        <table class="min-w-full table-fixed divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="px-6 py-3 text-left text-xs text-gray-500">#</th>
-              <th class="px-6 py-3 text-left text-xs text-gray-500">
-                Vehicle Type
-              </th>
+              <th class="w-16 px-6 py-3 text-left text-xs text-gray-500">#</th>
 
-              <th class="px-6 py-3 text-left text-xs text-gray-500">
+              <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
                 Vehicle Class
               </th>
-
-              <th class="px-6 py-3 text-left text-xs text-gray-500">Updated</th>
-              <th class="px-6 py-3 text-left text-xs text-gray-500">User</th>
-              <th class="px-6 py-3 text-left text-xs text-gray-500">Action</th>
+              <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">
+                Updated
+              </th>
+              <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">
+                User
+              </th>
+              <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">
+                Action
+              </th>
             </tr>
           </thead>
 
@@ -123,16 +174,12 @@ onMounted(async () => {
             <!-- Data -->
             <tr
               v-else-if="vehicles.length > 0"
-              v-for="(vehicle, index) in vehicles"
-              :key="vehicle.id"
+              v-for="(vehicle, index) in filteredVehicles"
+              :key="vehicle.vehicle_id"
               class="hover:bg-gray-50"
             >
               <td class="px-6 py-4 text-sm">
                 {{ index + 1 }}
-              </td>
-
-              <td class="px-6 py-4 text-sm">
-                {{ vehicle.vehicleType }}
               </td>
 
               <td class="px-6 py-4 text-sm">
@@ -144,21 +191,12 @@ onMounted(async () => {
               </td>
 
               <td class="px-6 py-4 text-sm">-</td>
-
-              <!-- ACTIONS -->
               <td class="px-6 py-4 text-sm flex items-start gap-1">
                 <button
-                  @click="handleEdit(item)"
+                  @click="openEditVehicle(vehicle)"
                   class="font-medium text-blue-600 hover:text-blue-900 flex items-center"
                 >
                   <Edit class="w-4 h-4 mr-1" />
-                </button>
-
-                <button
-                  @click="handleDelete(item)"
-                  class="font-medium text-red-600 hover:text-red-900 flex items-center"
-                >
-                  <Trash2 class="w-4 h-4 mr-1" />
                 </button>
               </td>
             </tr>
@@ -176,9 +214,17 @@ onMounted(async () => {
   </div>
   <transition name="modal-fade">
     <ModalCreateVehicle
-      v-if="isModalOpen"
-      @close="closeModal"
-      @saved="handleSaved"
+      v-if="isCreateModalOpen"
+      @close="closeCreateModal"
+      @save="handleCreateSaved"
+    />
+  </transition>
+  <transition name="modal-fade">
+    <ModalEditVehicle
+      v-if="isEditModalOpen"
+      :vehicle="selectedVehicle"
+      @close="closeEditModal"
+      @save="handleEditSaved"
     />
   </transition>
 </template>
