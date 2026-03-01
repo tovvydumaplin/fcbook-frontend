@@ -46,13 +46,75 @@ const adminFees = [
   // Add more routes as needed
 ];
 
+// Dynamic rates fetched from API
+const dynamicRates = ref([]);
+const loadingRates = ref(false);
+
+// Fetch rates for selected route
+const fetchRates = async (routeId) => {
+  if (!routeId) {
+    dynamicRates.value = [];
+    return;
+  }
+
+  loadingRates.value = true;
+  try {
+    const stored = localStorage.getItem("token");
+    const authHeader = stored?.startsWith("Bearer ")
+      ? stored
+      : `Bearer ${stored}`;
+
+    const response = await fetch(`${apiBase}/routes/${routeId}/rates`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: authHeader,
+      },
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      console.log("Rate API Response:", result);
+
+      if (result.accommodations) {
+        dynamicRates.value = result.accommodations;
+        console.log("Fetched rates:", dynamicRates.value);
+      } else if (result.data?.accommodations) {
+        dynamicRates.value = result.data.accommodations;
+        console.log("Fetched rates:", dynamicRates.value);
+      } else {
+        console.error("No accommodations found in response");
+        dynamicRates.value = [];
+      }
+    } else {
+      console.error("Failed to fetch rates, status:", response.status);
+      dynamicRates.value = [];
+    }
+  } catch (err) {
+    console.error("Error fetching rates:", err);
+    dynamicRates.value = [];
+  } finally {
+    loadingRates.value = false;
+  }
+};
+
 const getCurrentRate = () => {
-  const route = `${originPort.value} - ${destinationPort.value}`;
-  const found = rates.find((r) => r.route === route);
-  if (!found) return 0;
-  if (selectedAccommodation.value === "Business Class") return found.business;
-  if (selectedAccommodation.value === "Premium Economy") return found.premium;
-  if (selectedAccommodation.value === "Economy") return found.economy;
+  // Use dynamic rates if available
+  if (dynamicRates.value && dynamicRates.value.length > 0) {
+    const rateEntry = dynamicRates.value.find(
+      (r) => r.accommodation === selectedAccommodation.value,
+    );
+    if (rateEntry) {
+      const rate = parseFloat(rateEntry.baseRate || 0);
+      console.log(`Rate for ${selectedAccommodation.value}: ${rate}`);
+      return rate;
+    }
+    console.log(`No rate found for ${selectedAccommodation.value}`);
+  } else {
+    console.log("No dynamic rates available");
+  }
+
+  // Return 0 if no rate found
   return 0;
 };
 
@@ -116,6 +178,12 @@ watch(selectedRoute, (newRoute) => {
         newRoute.portA?.port_name || newRoute.portA?.name || "";
       destinationPort.value =
         newRoute.portB?.port_name || newRoute.portB?.name || "";
+    }
+
+    // Fetch rates for the selected route
+    const routeId = newRoute.route_id || newRoute.id;
+    if (routeId) {
+      fetchRates(routeId);
     }
   }
 });
@@ -347,6 +415,15 @@ const discounts = [
   { label: "Special Discount", value: "25%", percent: "25%" },
   { label: "FOC", value: "100%", percent: "100%" },
 ];
+
+// Handle accommodation click with rate alert
+const handleAccommodationClick = (accommodation) => {
+  selectedAccommodation.value = accommodation;
+
+  // Calculate and show the rate
+  const rate = getCurrentRate();
+  alert(`Selected: ${accommodation}\nRate: ₱${rate.toFixed(2)}`);
+};
 
 const bookEntry = () => {
   const fare = getCurrentRate();
@@ -1034,7 +1111,7 @@ const editPassengerFromModal = (passenger) => {
               <button
                 v-for="accommodation in accommodations"
                 :key="accommodation"
-                @click="selectedAccommodation = accommodation"
+                @click="handleAccommodationClick(accommodation)"
                 :class="[
                   'p-3 text-center rounded-lg text-base border border-gray-300 transition-all duration-300',
                   selectedAccommodation === accommodation
