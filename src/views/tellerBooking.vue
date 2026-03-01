@@ -170,8 +170,10 @@ watch(selectedAccommodation, async (newAccommodation) => {
   loadingSeatmap.value = true;
   try {
     const stored = localStorage.getItem("token");
-    const authHeader = stored?.startsWith("Bearer ") ? stored : `Bearer ${stored}`;
-    
+    const authHeader = stored?.startsWith("Bearer ")
+      ? stored
+      : `Bearer ${stored}`;
+
     const response = await fetch(
       `${apiBase}/vessels/${selectedSchedule.value.vesselId}/layout`,
       {
@@ -180,19 +182,19 @@ watch(selectedAccommodation, async (newAccommodation) => {
           "Content-Type": "application/json",
           Authorization: authHeader,
         },
-      }
+      },
     );
 
     if (response.ok) {
       const result = await response.json();
       if (result.success && result.data) {
         vesselSeatmap.value = result.data;
-        
+
         // Find the class that matches selected accommodation
         const selectedClass = result.data.classes?.find(
-          (cls) => cls.accommodation_name === newAccommodation
+          (cls) => cls.accommodation_name === newAccommodation,
         );
-        
+
         if (selectedClass) {
           // Get seats for this class
           availableSeats.value = selectedClass.seats || [];
@@ -277,7 +279,8 @@ onMounted(async () => {
             item.vessel?.name ??
             item.vessel_name ??
             (typeof item.vessel === "string" ? item.vessel : "");
-          const vesselId = item.vessel?.vessel_id ?? item.vessel?.id ?? item.vessel_id ?? null;
+          const vesselId =
+            item.vessel?.vessel_id ?? item.vessel?.id ?? item.vessel_id ?? null;
           allScheds.push({
             id: item.sched_id ?? item.id ?? null,
             time: item.departure_time,
@@ -298,7 +301,8 @@ onMounted(async () => {
             item.vessel?.name ??
             item.vessel_name ??
             (typeof item.vessel === "string" ? item.vessel : "");
-          const vesselId = item.vessel?.vessel_id ?? item.vessel?.id ?? item.vessel_id ?? null;
+          const vesselId =
+            item.vessel?.vessel_id ?? item.vessel?.id ?? item.vessel_id ?? null;
           allScheds.push({
             id: item.sched_id ?? item.id ?? null,
             time: item.departure_time,
@@ -360,7 +364,8 @@ const bookEntry = () => {
     gender: selectedGender.value,
     discount: selectedDiscount.value,
     fullname: fullname.value,
-    seat: selectedSeat.value?.seat_no || 
+    seat:
+      selectedSeat.value?.seat_no ||
       (editingIndex.value !== null
         ? passengers.value[editingIndex.value].seat
         : `00${passengers.value.length + 1}A`),
@@ -1047,15 +1052,20 @@ const editPassengerFromModal = (passenger) => {
             <h3 class="text-base font-medium text-gray-700 mb-3">
               Select Your Seat
             </h3>
-            
+
             <!-- Loading State -->
             <div v-if="loadingSeatmap" class="text-center py-8">
-              <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-900"></div>
+              <div
+                class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-900"
+              ></div>
               <p class="text-gray-600 mt-2">Loading seatmap...</p>
             </div>
-            
+
             <!-- Seatmap -->
-            <div v-else-if="availableSeats.length > 0" class="bg-white p-6 rounded-lg border border-gray-300">
+            <div
+              v-else-if="availableSeats.length > 0"
+              class="bg-white p-6 rounded-lg border border-gray-300"
+            >
               <!-- Legend -->
               <div class="flex gap-4 mb-4 text-xs">
                 <div class="flex items-center gap-1">
@@ -1071,21 +1081,30 @@ const editPassengerFromModal = (passenger) => {
                   <span>Blocked/Path</span>
                 </div>
               </div>
-              
+
               <!-- Seats Grid -->
-              <div class="grid gap-2" :style="{ gridTemplateColumns: `repeat(${Math.max(...availableSeats.map(s => s.col)) + 1}, minmax(0, 1fr))` }">
+              <div
+                class="grid gap-2"
+                :style="{
+                  gridTemplateColumns: `repeat(${Math.max(...availableSeats.map((s) => s.col)) + 1}, minmax(0, 1fr))`,
+                }"
+              >
                 <button
                   v-for="seat in availableSeats"
                   :key="`${seat.row}-${seat.col}`"
-                  @click="!seat.blocked && !seat.path && !seat.facility ? (selectedSeat = seat) : null"
+                  @click="
+                    !seat.blocked && !seat.path && !seat.facility
+                      ? (selectedSeat = seat)
+                      : null
+                  "
                   :disabled="seat.blocked || seat.path || seat.facility"
                   :class="[
                     'w-10 h-10 rounded text-xs font-semibold transition-all duration-200',
                     seat.blocked || seat.path || seat.facility
                       ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
                       : selectedSeat?.seat_no === seat.seat_no
-                      ? 'bg-blue-900 text-white shadow-lg scale-110'
-                      : 'bg-green-500 text-white hover:bg-green-600 hover:scale-105 cursor-pointer',
+                        ? 'bg-blue-900 text-white shadow-lg scale-110'
+                        : 'bg-green-500 text-white hover:bg-green-600 hover:scale-105 cursor-pointer',
                   ]"
                   :style="{ gridColumn: seat.col + 1, gridRow: seat.row + 1 }"
                   :title="seat.renaming || seat.seat_no"
@@ -1093,19 +1112,32 @@ const editPassengerFromModal = (passenger) => {
                   {{ seat.renaming || seat.seat_no }}
                 </button>
               </div>
-              
+
               <!-- Selected Seat Info -->
-              <div v-if="selectedSeat" class="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div
+                v-if="selectedSeat"
+                class="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200"
+              >
                 <p class="text-sm font-medium text-blue-900">
-                  Selected Seat: <span class="font-bold">{{ selectedSeat.renaming || selectedSeat.seat_no }}</span>
+                  Selected Seat:
+                  <span class="font-bold">{{
+                    selectedSeat.renaming || selectedSeat.seat_no
+                  }}</span>
                 </p>
               </div>
             </div>
-            
+
             <!-- No Seatmap Available -->
-            <div v-else class="bg-gray-50 p-6 rounded-lg border border-gray-300 text-center">
-              <p class="text-gray-600">No seatmap available for this accommodation class.</p>
-              <p class="text-sm text-gray-500 mt-1">Seat will be assigned automatically.</p>
+            <div
+              v-else
+              class="bg-gray-50 p-6 rounded-lg border border-gray-300 text-center"
+            >
+              <p class="text-gray-600">
+                No seatmap available for this accommodation class.
+              </p>
+              <p class="text-sm text-gray-500 mt-1">
+                Seat will be assigned automatically.
+              </p>
             </div>
           </div>
 
