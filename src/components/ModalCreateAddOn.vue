@@ -172,7 +172,7 @@ onMounted(async () => {
         <!-- LEFT COLUMN // CREATE ADD ON -->
         <div class="flex flex-col items-start gap-6 p-6">
           <h2 class="text-lg font-semibold text-gray-900">
-            {{ isEditMode ? "Update Add On" : "Create Add On" }}
+            {{ isEditMode ? "Edit Add On" : "Create Add On" }}
           </h2>
           <form
             @submit.prevent="submitAddOn"
@@ -272,7 +272,7 @@ onMounted(async () => {
                   Creating Add On ...
                 </span>
                 <span v-else>
-                  {{ isEditMode ? "Update Add On" : "Create Add On" }}
+                  {{ isEditMode ? "Edit Add On" : "Create Add On" }}
                 </span>
               </button>
             </div>

@@ -1,4 +1,128 @@
-<!-- RATE MANAGEMENT ONLY -->
+<script setup>
+import { ref, computed, onMounted } from "vue";
+import { Plus, Search, Edit } from "lucide-vue-next";
+
+import ModalAddEditRate from "../../components/ModalAddEditRate.vue";
+import ModalCreateAddOn from "../../components/ModalCreateAddOn.vue";
+
+const apiBase = import.meta.env.VITE_API_URL;
+
+const isModalOpen = ref(false);
+const routes = ref([]);
+const accommodations = ref([]);
+const selectedRoute = ref(null);
+const selectedAccommodationRate = ref(null);
+
+const searchQuery = ref("");
+const isTableLoading = ref(false);
+const isRateLoading = ref(false);
+const isRateModalOpen = ref(false);
+
+const filteredRoutes = computed(() => {
+  if (!searchQuery.value) return routes.value;
+  const q = searchQuery.value.toLowerCase();
+  return routes.value.filter((r) => r.route_name.toLowerCase().includes(q));
+});
+
+const fetchPassengerAccommodations = async () => {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`${apiBase}/passenger-accommodations`, {
+    headers: { Authorization: token },
+  });
+  const data = await res.json();
+  accommodations.value = data.data || [];
+};
+
+const fetchRoutes = async () => {
+  isTableLoading.value = true;
+  const token = localStorage.getItem("token");
+  const res = await fetch(`${apiBase}/routes`, {
+    headers: { Authorization: token },
+  });
+  const data = await res.json();
+
+  routes.value = data.data.routes.map((r) => ({
+    id: r.route_id,
+    route_name: `${r.port_a.port_name} - ${r.port_b.port_name}`,
+  }));
+  isTableLoading.value = false;
+};
+
+const fetchRouteAccRates = async (route) => {
+  try {
+    isRateLoading.value = true;
+    selectedRoute.value = route;
+
+    const res = await fetch(
+      `${apiBase}/accommodation-rates/route/${route.id}`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      },
+    );
+
+    if (!res.ok) throw new Error("Failed to fetch accommodation rates");
+
+    const data = await res.json();
+
+    selectedRoute.value = {
+      ...route,
+      accommodations: data.data.accRates.map((acc) => ({
+        accommodationRateId: acc.acc_rate_id,
+        accommodationId: acc.accommodation?.accommodation_id,
+        accommodationName: acc.accommodation?.accommodation_name,
+        baseRate: acc.base_rate,
+        withoutAC: acc.without_ac,
+        status: acc.status,
+        updatedAt: acc.updated_at
+          ? new Date(acc.updated_at).toLocaleDateString()
+          : null,
+      })),
+    };
+  } catch (err) {
+    console.error("Fetch error:", err);
+  } finally {
+    isRateLoading.value = false;
+  }
+};
+const openRateModal = (acc) => {
+  selectedAccommodationRate.value = acc;
+  isRateModalOpen.value = true;
+};
+
+const openCreateModal = () => {
+  isModalOpen.value = true;
+};
+
+const handleAddOnSaved = async () => {
+  closeModal();
+  await fetchPassengerAccommodations();
+  if (selectedRoute.value) {
+    await fetchRouteAccRates(selectedRoute.value);
+  }
+};
+
+const closeModal = () => {
+  isModalOpen.value = false;
+};
+
+const handleAccRateSaved = async () => {
+  isRateModalOpen.value = false;
+
+  if (!selectedRoute.value) return;
+
+  await fetchRouteAccRates(selectedRoute.value);
+};
+
+onMounted(async () => {
+  await fetchPassengerAccommodations();
+  await fetchRoutes();
+});
+</script>
+
 <template>
   <div class="grid md:grid-cols-[380px_1fr] gap-6">
     <!-- LEFT ROUTE LIST -->
@@ -58,7 +182,7 @@
                 <tr
                   v-for="route in filteredRoutes"
                   :key="route.id"
-                  @click="fetchRateForRoute(route)"
+                  @click="fetchRouteAccRates(route)"
                   class="hover:bg-gray-50 cursor-pointer"
                   :class="{
                     'bg-blue-50':
@@ -179,24 +303,24 @@
             <tbody class="bg-white divide-y divide-gray-200">
               <tr
                 v-for="(acc, index) in selectedRoute.accommodations"
-                :key="acc.id"
+                :key="acc.accommodationRateId"
                 class="hover:bg-gray-50"
               >
                 <td class="px-6 py-4 text-sm">{{ index + 1 }}</td>
-                <td class="px-6 py-4 text-sm">{{ acc.class_name }}</td>
+                <td class="px-6 py-4 text-sm">{{ acc.accommodationName }}</td>
                 <td class="px-6 py-4 text-sm">
-                  <span v-if="acc.rate === null">—</span>
-                  <span v-else>₱{{ acc.rate }}</span>
+                  <span v-if="acc.baseRate === null">—</span>
+                  <span v-else>₱{{ acc.baseRate }}</span>
                 </td>
                 <td class="px-6 py-4 text-sm text-gray-500">
                   <span v-if="acc.withoutAC === null">—</span>
                   <span v-else>₱{{ acc.withoutAC }}</span>
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-500">—</td>
                 <td class="px-6 py-4 text-sm text-gray-500">
-                  <span v-if="acc.updated_by === null">—</span>
-                  <span v-else>{{ acc.updated_by }}</span>
+                  <span v-if="acc.updatedAt === null">—</span>
+                  <span v-else>{{ acc.updatedAt }}</span>
                 </td>
+                <td class="px-6 py-4 text-sm text-gray-500">—</td>
                 <td class="px-6 py-4 text-sm text-gray-500">
                   <span v-if="acc.status === null">—</span>
                   <span v-else>{{ acc.status }}</span>
@@ -220,140 +344,17 @@
   <transition name="modal-fade">
     <ModalAddEditRate
       v-if="isRateModalOpen"
-      :accommodation="selectedAccommodation"
+      :accommodationRate="selectedAccommodationRate"
       :route="selectedRoute"
       @close="isRateModalOpen = false"
-      @save="handleRateSaved"
+      @save="handleAccRateSaved"
     />
   </transition>
   <transition name="modal-fade">
     <ModalCreateAddOn
       v-if="isModalOpen"
       @close="closeModal"
-      @saved="handleSaved"
+      @saved="handleAddOnSaved"
     />
   </transition>
 </template>
-
-<script setup>
-import { ref, computed, onMounted } from "vue";
-import { Plus, Search, Edit } from "lucide-vue-next";
-import ModalAddEditRate from "../../components/ModalAddEditRate.vue";
-import ModalCreateAddOn from "../../components/ModalCreateAddOn.vue";
-
-const apiBase = import.meta.env.VITE_API_URL;
-
-const isModalOpen = ref(false);
-const routes = ref([]);
-const accommodations = ref([]);
-const selectedRoute = ref(null);
-const selectedAccommodation = ref(null);
-
-const searchQuery = ref("");
-const isTableLoading = ref(false);
-const isRateLoading = ref(false);
-const isRateModalOpen = ref(false);
-
-const filteredRoutes = computed(() => {
-  if (!searchQuery.value) return routes.value;
-  const q = searchQuery.value.toLowerCase();
-  return routes.value.filter((r) => r.route_name.toLowerCase().includes(q));
-});
-
-const fetchPassengerAccommodations = async () => {
-  const token = localStorage.getItem("token");
-  const res = await fetch(`${apiBase}/passenger-accommodations`, {
-    headers: { Authorization: token },
-  });
-  const data = await res.json();
-  accommodations.value = data.data || [];
-};
-
-const fetchRoutes = async () => {
-  isTableLoading.value = true;
-  const token = localStorage.getItem("token");
-  const res = await fetch(`${apiBase}/routes`, {
-    headers: { Authorization: token },
-  });
-  const data = await res.json();
-
-  routes.value = data.data.routes.map((r) => ({
-    id: r.route_id,
-    route_name: `${r.port_a.port_name} - ${r.port_b.port_name}`,
-  }));
-  isTableLoading.value = false;
-};
-
-const fetchRateForRoute = async (route) => {
-  isRateLoading.value = true;
-  selectedRoute.value = null;
-
-  const token = localStorage.getItem("token");
-  const res = await fetch(`${apiBase}/routes/${route.id}/rates`, {
-    headers: { Authorization: token },
-  });
-  const data = await res.json();
-
-  const rateMap = {};
-  if (Array.isArray(data.accommodations)) {
-    data.accommodations.forEach((r) => {
-      rateMap[r.accommodation.toLowerCase()] = r;
-    });
-  }
-
-  selectedRoute.value = {
-    ...route,
-    accommodations: accommodations.value.map((acc) => {
-      const rate = rateMap[acc.accommodation_name.toLowerCase()];
-      return {
-        id: acc.accommodation_id,
-        class_name: acc.accommodation_name,
-        rate: rate?.baseRate ?? null,
-        withoutAC: rate?.withoutAC ?? null,
-        updated_by: rate?.updatedBy ?? null,
-        status: rate?.status ?? null,
-      };
-    }),
-  };
-
-  isRateLoading.value = false;
-};
-
-const openRateModal = (acc) => {
-  selectedAccommodation.value = acc;
-  isRateModalOpen.value = true;
-};
-
-const openCreateModal = () => {
-  isModalOpen.value = true;
-};
-
-const handleSaved = () => {
-  closeModal();
-};
-
-const closeModal = () => {
-  isModalOpen.value = false;
-};
-
-const handleRateSaved = (updated) => {
-  const idx = selectedRoute.value.accommodations.findIndex(
-    (a) => a.class_name === updated.seat_class,
-  );
-  if (idx !== -1) {
-    selectedRoute.value.accommodations[idx] = {
-      ...selectedRoute.value.accommodations[idx],
-      rate: updated.base_rate,
-      withoutAC: updated.without_ac,
-      updated_by: updated.updated_by,
-      status: updated.status,
-    };
-  }
-  isRateModalOpen.value = false;
-};
-
-onMounted(async () => {
-  await fetchPassengerAccommodations(); // MUST BE FIRST
-  await fetchRoutes();
-});
-</script>
