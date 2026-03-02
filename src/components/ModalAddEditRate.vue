@@ -2,23 +2,19 @@
 import { reactive, watch } from "vue";
 
 const props = defineProps({
-  accommodation: Object,
+  accommodationRate: Object,
   route: Object,
 });
-
 const emit = defineEmits(["close", "save"]);
-
 const form = reactive({
-  rate: props.accommodation?.rate ?? 0,
-  withoutAC: props.accommodation?.withoutAC ?? 0,
+  baseRate: props.accommodationRate?.baseRate ?? 0,
 });
 
 watch(
-  () => props.accommodation,
+  () => props.accommodationRate,
   (newVal) => {
     if (newVal) {
-      form.rate = newVal.rate ?? 0;
-      form.withoutAC = newVal.withoutAC ?? 0;
+      form.baseRate = newVal.baseRate ?? 0;
     }
   },
 );
@@ -26,17 +22,13 @@ watch(
 const handleSubmit = async () => {
   try {
     const payload = {
-      seat_class: props.accommodation.class_name,
-      base_rate: form.rate,
-      without_ac: form.withoutAC,
-      status: "Active",
-      updated_by: localStorage.getItem("username") || "unknown",
+      base_rate: form.baseRate,
+      status: props.accommodationRate?.status ?? "active",
     };
-
     const res = await fetch(
-      `${import.meta.env.VITE_API_URL}/routes/${props.route.id}/rates`,
+      `${import.meta.env.VITE_API_URL}/accommodation-rates/${props.accommodationRate.accommodationRateId}`,
       {
-        method: "POST", // or PUT if your API distinguishes create/update
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -47,10 +39,10 @@ const handleSubmit = async () => {
 
     const data = await res.json();
     if (res.ok) {
-      emit("save", data); // send saved data back to parent
+      emit("save", data);
       emit("close");
     } else {
-      console.error("Error saving rate:", data);
+      console.error("Error saving accommodation rate:", data);
     }
   } catch (err) {
     console.error("Network error:", err);
@@ -71,7 +63,7 @@ const handleSubmit = async () => {
         class="flex items-center justify-between border-b p-6 border-gray-200"
       >
         <h2 class="text-lg font-semibold text-gray-900">
-          Edit Rate: {{ accommodation.class_name }}
+          Edit Rate: {{ accommodationRate.accommodationName }}
         </h2>
         <button
           @click="$emit('close')"
@@ -99,17 +91,7 @@ const handleSubmit = async () => {
           </label>
           <input
             type="number"
-            v-model="form.rate"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2"
-            >W/O AC</label
-          >
-          <input
-            type="number"
-            v-model="form.withoutAC"
+            v-model="form.baseRate"
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
