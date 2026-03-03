@@ -1,3 +1,15 @@
+<script setup>
+import { ref } from "vue";
+import RatesModule from "./ratePassengerTemplates/RatesModule.vue";
+import PassengerTypesModule from "./ratePassengerTemplates/PassengerTypesModule.vue";
+
+const activeTab = ref("rate");
+const tabs = [
+  { id: "rate", name: "Rates" },
+  { id: "discount", name: "Passenger Type" },
+];
+</script>
+
 <template>
   <div class="min-h-full bg-gray-50 p-6">
     <!-- Header -->
@@ -16,7 +28,7 @@
     <div
       class="border border-gray-300 mb-2 rounded-lg bg-gray-200 inline-block"
     >
-      <nav class="flex space-x-4 px-2 py-2">
+      <nav class="flex space-x-4 p-1">
         <button
           v-for="tab in tabs"
           :key="tab.id"
@@ -34,29 +46,8 @@
     </div>
     <!-- TAB CONTENT -->
     <div class="mt-6">
-      <RateDiscountsModule v-if="activeTab === 'rate'" />
+      <RatesModule v-if="activeTab === 'rate'" />
       <PassengerTypesModule v-else-if="activeTab === 'discount'" />
     </div>
   </div>
 </template>
-<script setup>
-import { ref, computed, nextTick, onMounted } from "vue";
-import {
-  Plus,
-  BarChart3,
-  AlertCircle,
-  Search,
-  Edit,
-  Eye,
-  List,
-} from "lucide-vue-next";
-import RateDiscountsModule from "./ratePassengerTemplates/RateDiscountsModule.vue";
-import PassengerTypesModule from "./ratePassengerTemplates/PassengerTypesModule.vue";
-
-const apiBase = import.meta.env.VITE_API_URL;
-const activeTab = ref("rate");
-const tabs = [
-  { id: "rate", name: "Rates" },
-  { id: "discount", name: "Passenger Type" },
-];
-</script>
