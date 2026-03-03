@@ -1,3 +1,58 @@
+<script setup>
+import { ref, watch, onMounted } from "vue";
+import { Search, Edit, Plus } from "lucide-vue-next";
+import ModalCreateAccommodation from "../components/ModalCreateAccommodation.vue";
+import ModalEditAccommodation from "../components/ModalEditAccommodation.vue";
+const isModalOpen = ref(false);
+const isEditModalOpen = ref(false);
+
+const apiBase = import.meta.env.VITE_API_URL;
+
+const accommodations = ref([]);
+const selectedAccommodation = ref(null);
+const search = ref("");
+const loading = ref(false);
+
+const fetchAccommodations = async () => {
+  loading.value = true;
+
+  try {
+    const response = await fetch(
+      `${apiBase}/passenger-accommodations?search=${search.value}`,
+      {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch accommodations");
+    }
+
+    const result = await response.json();
+    accommodations.value = result.data ?? [];
+  } catch (error) {
+    console.error(error);
+    accommodations.value = [];
+  } finally {
+    loading.value = false;
+  }
+};
+
+const openEditModal = (accommodation) => {
+  selectedAccommodation.value = accommodation;
+  isEditModalOpen.value = true;
+};
+
+const handleSave = () => {
+  fetchAccommodations();
+};
+watch(search, fetchAccommodations);
+onMounted(fetchAccommodations);
+</script>
+
 <template>
   <div class="min-h-full bg-gray-50 p-6">
     <!-- Header -->
@@ -62,16 +117,12 @@
               <th class="px-6 py-3 text-left text-xs text-gray-500">Actions</th>
             </tr>
           </thead>
-
           <tbody class="bg-white divide-y divide-gray-200">
-            <!-- Loading -->
             <tr v-if="loading">
               <td colspan="10" class="text-center py-6 text-gray-500">
                 Loading accommodations...
               </td>
             </tr>
-
-            <!-- Data -->
             <tr
               v-for="(a, index) in accommodations"
               :key="a.accommodation_id"
@@ -80,21 +131,17 @@
               <td class="px-6 py-4 text-sm">
                 {{ index + 1 }}
               </td>
-
               <td class="px-6 py-4 text-sm font-medium text-gray-900">
                 {{ a.accommodation_name }}
               </td>
-
               <td class="px-6 py-4 text-sm text-gray-500">Active</td>
-
               <td class="px-6 py-4 text-sm text-gray-500">
                 {{ new Date(a.updated_at).toLocaleDateString() }}
               </td>
-
               <td class="px-6 py-4 text-sm text-gray-500">Yoshinoya</td>
-
               <td class="px-6 py-4 text-sm">
                 <button
+                  @click="openEditModal(a)"
                   type="button"
                   class="font-medium text-blue-600 hover:text-blue-900 flex items-center cursor-pointer"
                 >
@@ -102,8 +149,6 @@
                 </button>
               </td>
             </tr>
-
-            <!-- Empty -->
             <tr v-if="!loading && accommodations.length === 0">
               <td colspan="10" class="text-center py-6 text-gray-500">
                 No accommodations found.
@@ -113,58 +158,20 @@
         </table>
       </div>
     </div>
-    <!-- Modal rendered only when open -->
-    <transition name="modal-fade">
-      <ModalCreateAccommodation
-        v-if="isModalOpen"
-        @close="isModalOpen = false"
-        @save="handleSave"
-      />
-    </transition>
   </div>
+  <transition name="modal-fade">
+    <ModalCreateAccommodation
+      v-if="isModalOpen"
+      @close="isModalOpen = false"
+      @save="handleSave"
+    />
+  </transition>
+  <transition name="modal-fade">
+    <ModalEditAccommodation
+      :accommodation="selectedAccommodation"
+      v-if="isEditModalOpen"
+      @close="isEditModalOpen = false"
+      @save="handleSave"
+    />
+  </transition>
 </template>
-
-<script setup>
-import { ref, watch, onMounted } from "vue";
-import { Search, Edit, Plus } from "lucide-vue-next";
-import ModalCreateAccommodation from "../components/ModalCreateAccommodation.vue";
-/* STATE */
-const isModalOpen = ref(false);
-const apiBase = import.meta.env.VITE_API_URL;
-const accommodations = ref([]);
-const search = ref("");
-const loading = ref(false);
-
-const fetchAccommodations = async () => {
-  loading.value = true;
-
-  try {
-    const response = await fetch(
-      `${apiBase}/passenger-accommodations?search=${search.value}`,
-      {
-        headers: {
-          Accept: "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch accommodations");
-    }
-
-    const result = await response.json();
-    accommodations.value = result.data ?? [];
-  } catch (error) {
-    console.error(error);
-    accommodations.value = [];
-  } finally {
-    loading.value = false;
-  }
-};
-const handleSave = () => {
-  fetchAccommodations(); // refresh table
-};
-watch(search, fetchAccommodations);
-onMounted(fetchAccommodations);
-</script>

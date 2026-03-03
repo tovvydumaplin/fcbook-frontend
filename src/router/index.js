@@ -6,7 +6,7 @@ import tellerBooking from "../views/tellerBooking.vue";
 import ScheduleModule from "../views/ScheduleModule.vue";
 import RoutesModule from "../views/RoutesModule.vue";
 import VesselsModule from "../views/VesselsModule.vue";
-import RateDiscountsModule from "../views/RatePassengerLayout.vue";
+import RatesModule from "../views/RatePassengerLayout.vue";
 import PassengerMonitoringModule from "../views/PassengerMonitoringModule.vue";
 import PassengerAccommodation from "../views/PassengerAccommodation.vue";
 import VehiclesModule from "../views/VehiclesModule.vue";
@@ -19,7 +19,7 @@ const routes = [
   { path: "/schedule", component: ScheduleModule },
   { path: "/routes", component: RoutesModule },
   { path: "/vessels", component: VesselsModule },
-  { path: "/rates-discounts", component: RateDiscountsModule },
+  { path: "/rates-discounts", component: RatesModule },
   { path: "/passenger-monitoring", component: PassengerMonitoringModule },
   { path: "/passenger-accommodation", component: PassengerAccommodation },
   { path: "/vehicles", component: VehiclesModule },

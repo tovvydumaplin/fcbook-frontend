@@ -248,13 +248,13 @@ const moduleItems = [
     icon: ratesIcon,
   },
   {
-    name: "Passenger Monitoring",
-    route: "/passenger-monitoring",
+    name: "Vehicles",
+    route: "/vehicles",
     icon: vehiclesIcon,
   },
   {
-    name: "Vehicles",
-    route: "/vehicles",
+    name: "Passenger Monitoring",
+    route: "/passenger-monitoring",
     icon: vehiclesIcon,
   },
 ];
