@@ -28,7 +28,7 @@
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-medium text-gray-600">Total Vessels</h3>
         </div>
-        <div class="text-3xl font-bold text-gray-900 mb-1">4</div>
+        <div class="text-3xl font-bold text-gray-900 mb-1">{{ vessels.length }}</div>
       </div>
 
       <div class="bg-white rounded-lg p-6 shadow-sm">
@@ -36,7 +36,7 @@
           <h3 class="text-sm font-medium text-gray-600">Active Vessels</h3>
           <BarChart3 class="w-5 h-5 text-blue-600" />
         </div>
-        <div class="text-3xl font-bold text-gray-900 mb-1">2</div>
+        <div class="text-3xl font-bold text-gray-900 mb-1">{{ activeVesselsCount }}</div>
       </div>
 
       <div class="bg-white rounded-lg p-6 shadow-sm">
@@ -44,7 +44,7 @@
           <h3 class="text-sm font-medium text-gray-600">Drydock</h3>
           <AlertCircle class="w-5 h-5 text-blue-600" />
         </div>
-        <div class="text-3xl font-bold text-gray-900 mb-1">4</div>
+        <div class="text-3xl font-bold text-gray-900 mb-1">{{ drydockVesselsCount }}</div>
       </div>
     </div>
 
@@ -119,7 +119,7 @@
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
               <!-- LOADING -->
-              <tr v-if="isLoading">
+              <tr v-if="isTableLoading">
                 <td
                   colspan="8"
                   class="px-6 py-6 text-center text-sm text-gray-500"
@@ -312,22 +312,25 @@ const getStatusClass = (status) =>
 // API
 
 const fetchVessels = async () => {
-  isLoading.value = true;
+  isTableLoading.value = true;
   try {
     const token = localStorage.getItem("token");
     const res = await fetch(`${apiBase}/vessels`, {
       headers: { "Content-Type": "application/json", Authorization: token },
     });
     const data = await res.json();
+    console.log("Vessels API Response:", data);
 
     if (res.ok && data.success && data.data?.vessels) {
       vessels.value = data.data.vessels.map((v) => ({
         id: v.id,
-        name: v.name,
+        name: v.vessel_name || v.name,
         status: v.status,
+        capacity: v.capacity,
+        description: v.description,
 
-        classes: v.accommodations.map((a) => ({
-          name: a.name || "Unknown",
+        classes: (v.accommodations || []).map((a) => ({
+          name: a.name || a.accommodation_name || "Unknown",
           rows: a.rows || 0,
           columns: a.columns || 0,
           seats: a.seats || 0,
@@ -336,14 +339,16 @@ const fetchVessels = async () => {
           wifi: !!a.wifi,
         })),
       }));
+      console.log("Parsed vessels:", vessels.value);
     } else {
       vessels.value = [];
+      console.error("Failed to parse vessels data:", data);
     }
   } catch (err) {
     vessels.value = [];
     console.error("Failed to fetch vessels", err);
   } finally {
-    isLoading.value = false;
+    isTableLoading.value = false;
   }
 };
 
@@ -395,6 +400,14 @@ const filteredVessels = computed(() =>
   activeTab.value === "all"
     ? vessels.value
     : vessels.value.filter((v) => v.status === statusMap[activeTab.value]),
+);
+
+const activeVesselsCount = computed(() => 
+  vessels.value.filter(v => v.status === 'Available').length
+);
+
+const drydockVesselsCount = computed(() => 
+  vessels.value.filter(v => v.status === 'Drydock').length
 );
 
 // Save seatmap
