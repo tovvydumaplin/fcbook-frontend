@@ -64,13 +64,16 @@ const fetchRates = async (routeId) => {
       ? stored
       : `Bearer ${stored}`;
 
-    const response = await fetch(`${apiBase}/accommodation-rates/route/${routeId}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: authHeader,
+    const response = await fetch(
+      `${apiBase}/accommodation-rates/route/${routeId}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: authHeader,
+        },
       },
-    });
+    );
 
     if (response.ok) {
       const result = await response.json();
@@ -99,7 +102,8 @@ const getCurrentRate = () => {
   // Use dynamic rates if available
   if (dynamicRates.value && dynamicRates.value.length > 0) {
     const rateEntry = dynamicRates.value.find(
-      (r) => r.accommodation?.accommodation_name === selectedAccommodation.value,
+      (r) =>
+        r.accommodation?.accommodation_name === selectedAccommodation.value,
     );
     if (rateEntry) {
       const rate = parseFloat(rateEntry.base_rate || 0);
@@ -226,10 +230,13 @@ watch(selectedSchedule, (newSchedule) => {
 
 // Fetch seatmap when accommodation is selected
 watch(selectedAccommodation, async (newAccommodation) => {
-  console.log('Watch triggered - selectedAccommodation changed to:', newAccommodation);
-  console.log('Current schedule:', selectedSchedule.value);
-  console.log('Vessel ID:', selectedSchedule.value?.vesselId);
-  
+  console.log(
+    "Watch triggered - selectedAccommodation changed to:",
+    newAccommodation,
+  );
+  console.log("Current schedule:", selectedSchedule.value);
+  console.log("Vessel ID:", selectedSchedule.value?.vesselId);
+
   if (!newAccommodation || !selectedSchedule.value?.vesselId) {
     vesselSeatmap.value = null;
     availableSeats.value = [];
@@ -242,8 +249,10 @@ watch(selectedAccommodation, async (newAccommodation) => {
     return;
   }
 
-  console.log(`Fetching seatmap for vessel ${selectedSchedule.value.vesselId}, accommodation: ${newAccommodation}`);
-  
+  console.log(
+    `Fetching seatmap for vessel ${selectedSchedule.value.vesselId}, accommodation: ${newAccommodation}`,
+  );
+
   loadingSeatmap.value = true;
   try {
     const stored = localStorage.getItem("token");
@@ -262,35 +271,37 @@ watch(selectedAccommodation, async (newAccommodation) => {
       },
     );
 
-    console.log('Seatmap fetch response status:', response.status);
+    console.log("Seatmap fetch response status:", response.status);
 
     if (response.ok) {
       const result = await response.json();
       console.log("Seatmap API Response:", result);
-      
+
       // Response structure: { name, status, classes: [...] }
       const classes = result.classes || [];
       vesselSeatmap.value = result;
 
       // Find the class that matches selected accommodation by name
-      const selectedClass = classes.find(
-        (cls) => {
-          const matchByName = cls.name === newAccommodation;
-          console.log(`Checking class: ${cls.name} - Match: ${matchByName}`);
-          return matchByName;
-        }
-      );
+      const selectedClass = classes.find((cls) => {
+        const matchByName = cls.name === newAccommodation;
+        console.log(`Checking class: ${cls.name} - Match: ${matchByName}`);
+        return matchByName;
+      });
 
       if (selectedClass) {
         // Get seats for this class
         availableSeats.value = selectedClass.seats || [];
-        console.log(`✓ Found ${availableSeats.value.length} seats for ${newAccommodation}`);
-        console.log('First few seats:', availableSeats.value.slice(0, 5));
-        
+        console.log(
+          `✓ Found ${availableSeats.value.length} seats for ${newAccommodation}`,
+        );
+        console.log("First few seats:", availableSeats.value.slice(0, 5));
+
         // Mark seats as blocked if they're already assigned to passengers
-        passengers.value.forEach(passenger => {
+        passengers.value.forEach((passenger) => {
           if (passenger.accommodation === newAccommodation && passenger.seat) {
-            const seat = availableSeats.value.find(s => s.seat_no === passenger.seat);
+            const seat = availableSeats.value.find(
+              (s) => s.seat_no === passenger.seat,
+            );
             if (seat) {
               seat.blocked = true;
             }
@@ -299,7 +310,10 @@ watch(selectedAccommodation, async (newAccommodation) => {
       } else {
         availableSeats.value = [];
         console.log(`✗ No class found matching ${newAccommodation}`);
-        console.log('Available classes:', classes.map(c => c.name));
+        console.log(
+          "Available classes:",
+          classes.map((c) => c.name),
+        );
       }
     } else {
       console.error("Failed to fetch seatmap, status:", response.status);
@@ -451,7 +465,7 @@ const discounts = [
 
 // Handle accommodation click with rate alert
 const handleAccommodationClick = (accommodation) => {
-  console.log('Accommodation clicked:', accommodation);
+  console.log("Accommodation clicked:", accommodation);
   selectedAccommodation.value = accommodation;
 
   // Calculate and show the rate
@@ -492,30 +506,36 @@ const bookEntry = () => {
     // When editing, unblock the old seat if it changed
     const oldSeat = passengers.value[editingIndex.value].seat;
     const newSeat = entry.seat;
-    
+
     if (oldSeat !== newSeat) {
       // Unblock the old seat
-      const oldSeatObj = availableSeats.value.find(s => s.seat_no === oldSeat);
+      const oldSeatObj = availableSeats.value.find(
+        (s) => s.seat_no === oldSeat,
+      );
       if (oldSeatObj) {
         oldSeatObj.blocked = false;
       }
-      
+
       // Block the new seat
-      const newSeatObj = availableSeats.value.find(s => s.seat_no === newSeat);
+      const newSeatObj = availableSeats.value.find(
+        (s) => s.seat_no === newSeat,
+      );
       if (newSeatObj) {
         newSeatObj.blocked = true;
       }
     }
-    
+
     passengers.value[editingIndex.value] = entry;
     editingIndex.value = null;
   } else {
     // When adding new passenger, block the selected seat
-    const seatToBlock = availableSeats.value.find(s => s.seat_no === entry.seat);
+    const seatToBlock = availableSeats.value.find(
+      (s) => s.seat_no === entry.seat,
+    );
     if (seatToBlock) {
       seatToBlock.blocked = true;
     }
-    
+
     passengers.value.push(entry);
   }
 
@@ -646,12 +666,14 @@ const removePassenger = (idx) => {
   // Unblock the seat before removing the passenger
   const passenger = passengers.value[idx];
   if (passenger && passenger.seat) {
-    const seatToUnblock = availableSeats.value.find(s => s.seat_no === passenger.seat);
+    const seatToUnblock = availableSeats.value.find(
+      (s) => s.seat_no === passenger.seat,
+    );
     if (seatToUnblock) {
       seatToUnblock.blocked = false;
     }
   }
-  
+
   passengers.value.splice(idx, 1);
 };
 
@@ -692,13 +714,13 @@ const editPassengerFromModal = (passenger) => {
     selectedDiscount.value = passenger.discount;
     fullname.value = passenger.fullname;
     selectedVehicleDetails.value = passenger.vehicle;
-    
+
     // Set the selected seat for editing
-    const seat = availableSeats.value.find(s => s.seat_no === passenger.seat);
+    const seat = availableSeats.value.find((s) => s.seat_no === passenger.seat);
     if (seat) {
       selectedSeat.value = seat;
     }
-    
+
     editingIndex.value = idx;
     isViewPassengerOpen.value = false; // Close the modal
   }
@@ -1224,7 +1246,9 @@ const editPassengerFromModal = (passenger) => {
               </p>
 
               <!-- Seatmap Container -->
-              <div class="relative h-[350px] overflow-auto border rounded-lg p-2 bg-gray-50">
+              <div
+                class="relative h-[350px] overflow-auto border rounded-lg p-2 bg-gray-50"
+              >
                 <div class="relative w-full h-full">
                   <!-- Seats with Absolute Positioning -->
                   <div
@@ -1242,11 +1266,21 @@ const editPassengerFromModal = (passenger) => {
                     :class="{
                       'bg-gray-300 cursor-not-allowed': seat.path,
                       'bg-red-700 text-white cursor-not-allowed': seat.blocked,
-                      'bg-gray-100 hover:bg-green-100': !seat.path && !seat.blocked && !seat.facility && selectedSeat?.seat_no !== seat.seat_no,
-                      'bg-orange-400 text-white cursor-not-allowed': seat.facility,
-                      'bg-blue-600 text-white shadow-lg ring-2 ring-blue-400': selectedSeat?.seat_no === seat.seat_no,
+                      'bg-gray-100 hover:bg-green-100':
+                        !seat.path &&
+                        !seat.blocked &&
+                        !seat.facility &&
+                        selectedSeat?.seat_no !== seat.seat_no,
+                      'bg-orange-400 text-white cursor-not-allowed':
+                        seat.facility,
+                      'bg-blue-600 text-white shadow-lg ring-2 ring-blue-400':
+                        selectedSeat?.seat_no === seat.seat_no,
                     }"
-                    @click="!seat.blocked && !seat.path && !seat.facility ? (selectedSeat = seat) : null"
+                    @click="
+                      !seat.blocked && !seat.path && !seat.facility
+                        ? (selectedSeat = seat)
+                        : null
+                    "
                   >
                     <span v-if="!seat.blocked && !seat.path && !seat.facility">
                       {{ seat.seat_no }}
@@ -1295,9 +1329,7 @@ const editPassengerFromModal = (passenger) => {
               >
                 <p class="text-sm font-medium text-blue-900">
                   Selected Seat:
-                  <span class="font-bold">{{
-                    selectedSeat.seat_no
-                  }}</span>
+                  <span class="font-bold">{{ selectedSeat.seat_no }}</span>
                 </p>
               </div>
             </div>

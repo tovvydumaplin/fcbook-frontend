@@ -28,7 +28,9 @@
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-medium text-gray-600">Total Vessels</h3>
         </div>
-        <div class="text-3xl font-bold text-gray-900 mb-1">{{ vessels.length }}</div>
+        <div class="text-3xl font-bold text-gray-900 mb-1">
+          {{ vessels.length }}
+        </div>
       </div>
 
       <div class="bg-white rounded-lg p-6 shadow-sm">
@@ -36,7 +38,9 @@
           <h3 class="text-sm font-medium text-gray-600">Active Vessels</h3>
           <BarChart3 class="w-5 h-5 text-blue-600" />
         </div>
-        <div class="text-3xl font-bold text-gray-900 mb-1">{{ activeVesselsCount }}</div>
+        <div class="text-3xl font-bold text-gray-900 mb-1">
+          {{ activeVesselsCount }}
+        </div>
       </div>
 
       <div class="bg-white rounded-lg p-6 shadow-sm">
@@ -44,7 +48,9 @@
           <h3 class="text-sm font-medium text-gray-600">Drydock</h3>
           <AlertCircle class="w-5 h-5 text-blue-600" />
         </div>
-        <div class="text-3xl font-bold text-gray-900 mb-1">{{ drydockVesselsCount }}</div>
+        <div class="text-3xl font-bold text-gray-900 mb-1">
+          {{ drydockVesselsCount }}
+        </div>
       </div>
     </div>
 
@@ -402,12 +408,12 @@ const filteredVessels = computed(() =>
     : vessels.value.filter((v) => v.status === statusMap[activeTab.value]),
 );
 
-const activeVesselsCount = computed(() => 
-  vessels.value.filter(v => v.status === 'Available').length
+const activeVesselsCount = computed(
+  () => vessels.value.filter((v) => v.status === "Available").length,
 );
 
-const drydockVesselsCount = computed(() => 
-  vessels.value.filter(v => v.status === 'Drydock').length
+const drydockVesselsCount = computed(
+  () => vessels.value.filter((v) => v.status === "Drydock").length,
 );
 
 // Save seatmap
