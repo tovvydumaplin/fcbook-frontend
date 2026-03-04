@@ -288,9 +288,34 @@
         <button
           @click="handleSave"
           type="button"
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-2"
+          :disabled="isSaving"
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
+          <!-- Loading Spinner -->
           <svg
+            v-if="isSaving"
+            class="animate-spin h-4 w-4 text-white"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
+          </svg>
+          <!-- Check Icon -->
+          <svg
+            v-else
             class="w-3 h-3"
             fill="none"
             stroke="currentColor"
@@ -303,7 +328,7 @@
               d="M5 13l4 4L19 7"
             />
           </svg>
-          Save Changes
+          {{ isSaving ? 'Saving...' : 'Save Changes' }}
         </button>
       </div>
     </div>
@@ -321,6 +346,8 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["close", "save"]);
+
+const isSaving = ref(false);
 
 const routeName = computed(() => {
   if (!props.selectedRoute) return "";
@@ -415,19 +442,28 @@ const updateAllCheckbox = (schedule) => {
   schedule.all = schedule.online && schedule.teller && schedule.merchant;
 };
 
-const handleSave = () => {
-  const scheduleOptions = {
-    route_id: props.selectedRoute.route_id,
-    portA: portASchedules.value.map((sched) => ({
-      sched_id: sched.sched_id,
-      visibility: sched.visibility,
-    })),
-    portB: portBSchedules.value.map((sched) => ({
-      sched_id: sched.sched_id,
-      visibility: sched.visibility,
-    })),
-  };
+const handleSave = async () => {
+  isSaving.value = true;
+  
+  try {
+    const scheduleOptions = {
+      route_id: props.selectedRoute.route_id,
+      portA: portASchedules.value.map((sched) => ({
+        sched_id: sched.sched_id,
+        visibility: sched.visibility,
+      })),
+      portB: portBSchedules.value.map((sched) => ({
+        sched_id: sched.sched_id,
+        visibility: sched.visibility,
+      })),
+    };
 
-  emit("save", scheduleOptions);
+    emit("save", scheduleOptions);
+    
+    // Add a small delay to show the loading state
+    await new Promise(resolve => setTimeout(resolve, 300));
+  } finally {
+    isSaving.value = false;
+  }
 };
 </script>

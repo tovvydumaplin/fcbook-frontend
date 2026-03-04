@@ -1240,10 +1240,15 @@ const editPassengerFromModal = (passenger) => {
               v-else-if="availableSeats.length > 0"
               class="bg-white p-4 rounded-lg border border-gray-300"
             >
-              <!-- Title -->
-              <p class="text-sm text-center font-medium text-gray-700 mb-3">
-                Seatmap Preview
-              </p>
+              <!-- Title and Selected Class -->
+              <div class="flex items-center justify-center gap-3 mb-3">
+                <p class="text-sm font-medium text-gray-700">Seatmap Preview</p>
+                <span
+                  class="px-3 py-1 bg-blue-900 text-white text-xs font-semibold rounded-full"
+                >
+                  {{ selectedAccommodation }}
+                </span>
+              </div>
 
               <!-- Seatmap Container -->
               <div

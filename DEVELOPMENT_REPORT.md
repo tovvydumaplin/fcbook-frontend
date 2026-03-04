@@ -6,6 +6,9 @@
 2. [Schedule Management Module](#schedule-management-module)
 3. [UI/UX Enhancements](#uiux-enhancements)
 4. [Authentication Feedback](#authentication-feedback)
+5. [Technical Improvements](#technical-improvements)
+6. [Future Enhancements (Recommended)](#future-enhancements-recommended)
+7. [Conclusion](#conclusion)
 
 ---
 
@@ -192,6 +195,285 @@ selectedSchedule.value = {
 **Symptom:** `ReferenceError: Cannot access 'selectedSchedule' before initialization`
 **Cause:** Watch statement used `selectedSchedule` before it was declared
 **Fix:** Moved all ref declarations before watch statements
+
+### Seatmap Integration
+
+#### 6. Dynamic Seatmap Display
+
+**Feature Overview:**
+The teller booking module now displays an interactive seatmap that dynamically loads based on the selected vessel and accommodation class. This provides visual seat selection capability for tellers during the booking process.
+
+**Implementation:**
+
+**API Integration:**
+
+- Fetches vessel layout from `/vessels/{vesselId}/layout` endpoint
+- Vessel ID is extracted from the selected schedule's vessel data
+- Response structure: `{name, status, classes: [{name, seats: [...]}]}`
+
+**Reactive Seat Loading:**
+
+```javascript
+watch(selectedAccommodation, async (newAccommodation) => {
+  if (!newAccommodation || !selectedSchedule.value?.vesselId) {
+    vesselSeatmap.value = null;
+    availableSeats.value = [];
+    selectedSeat.value = null;
+    return;
+  }
+
+  const response = await fetch(
+    `${apiBase}/vessels/${selectedSchedule.value.vesselId}/layout`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: authHeader,
+      },
+    },
+  );
+
+  const result = await response.json();
+  const classes = result.classes || [];
+
+  // Find matching accommodation class
+  const selectedClass = classes.find((cls) => cls.name === newAccommodation);
+
+  if (selectedClass) {
+    availableSeats.value = selectedClass.seats || [];
+
+    // Mark already booked seats as blocked
+    passengers.value.forEach((passenger) => {
+      if (passenger.accommodation === newAccommodation && passenger.seat) {
+        const seat = availableSeats.value.find(
+          (s) => s.seat_no === passenger.seat,
+        );
+        if (seat) {
+          seat.blocked = true;
+        }
+      }
+    });
+  }
+});
+```
+
+**Seatmap Visual Design:**
+
+- Absolute positioning layout matching vessel module design
+- 40px × 40px seat size for consistent display
+- Color-coded seat states:
+  - **Gray (bg-gray-100)**: Available seats
+  - **Blue (bg-blue-600)**: Selected seat
+  - **Gray (bg-gray-300)**: Path/walkway seats
+  - **Red (bg-red-700)**: Blocked seats (with ✕ symbol)
+  - **Orange (bg-orange-400)**: Facility seats (restroom, etc.)
+
+**Layout Code:**
+
+```javascript
+<div class="relative h-[350px] overflow-auto border rounded-lg p-2 bg-gray-50">
+  <div class="relative w-full h-full">
+    <!-- Title and Selected Class Badge -->
+    <div class="flex items-center justify-center gap-3 mb-3">
+      <p class="text-sm font-medium text-gray-700">Seatmap Preview</p>
+      <span class="px-3 py-1 bg-blue-900 text-white text-xs font-semibold rounded-full">
+        {{ selectedAccommodation }}
+      </span>
+    </div>
+
+    <!-- Seats with Absolute Positioning -->
+    <div
+      v-for="seat in availableSeats"
+      :key="seat.seat_no"
+      class="absolute flex items-center justify-center border rounded-md text-xs font-medium cursor-pointer"
+      :style="{
+        width: '40px',
+        height: '40px',
+        top: seat.row * 40 + 'px',
+        left: seat.col * 40 + 'px',
+      }"
+      :class="{
+        'bg-gray-300 cursor-not-allowed': seat.path,
+        'bg-red-700 text-white cursor-not-allowed': seat.blocked,
+        'bg-gray-100 hover:bg-green-100': !seat.path && !seat.blocked && !seat.facility,
+        'bg-orange-400 text-white cursor-not-allowed': seat.facility,
+        'bg-blue-600 text-white shadow-lg ring-2 ring-blue-400': selectedSeat?.seat_no === seat.seat_no,
+      }"
+      @click="!seat.blocked && !seat.path && !seat.facility ? (selectedSeat = seat) : null"
+    >
+      <span v-if="!seat.blocked && !seat.path && !seat.facility">
+        {{ seat.seat_no }}
+      </span>
+      <span v-if="seat.facility">{{ seat.facility }}</span>
+      <span v-if="seat.blocked">✕</span>
+    </div>
+  </div>
+</div>
+```
+
+**Visual Enhancements:**
+
+- **Class Badge Display**: Shows the currently selected accommodation class (e.g., "Business Class", "Economy Class") in a blue rounded badge above the seatmap
+- **Clear Visual Hierarchy**: Badge positioned next to the "Seatmap Preview" title for immediate recognition
+- **Responsive Design**: Badge adapts to different class name lengths
+
+**Seat Properties:**
+
+- `seat_no`: Seat identifier (e.g., "1A", "2B")
+- `row`: Row position for grid layout
+- `col`: Column position for grid layout
+- `blocked`: Boolean indicating if seat is unavailable
+- `path`: Boolean indicating walkway/aisle
+- `facility`: String label for facility seats (e.g., "CR", "PWD")
+- `renaming`: Optional custom seat label
+
+#### 7. Seat Blocking Management
+
+**Problem Solved:** Prevent double-booking by automatically blocking seats when passengers are added and unblocking when removed.
+
+**Implementation:**
+
+**Save Passenger - Seat Blocking:**
+
+```javascript
+if (editingIndex.value !== null) {
+  // When editing, handle seat changes
+  const oldSeat = passengers.value[editingIndex.value].seat;
+  const newSeat = entry.seat;
+
+  if (oldSeat !== newSeat) {
+    // Unblock the old seat
+    const oldSeatObj = availableSeats.value.find((s) => s.seat_no === oldSeat);
+    if (oldSeatObj) {
+      oldSeatObj.blocked = false;
+    }
+
+    // Block the new seat
+    const newSeatObj = availableSeats.value.find((s) => s.seat_no === newSeat);
+    if (newSeatObj) {
+      newSeatObj.blocked = true;
+    }
+  }
+
+  passengers.value[editingIndex.value] = entry;
+} else {
+  // When adding new passenger, block the selected seat
+  const seatToBlock = availableSeats.value.find(
+    (s) => s.seat_no === entry.seat,
+  );
+  if (seatToBlock) {
+    seatToBlock.blocked = true;
+  }
+
+  passengers.value.push(entry);
+}
+```
+
+**Remove Passenger - Seat Unblocking:**
+
+```javascript
+const removePassenger = (idx) => {
+  // Unblock the seat before removing the passenger
+  const passenger = passengers.value[idx];
+  if (passenger && passenger.seat) {
+    const seatToUnblock = availableSeats.value.find(
+      (s) => s.seat_no === passenger.seat,
+    );
+    if (seatToUnblock) {
+      seatToUnblock.blocked = false;
+    }
+  }
+
+  passengers.value.splice(idx, 1);
+};
+```
+
+**Edit Passenger - Seat Restoration:**
+
+```javascript
+const editPassengerFromModal = (passenger) => {
+  const idx = passengers.value.findIndex(
+    (p) => p.seat === passenger.seat && p.fullname === passenger.fullname,
+  );
+
+  if (idx !== -1) {
+    // ... populate form fields ...
+
+    // Set the selected seat for editing
+    const seat = availableSeats.value.find((s) => s.seat_no === passenger.seat);
+    if (seat) {
+      selectedSeat.value = seat;
+    }
+
+    editingIndex.value = idx;
+  }
+};
+```
+
+**Benefits:**
+
+- Real-time seat availability updates
+- Visual feedback for seat status changes
+- Prevents accidental double-booking
+- Maintains seat state across accommodation switches
+- Handles seat changes during passenger edits
+
+#### 8. Selected Seat Information Display
+
+**Feature:** Shows selected seat details in a highlighted info box below the seatmap.
+
+**UI Component:**
+
+```javascript
+<div v-if="selectedSeat" class="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+  <p class="text-sm font-medium text-blue-900">
+    Selected Seat: <span class="font-bold">{{ selectedSeat.seat_no }}</span>
+  </p>
+</div>
+```
+
+**Legend Display:**
+
+```javascript
+<div class="flex gap-4 mt-4 text-xs justify-center">
+  <div class="flex items-center gap-1">
+    <div class="w-6 h-6 bg-gray-100 border rounded"></div>
+    <span>Available</span>
+  </div>
+  <div class="flex items-center gap-1">
+    <div class="w-6 h-6 bg-blue-600 rounded"></div>
+    <span>Selected</span>
+  </div>
+  <div class="flex items-center gap-1">
+    <div class="w-6 h-6 bg-gray-300 rounded"></div>
+    <span>Path</span>
+  </div>
+  <div class="flex items-center gap-1">
+    <div class="w-6 h-6 bg-red-700 rounded"></div>
+    <span>Blocked</span>
+  </div>
+</div>
+```
+
+### Bug Fixes (Seatmap)
+
+#### Issue 3: Seatmap Not Loading
+
+**Symptom:** Seatmap fetch triggered but no data displayed
+**Cause:** Alert dialog blocking watch execution and reactive updates
+**Fix:** Removed blocking `alert()` calls, replaced with `console.log()` for debugging
+
+#### Issue 4: Class Matching Failure
+
+**Symptom:** "No class found matching Business Class" despite correct API response
+**Cause:** Attempted to match by `accommodation_id` which doesn't exist in layout classes
+**Fix:** Simplified matching to use only `cls.name === newAccommodation`
+
+#### Issue 5: Seats Not Persisting Blocked State
+
+**Symptom:** Switching accommodations would reset all seats to available
+**Cause:** Fresh seat data loaded without checking existing passenger assignments
+**Fix:** Added logic to re-block seats assigned to passengers after loading new seatmap data
 
 ---
 
@@ -790,6 +1072,137 @@ try {
 - Automatic redirect to login on 401/403
 - Token refresh logic
 - Session persistence validation
+
+### API Integration Fixes
+
+#### 1. Vessels Module Data Parsing
+
+**Issue:** VesselsModule.vue was not displaying vessel data correctly after API changes.
+
+**Root Cause:** API response structure changed from `name` to `vessel_name` field.
+
+**Solution:**
+
+```javascript
+// Before
+const mappedVessels = response.data.vessels.map((v) => ({
+  ...v,
+  name: v.name, // Would be undefined with new API
+}));
+
+// After
+const mappedVessels = response.data.vessels.map((v) => ({
+  ...v,
+  name: v.vessel_name || v.name, // Fallback for backward compatibility
+}));
+```
+
+**Benefits:**
+
+- Vessels display correctly in vessel management dashboard
+- Backward compatible with both API response formats
+- Proper summary card calculations (total vessels, active, drydock)
+
+#### 2. Accommodation Rates Endpoint
+
+**Issue:** Rate fetching for teller booking used incorrect endpoint and response structure.
+
+**Previous Implementation:**
+
+```javascript
+// Wrong endpoint
+const response = await fetch(`${apiBase}/routes/rates`);
+
+// Expected wrong structure
+const rates = response.data.rates;
+```
+
+**Corrected Implementation:**
+
+```javascript
+// Correct endpoint
+const response = await fetch(`${apiBase}/accommodation-rates/route/${routeId}`);
+
+// Parse correct structure
+const result = await response.json();
+const rates = result.data?.accRates || [];
+
+// Map to match accommodation names
+const matchedRate = rates.find(
+  (r) => r.accommodation.accommodation_name === selectedAccommodation.value,
+);
+const baseRate = matchedRate?.base_rate || 0;
+```
+
+**Response Structure:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "accRates": [
+      {
+        "accommodation": {
+          "accommodation_name": "Business Class",
+          "accommodation_id": 1
+        },
+        "base_rate": 250.0
+      }
+    ]
+  }
+}
+```
+
+**Benefits:**
+
+- Accurate rate calculations based on selected accommodation
+- Dynamic pricing based on route-specific rates
+- Proper discount calculations from correct base rate
+
+#### 3. Vessel Layout API Integration
+
+**Challenge:** Integrating vessel seatmap data from vessel management module into teller booking.
+
+**API Endpoint:** `GET /vessels/{vesselId}/layout`
+
+**Response Parsing:**
+
+```javascript
+// Response structure
+{
+  "name": "FCM15",
+  "status": "active",
+  "classes": [
+    {
+      "name": "Business Class",
+      "rows": 5,
+      "columns": 8,
+      "seats": [
+        {
+          "seat_no": "1A",
+          "row": 0,
+          "col": 0,
+          "blocked": false,
+          "path": false,
+          "facility": null
+        }
+      ]
+    }
+  ]
+}
+
+// Class matching logic
+const selectedClass = classes.find(cls => cls.name === selectedAccommodation.value);
+if (selectedClass) {
+  availableSeats.value = selectedClass.seats || [];
+}
+```
+
+**Key Learning:**
+
+- Class matching should use `name` field, not `accommodation_id`
+- API returns class-specific seat layouts, not a flat list
+- Each class can have different seating configurations
 
 ---
 
