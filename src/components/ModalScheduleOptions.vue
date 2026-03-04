@@ -328,7 +328,7 @@
               d="M5 13l4 4L19 7"
             />
           </svg>
-          {{ isSaving ? 'Saving...' : 'Save Changes' }}
+          {{ isSaving ? "Saving..." : "Save Changes" }}
         </button>
       </div>
     </div>
@@ -444,7 +444,7 @@ const updateAllCheckbox = (schedule) => {
 
 const handleSave = async () => {
   isSaving.value = true;
-  
+
   try {
     const scheduleOptions = {
       route_id: props.selectedRoute.route_id,
@@ -459,9 +459,9 @@ const handleSave = async () => {
     };
 
     emit("save", scheduleOptions);
-    
+
     // Add a small delay to show the loading state
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await new Promise((resolve) => setTimeout(resolve, 300));
   } finally {
     isSaving.value = false;
   }
