@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from "vue";
-import InstitutionalAccountsModule from "./Modules/InstitutionalAccountModule.vue";
-import MerchantAccountsModule from "./Modules/MerchantAccountModule.vue";
+import InstitutionalAccountLayout from "./Modules/InstitutionalAccountLayout.vue";
+import MerchantLayout from "./Modules/MerchantLayout.vue";
 
 const activeTab = ref("ia");
 const tabs = [
@@ -44,8 +44,8 @@ const tabs = [
     </div>
     <!-- TAB CONTENT -->
     <div class="mt-6">
-      <InstitutionalAccountsModule v-if="activeTab === 'ia'" />
-      <MerchantAccountsModule v-else-if="activeTab === 'merchant'" />
+      <InstitutionalAccountLayout v-if="activeTab === 'ia'" />
+      <MerchantLayout v-else-if="activeTab === 'merchant'" />
     </div>
   </div>
 </template>
