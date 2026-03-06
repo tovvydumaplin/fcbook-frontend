@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from "vue";
+import Swal from "sweetalert2";
 
 const emit = defineEmits(["close", "save"]);
 
@@ -21,6 +22,17 @@ const paymentType = ref("");
 
 const saveIA = async () => {
   errorMsg.value = "";
+  const confirm = await Swal.fire({
+    title: "Are you sure?",
+    text: "Do you want to save this institutional account?",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: "Yes, save it!",
+    cancelButtonText: "Cancel",
+  });
+
+  if (!confirm.isConfirmed) return;
+
   isLoading.value = true;
 
   try {
@@ -59,6 +71,12 @@ const saveIA = async () => {
   } catch (error) {
     console.error(error);
     errorMsg.value = error.message || "Something went wrong while saving.";
+
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: errorMsg.value,
+    });
   } finally {
     isLoading.value = false;
   }

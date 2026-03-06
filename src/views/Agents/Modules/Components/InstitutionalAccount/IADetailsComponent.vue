@@ -3,6 +3,7 @@ import { Edit, Plus, Search } from "lucide-vue-next";
 import { ref, onMounted } from "vue";
 import ModalEditIA from "../../../../../components/ModalEditIA.vue";
 import ModalCreateIA from "../../../../../components/ModalCreateIA.vue";
+import Swal from "sweetalert2";
 
 const apiBase = import.meta.env.VITE_API_URL;
 
@@ -18,11 +19,6 @@ const openEditIA = (ia) => {
   isEditModalOpen.value = true;
 };
 
-const handleEditSaved = async () => {
-  closeEditModal();
-  await fetchInstitutionalAccounts();
-};
-
 const closeEditModal = () => {
   isEditModalOpen.value = false;
 };
@@ -35,8 +31,29 @@ const closeCreateModal = () => {
   isCreateModalOpen.value = false;
 };
 
+const handleEditSaved = async () => {
+  closeEditModal();
+  await Swal.fire({
+    icon: "success",
+    title: "Updated!",
+    text: `${selectedInstitutionalAccount.value.iaName} has been updated.`,
+    timer: 2000,
+    showConfirmButton: false,
+  });
+
+  await fetchInstitutionalAccounts();
+};
+
 const handleCreateSaved = async () => {
   closeCreateModal();
+  await Swal.fire({
+    icon: "success",
+    title: "Created!",
+    text: `New institutional account has been created.`,
+    timer: 2000,
+    showConfirmButton: false,
+  });
+
   await fetchInstitutionalAccounts();
 };
 
@@ -58,22 +75,27 @@ const fetchInstitutionalAccounts = async () => {
 
     institutionalAccounts.value = data.data.institutional_accounts.map(
       (ia) => ({
-        iaId: ia.ia_id,
-        iaName: ia.ia_name,
-        address: ia.address,
-        email: ia.email,
-        contactPerson: ia.contact_person,
-        contactNumber: ia.contact_number,
-        area: ia.area,
-        paymentMode: ia.payment_mode,
-        effectiveDate: ia.effective_date,
-        eocDate: ia.eoc_date,
-        paymentType: ia.payment_type,
-        updatedAt: new Date(ia.updated_at).toLocaleDateString(),
+        iaId: ia.ia_id ?? "-",
+        iaName: ia.ia_name ?? "-",
+        address: ia.address ?? "-",
+        email: ia.email ?? "-",
+        contactPerson: ia.contact_person ?? "-",
+        contactNumber: ia.contact_number ?? "-",
+        area: ia.area ?? "-",
+        paymentMode: ia.payment_mode ?? "-",
+        effectiveDate: ia.effective_date
+          ? new Date(ia.effective_date).toLocaleDateString()
+          : "-",
+        eocDate: ia.eoc_date ? new Date(ia.eoc_date).toLocaleDateString() : "-",
+        paymentType: ia.payment_type ?? "-",
+        updatedAt: ia.updated_at
+          ? new Date(ia.updated_at).toLocaleDateString()
+          : "-",
       }),
     );
   } catch (err) {
     console.error("Fetch error:", err);
+    Swal.fire("Error", "Failed to fetch institutional accounts.", "error");
   } finally {
     isTableLoading.value = false;
   }
@@ -84,7 +106,6 @@ onMounted(fetchInstitutionalAccounts);
 
 <template>
   <!-- TABLE -->
-
   <div class="px-4 py-3 border-b border-gray-200 flex flex-col gap-2">
     <div class="flex justify-between items-center">
       <div class="relative">
@@ -128,10 +149,17 @@ onMounted(fetchInstitutionalAccounts);
           <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">
             Contact Person
           </th>
-
           <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">
             Contact Number
           </th>
+          <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">
+            Effective Date
+          </th>
+
+          <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">
+            EOC Date
+          </th>
+
           <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">Action</th>
         </tr>
       </thead>
@@ -156,19 +184,22 @@ onMounted(fetchInstitutionalAccounts);
           <td class="px-6 py-4 text-sm">{{ ia.address }}</td>
           <td class="px-6 py-4 text-sm">{{ ia.contactPerson }}</td>
           <td class="px-6 py-4 text-sm">{{ ia.contactNumber }}</td>
-          <td class="px-6 py-4 text-sm flex items-start gap-1">
+          <td class="px-6 py-4 text-sm">{{ ia.effectiveDate }}</td>
+          <td class="px-6 py-4 text-sm">{{ ia.eocDate }}</td>
+
+          <td class="px-6 py-4 text-sm">
             <button
               @click="openEditIA(ia)"
-              class="font-medium text-blue-600 hover:text-blue-900 flex items-center"
+              class="font-medium text-blue-600 hover:text-blue-900 flex items-center gap-2"
             >
-              <Edit class="w-4 h-4 mr-1" />
+              <Edit class="w-5 h-5" />
+              Edit
             </button>
           </td>
         </tr>
       </tbody>
     </table>
   </div>
-
   <transition name="modal-fade">
     <ModalEditIA
       v-if="isEditModalOpen"

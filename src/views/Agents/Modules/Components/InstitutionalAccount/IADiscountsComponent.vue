@@ -5,20 +5,20 @@ import ModalIADiscounts from "../../../../../components/ModalIADiscounts.vue";
 
 const apiBase = import.meta.env.VITE_API_URL;
 
-const isDiscountModalOpen = ref(false);
+const isIADiscountsModalOpen = ref(false);
 
 const selectedInstitutionalAccount = ref({});
 const isTableLoading = ref(false);
 const institutionalAccounts = ref([]);
 const search = ref("");
 
-const openDiscountsModal = (ia) => {
+const openIADiscountsModal = (ia) => {
   selectedInstitutionalAccount.value = ia;
-  isDiscountModalOpen.value = true;
+  isIADiscountsModalOpen.value = true;
 };
 
 const closeDiscountsModal = () => {
-  isDiscountModalOpen.value = false;
+  isIADiscountsModalOpen.value = false;
 };
 
 const fetchInstitutionalAccounts = async () => {
@@ -121,13 +121,13 @@ onMounted(fetchInstitutionalAccounts);
           <td class="px-6 py-4 text-sm">{{ ia.paymentMode }}</td>
           <td class="px-6 py-4 text-sm">{{ ia.paymentType }}</td>
 
-          <td class="px-6 py-4 text-sm flex items-start gap-1">
+          <td class="px-6 py-4 text-sm">
             <button
-              @click="openDiscountsModal(ia)"
+              @click="openIADiscountsModal(ia)"
               type="button"
-              class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 flex items-center gap-2 cursor-pointer"
+              class="font-medium text-blue-600 hover:text-blue-900 flex items-center gap-2"
             >
-              <Eye class="w-4 h-4" />
+              <Eye class="w-5 h-5" />
               View
             </button>
           </td>
@@ -137,10 +137,9 @@ onMounted(fetchInstitutionalAccounts);
   </div>
   <transition name="modal-fade">
     <ModalIADiscounts
-      v-if="isDiscountModalOpen"
+      v-if="isIADiscountsModalOpen"
       :ia="selectedInstitutionalAccount"
       @close="closeDiscountsModal"
-      @save="handleDiscountsSaved"
     />
   </transition>
 </template>

@@ -1,6 +1,16 @@
 <script setup>
-import { Edit, Plus, Trash2 } from "lucide-vue-next";
+import {
+  ArrowDown,
+  ChevronDown,
+  ChevronUp,
+  Edit,
+  Plus,
+  Trash2,
+} from "lucide-vue-next";
 import { onMounted, ref, watch, computed } from "vue";
+import ModalCreateIADiscount from "./ModalCreateIADiscount.vue";
+import ModalEditIADiscount from "./ModalEditIADiscount.vue";
+
 const emit = defineEmits(["close", "save"]);
 const apiBase = import.meta.env.VITE_API_URL;
 const isTableLoading = ref(false);
@@ -11,6 +21,9 @@ const routes = ref([]);
 const isRouteDropdownOpen = ref(false);
 const selectedRoutes = ref([]);
 const allRoutes = ref(true);
+const isCreateIADiscountModalOpen = ref(false);
+const isEditIADiscountModalOpen = ref(false);
+const selectedIADiscount = ref({});
 
 const props = defineProps({
   ia: {
@@ -19,12 +32,25 @@ const props = defineProps({
   },
 });
 
-const toggleRouteDropdown = () => {
-  isRouteDropdownOpen.value = !isRouteDropdownOpen.value;
+const openCreateIADiscountModal = () => {
+  isCreateIADiscountModalOpen.value = true;
 };
 
-const isRouteSelected = (routeId) => {
-  return selectedRoutes.value.includes(routeId);
+const openEditIADiscountModal = (iad) => {
+  selectedIADiscount.value = iad;
+  isEditIADiscountModalOpen.value = true;
+};
+
+const closeCreateIADiscountModal = () => {
+  isCreateIADiscountModalOpen.value = false;
+};
+
+const closeEditIADiscountModal = () => {
+  isEditIADiscountModalOpen.value = false;
+};
+
+const toggleRouteDropdown = () => {
+  isRouteDropdownOpen.value = !isRouteDropdownOpen.value;
 };
 
 const toggleAllRoutes = () => {
@@ -41,10 +67,11 @@ const routeLabel = computed(() => {
   return `${selectedRoutes.value.length} Routes Selected`;
 });
 
-const filteredRoutes = computed(() => {
-  if (allRoutes.value) return routes.value;
-  return routes.value.filter((route) =>
-    selectedRoutes.value.includes(route.route_id),
+const filteredIADiscounts = computed(() => {
+  if (allRoutes.value) return IADiscounts.value;
+
+  return IADiscounts.value.filter((iad) =>
+    selectedRoutes.value.includes(iad.routeId),
   );
 });
 
@@ -65,8 +92,10 @@ const fetchIADiscounts = async () => {
     if (!res.ok) throw new Error("Failed to fetch IA Discounts");
 
     const data = await res.json();
+
     IADiscounts.value = data.data.iaDiscounts.map((iad) => ({
       iaDiscountId: iad.ia_discount_id,
+      routeId: iad.route_id,
       discountName: iad.discount_name,
       discountValue: iad.discount_value,
       discountType: iad.discount_type,
@@ -79,8 +108,6 @@ const fetchIADiscounts = async () => {
       updatedAt: iad.updated_at
         ? new Date(iad.updated_at).toLocaleDateString()
         : null,
-
-      routeName: `${iad.route.port_a.port_name} → ${iad.route.port_b.port_name}`,
     }));
   } catch (err) {
     console.error(err);
@@ -142,7 +169,7 @@ onMounted(async () => {
     </div>
 
     <div
-      class="modal-card bg-white rounded-lg shadow-xl w-full max-w-8xl mx-4"
+      class="modal-card bg-white rounded-lg shadow-xl w-full max-w-7xl mx-4"
       @click.stop
     >
       <!-- HEADER -->
@@ -177,13 +204,18 @@ onMounted(async () => {
       <div class="p-6 gap-6 flex flex-col">
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-center justify-center gap-2">
-            <div class="relative w-72">
+            <div class="relative w-60 text-xs">
               <button
                 @click="toggleRouteDropdown"
                 type="button"
-                class="border border-gray-300 rounded-md px-3 py-2 w-full shadow-sm text-center"
+                class="border text-sm border-gray-300 rounded-md px-3 py-2 w-full shadow-sm text-center"
               >
-                {{ routeLabel }}
+                <div class="flex items-center justify-between gap-2">
+                  {{ routeLabel }}
+
+                  <ChevronDown v-if="!isRouteDropdownOpen" class="w-4 h-4" />
+                  <ChevronUp v-else class="w-4 h-4" />
+                </div>
               </button>
               <div
                 v-if="isRouteDropdownOpen"
@@ -212,14 +244,13 @@ onMounted(async () => {
                     :value="route.route_id"
                     v-model="selectedRoutes"
                   />
-
                   {{ route.port_a.port_name }} → {{ route.port_b.port_name }}
                 </label>
               </div>
             </div>
           </div>
           <button
-            @click="openCreateIA"
+            @click="openCreateIADiscountModal"
             type="button"
             class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 flex items-center gap-2 cursor-pointer"
           >
@@ -245,48 +276,48 @@ onMounted(async () => {
             </div>
           </div>
           <div v-else class="w-full overflow-auto min-h-[40vh] max-h-[40vh]">
-            <table class="min-w-full border-separate border-spacing-0">
+            <table class="table-fixed w-full border-separate border-spacing-0">
               <thead class="sticky top-0 bg-gray-100 text-sm text-gray-600">
                 <tr>
                   <th
-                    class="px-6 py-4 text-left border-l border-t border-b border-gray-300 rounded-tl-md rounded-bl-md"
+                    class="w-10 px-6 py-4 text-left border-l border-t border-b border-gray-300 rounded-tl-md rounded-bl-md"
                   >
                     #
                   </th>
                   <th
-                    class="px-6 py-4 text-left border-t border-b border-gray-300"
+                    class="w-64 px-6 py-4 text-left border-t border-b border-gray-300"
                   >
                     Route
                   </th>
 
                   <th
-                    class="px-6 py-4 text-left border-t border-b border-gray-300"
+                    class="w-48 px-6 py-4 text-left border-t border-b border-gray-300"
                   >
                     Discount Name
                   </th>
                   <th
-                    class="px-6 py-4 text-left border-t border-b border-gray-300"
+                    class="w-40 px-6 py-4 text-left border-t border-b border-gray-300"
                   >
                     Discount Value
                   </th>
                   <th
-                    class="px-6 py-4 text-left border-t border-b border-gray-300"
+                    class="w-20 px-6 py-4 text-left border-t border-b border-gray-300"
                   >
                     Status
                   </th>
                   <th
-                    class="px-6 py-4 text-left border-t border-b border-gray-300"
+                    class="w-32 px-6 py-4 text-left border-t border-b border-gray-300"
                   >
                     Effective Date
                   </th>
                   <th
-                    class="px-6 py-4 text-left border-t border-b border-gray-300"
+                    class="w-32 px-6 py-4 text-left border-t border-b border-gray-300"
                   >
                     Updated
                   </th>
 
                   <th
-                    class="px-6 py-4 text-left border-t border-b border-r border-gray-300 rounded-tr-md rounded-br-md"
+                    class="w-32 px-6 py-4 text-left border-t border-b border-r border-gray-300 rounded-tr-md rounded-br-md"
                   >
                     Actions
                   </th>
@@ -294,7 +325,7 @@ onMounted(async () => {
               </thead>
               <tbody class="text-gray-900">
                 <tr
-                  v-for="(iad, index) in IADiscounts"
+                  v-for="(iad, index) in filteredIADiscounts"
                   :key="iad.iaDiscountId"
                   class="hover:bg-gray-50"
                 >
@@ -316,7 +347,10 @@ onMounted(async () => {
 
                   <td class="px-6 py-4 text-sm">
                     <div class="flex gap-2">
-                      <button class="text-blue-600 hover:text-blue-900">
+                      <button
+                        @click="openEditIADiscountModal(iad)"
+                        class="text-blue-600 hover:text-blue-900"
+                      >
                         <Edit class="w-4 h-4" />
                       </button>
 
@@ -329,6 +363,22 @@ onMounted(async () => {
               </tbody>
             </table>
           </div>
+          <!-- MODALS  -->
+          <transition name="modal-fade">
+            <ModalCreateIADiscount
+              v-if="isCreateIADiscountModalOpen"
+              :routes="routes"
+              :ia-id="props.ia.iaId"
+              @close="closeCreateIADiscountModal"
+            />
+          </transition>
+          <transition name="modal-fade">
+            <ModalEditIADiscount
+              v-if="isEditIADiscountModalOpen"
+              :iad="selectedIADiscount"
+              @close="closeEditIADiscountModal"
+            />
+          </transition>
         </form>
       </div>
     </div>

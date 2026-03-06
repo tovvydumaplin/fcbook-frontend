@@ -1,8 +1,9 @@
 <script setup>
 import { User, Tag, LockKeyhole } from "lucide-vue-next";
-import { ref, onMounted } from "vue";
+import { ref } from "vue";
 import IADetailsComponent from "./Components/InstitutionalAccount/IADetailsComponent.vue";
 import IADiscountsComponent from "./Components/InstitutionalAccount/IADiscountsComponent.vue";
+import IAPasswordsComponent from "./Components/InstitutionalAccount/IAPasswordsComponent.vue";
 
 const activeTab = ref("ia-details");
 
@@ -34,5 +35,6 @@ const tabs = [
     </nav>
     <IADetailsComponent v-if="activeTab === 'ia-details'" />
     <IADiscountsComponent v-else-if="activeTab === 'ia-discounts'" />
+    <IAPasswordsComponent v-else-if="activeTab === 'ia-passwords'" />
   </div>
 </template>
