@@ -1,5 +1,7 @@
 <script setup>
 import { ref, computed } from "vue";
+import Swal from "sweetalert2";
+
 const emit = defineEmits(["close", "save"]);
 
 const apiBase = import.meta.env.VITE_API_URL;
@@ -46,22 +48,55 @@ const props = defineProps({
 
 const createIADiscount = async () => {
   errorMsg.value = "";
-  isLoading.value = true;
 
+  const confirm = await Swal.fire({
+    title: "Are you sure?",
+    text: "Do you want to save this institutional account?",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: "Confirm",
+    cancelButtonText: "Cancel",
+    reverseButtons: true,
+  });
+
+  if (!confirm.isConfirmed) return;
+  isLoading.value = true;
   try {
     const payload = {
+      ia_id: props.iaId,
       discount_name: discountName.value,
       route_id: selectedRoute.value,
       discount_value:
         discountType.value === "percentage"
-          ? percentageValue.value
-          : fixedValue.value,
+          ? Number(percentageValue.value)
+          : Number(fixedValue.value),
       discount_type: discountType.value,
     };
+
     console.log(payload);
+    const response = await fetch(
+      `${apiBase}/institutional-accounts/discounts`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify(payload),
+      },
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to save IA Discount");
+    }
+
+    emit("save");
+    emit("close");
   } catch (err) {
     console.error(err);
-    errorMsg.value = "Failed to save add on.";
+    errorMsg.value = "Failed to save discount.";
   } finally {
     isLoading.value = false;
   }

@@ -8,6 +8,7 @@ import {
   Trash2,
 } from "lucide-vue-next";
 import { onMounted, ref, watch, computed } from "vue";
+import Swal from "sweetalert2";
 import ModalCreateIADiscount from "./ModalCreateIADiscount.vue";
 import ModalEditIADiscount from "./ModalEditIADiscount.vue";
 
@@ -47,6 +48,19 @@ const closeCreateIADiscountModal = () => {
 
 const closeEditIADiscountModal = () => {
   isEditIADiscountModalOpen.value = false;
+};
+
+const createdIADiscount = async () => {
+  closeCreateIADiscountModal();
+  await Swal.fire({
+    icon: "success",
+    title: "Success!",
+    text: `Discount has been created.`,
+    timer: 2000,
+    showConfirmButton: false,
+  });
+
+  await fetchIADiscounts();
 };
 
 const toggleRouteDropdown = () => {
@@ -104,10 +118,10 @@ const fetchIADiscounts = async () => {
       status: iad.status,
       effectiveDate: iad.effective_date
         ? new Date(iad.effective_date).toLocaleDateString()
-        : null,
+        : "-",
       updatedAt: iad.updated_at
         ? new Date(iad.updated_at).toLocaleDateString()
-        : null,
+        : "-",
     }));
   } catch (err) {
     console.error(err);
@@ -213,8 +227,12 @@ onMounted(async () => {
                 <div class="flex items-center justify-between gap-2">
                   {{ routeLabel }}
 
-                  <ChevronDown v-if="!isRouteDropdownOpen" class="w-4 h-4" />
-                  <ChevronUp v-else class="w-4 h-4" />
+                  <ChevronDown
+                    :class="[
+                      'w-4 h-4 transition-transform duration-300',
+                      isRouteDropdownOpen ? 'rotate-180' : '',
+                    ]"
+                  />
                 </div>
               </button>
               <div
@@ -262,7 +280,7 @@ onMounted(async () => {
           <!-- IA DISCOUNTS LIST TABLE -->
           <div
             v-if="isTableLoading"
-            class="flex justify-center items-center py-8 min-h-[40vh]"
+            class="flex justify-center items-center py-8 min-h-[50vh]"
           >
             <div
               class="flex items-center gap-3 bg-white border border-blue-600 shadow-lg px-5 py-3 rounded-lg"
@@ -275,7 +293,7 @@ onMounted(async () => {
               >
             </div>
           </div>
-          <div v-else class="w-full overflow-auto min-h-[40vh] max-h-[40vh]">
+          <div v-else class="w-full overflow-auto min-h-[50vh] max-h-[50vh]">
             <table class="table-fixed w-full border-separate border-spacing-0">
               <thead class="sticky top-0 bg-gray-100 text-sm text-gray-600">
                 <tr>
@@ -369,6 +387,7 @@ onMounted(async () => {
               v-if="isCreateIADiscountModalOpen"
               :routes="routes"
               :ia-id="props.ia.iaId"
+              @save="createdIADiscount"
               @close="closeCreateIADiscountModal"
             />
           </transition>

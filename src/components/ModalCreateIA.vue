@@ -27,8 +27,9 @@ const saveIA = async () => {
     text: "Do you want to save this institutional account?",
     icon: "question",
     showCancelButton: true,
-    confirmButtonText: "Yes, save it!",
+    confirmButtonText: "Confirm",
     cancelButtonText: "Cancel",
+    reverseButtons: true,
   });
 
   if (!confirm.isConfirmed) return;

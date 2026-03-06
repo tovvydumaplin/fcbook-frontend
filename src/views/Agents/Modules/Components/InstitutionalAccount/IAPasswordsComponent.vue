@@ -43,14 +43,13 @@ const fetchInstitutionalAccounts = async () => {
   }
 };
 
-// ✅ Reset password function with SweetAlert2
 const resetPassword = async (ia) => {
   const result = await Swal.fire({
     title: `Reset password for ${ia.iaName}?`,
     text: "This will reset the password to the default password.",
     icon: "warning",
     showCancelButton: true,
-    confirmButtonText: "Yes, reset it!",
+    confirmButtonText: "Confirm",
     cancelButtonText: "Cancel",
     reverseButtons: true,
   });
