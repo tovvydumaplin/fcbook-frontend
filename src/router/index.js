@@ -10,6 +10,7 @@ import RatesModule from "../views/RatePassengerLayout.vue";
 import PassengerMonitoringModule from "../views/PassengerMonitoringModule.vue";
 import PassengerAccommodation from "../views/PassengerAccommodation.vue";
 import VehiclesModule from "../views/VehiclesModule.vue";
+import AgentsModule from "../views/Agents/AgentsLayout.vue";
 
 const routes = [
   { path: "/", component: Login },
@@ -19,10 +20,11 @@ const routes = [
   { path: "/schedule", component: ScheduleModule },
   { path: "/routes", component: RoutesModule },
   { path: "/vessels", component: VesselsModule },
-  { path: "/rates-discounts", component: RatesModule },
+  { path: "/rates", component: RatesModule },
   { path: "/passenger-monitoring", component: PassengerMonitoringModule },
   { path: "/passenger-accommodation", component: PassengerAccommodation },
   { path: "/vehicles", component: VehiclesModule },
+  { path: "/agents", component: AgentsModule },
 ];
 
 const router = createRouter({

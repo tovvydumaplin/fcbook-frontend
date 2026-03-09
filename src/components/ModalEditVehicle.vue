@@ -2,6 +2,8 @@
 import { ref, reactive } from "vue";
 
 const emit = defineEmits(["close", "save"]);
+const isLoading = ref(false);
+const errorMsg = ref("");
 
 const props = defineProps({
   vehicle: {
@@ -14,9 +16,6 @@ const form = reactive({
   vehicleType: props.vehicle?.vehicleType || "",
   vehicleClass: props.vehicle?.vehicleClass || "",
 });
-
-const isLoading = ref(false);
-const errorMsg = ref("");
 
 const saveVehicle = async () => {
   if (!form.vehicleClass) {
@@ -32,8 +31,6 @@ const saveVehicle = async () => {
       vehicle_type: form.vehicleType,
       vehicle_class: form.vehicleClass,
     };
-    console.log("Payload to save:", payload);
-
     const res = await fetch(
       `${import.meta.env.VITE_API_URL}/vehicles/${props.vehicle.vehicle_id}`,
       {

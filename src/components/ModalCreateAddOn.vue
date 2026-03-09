@@ -18,7 +18,6 @@ const editingId = ref(null);
 
 const addOns = ref([]);
 const setValue = (type, newValue) => {
-  // If input is cleared
   if (newValue === "" || newValue === null) {
     value_type.value = null;
     percentageValue.value = "";

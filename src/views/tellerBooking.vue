@@ -64,26 +64,26 @@ const fetchRates = async (routeId) => {
       ? stored
       : `Bearer ${stored}`;
 
-    const response = await fetch(`${apiBase}/routes/${routeId}/rates`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: authHeader,
+    const response = await fetch(
+      `${apiBase}/accommodation-rates/route/${routeId}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: authHeader,
+        },
       },
-    });
+    );
 
     if (response.ok) {
       const result = await response.json();
       console.log("Rate API Response:", result);
 
-      if (result.accommodations) {
-        dynamicRates.value = result.accommodations;
-        console.log("Fetched rates:", dynamicRates.value);
-      } else if (result.data?.accommodations) {
-        dynamicRates.value = result.data.accommodations;
+      if (result.data?.accRates) {
+        dynamicRates.value = result.data.accRates;
         console.log("Fetched rates:", dynamicRates.value);
       } else {
-        console.error("No accommodations found in response");
+        console.error("No accRates found in response");
         dynamicRates.value = [];
       }
     } else {
@@ -102,10 +102,11 @@ const getCurrentRate = () => {
   // Use dynamic rates if available
   if (dynamicRates.value && dynamicRates.value.length > 0) {
     const rateEntry = dynamicRates.value.find(
-      (r) => r.accommodation === selectedAccommodation.value,
+      (r) =>
+        r.accommodation?.accommodation_name === selectedAccommodation.value,
     );
     if (rateEntry) {
-      const rate = parseFloat(rateEntry.baseRate || 0);
+      const rate = parseFloat(rateEntry.base_rate || 0);
       console.log(`Rate for ${selectedAccommodation.value}: ${rate}`);
       return rate;
     }
@@ -217,6 +218,7 @@ watch(returnTrip, () => {
 // Update origin/destination when schedule is selected
 watch(selectedSchedule, (newSchedule) => {
   if (newSchedule) {
+    console.log("Schedule selected:", newSchedule);
     originPort.value = newSchedule.departurePort || originPort.value;
     destinationPort.value = newSchedule.arrivalPort || destinationPort.value;
   }
@@ -228,12 +230,28 @@ watch(selectedSchedule, (newSchedule) => {
 
 // Fetch seatmap when accommodation is selected
 watch(selectedAccommodation, async (newAccommodation) => {
+  console.log(
+    "Watch triggered - selectedAccommodation changed to:",
+    newAccommodation,
+  );
+  console.log("Current schedule:", selectedSchedule.value);
+  console.log("Vessel ID:", selectedSchedule.value?.vesselId);
+
   if (!newAccommodation || !selectedSchedule.value?.vesselId) {
     vesselSeatmap.value = null;
     availableSeats.value = [];
     selectedSeat.value = null;
+    if (!newAccommodation) {
+      console.log("No accommodation selected");
+    } else if (!selectedSchedule.value?.vesselId) {
+      console.log("No vessel ID found in schedule:", selectedSchedule.value);
+    }
     return;
   }
+
+  console.log(
+    `Fetching seatmap for vessel ${selectedSchedule.value.vesselId}, accommodation: ${newAccommodation}`,
+  );
 
   loadingSeatmap.value = true;
   try {
@@ -253,25 +271,54 @@ watch(selectedAccommodation, async (newAccommodation) => {
       },
     );
 
+    console.log("Seatmap fetch response status:", response.status);
+
     if (response.ok) {
       const result = await response.json();
-      if (result.success && result.data) {
-        vesselSeatmap.value = result.data;
+      console.log("Seatmap API Response:", result);
 
-        // Find the class that matches selected accommodation
-        const selectedClass = result.data.classes?.find(
-          (cls) => cls.accommodation_name === newAccommodation,
+      // Response structure: { name, status, classes: [...] }
+      const classes = result.classes || [];
+      vesselSeatmap.value = result;
+
+      // Find the class that matches selected accommodation by name
+      const selectedClass = classes.find((cls) => {
+        const matchByName = cls.name === newAccommodation;
+        console.log(`Checking class: ${cls.name} - Match: ${matchByName}`);
+        return matchByName;
+      });
+
+      if (selectedClass) {
+        // Get seats for this class
+        availableSeats.value = selectedClass.seats || [];
+        console.log(
+          `✓ Found ${availableSeats.value.length} seats for ${newAccommodation}`,
         );
+        console.log("First few seats:", availableSeats.value.slice(0, 5));
 
-        if (selectedClass) {
-          // Get seats for this class
-          availableSeats.value = selectedClass.seats || [];
-        } else {
-          availableSeats.value = [];
-        }
+        // Mark seats as blocked if they're already assigned to passengers
+        passengers.value.forEach((passenger) => {
+          if (passenger.accommodation === newAccommodation && passenger.seat) {
+            const seat = availableSeats.value.find(
+              (s) => s.seat_no === passenger.seat,
+            );
+            if (seat) {
+              seat.blocked = true;
+            }
+          }
+        });
+      } else {
+        availableSeats.value = [];
+        console.log(`✗ No class found matching ${newAccommodation}`);
+        console.log(
+          "Available classes:",
+          classes.map((c) => c.name),
+        );
       }
     } else {
-      console.error("Failed to fetch seatmap");
+      console.error("Failed to fetch seatmap, status:", response.status);
+      const errorText = await response.text();
+      console.error("Error response:", errorText);
       vesselSeatmap.value = null;
       availableSeats.value = [];
     }
@@ -418,11 +465,12 @@ const discounts = [
 
 // Handle accommodation click with rate alert
 const handleAccommodationClick = (accommodation) => {
+  console.log("Accommodation clicked:", accommodation);
   selectedAccommodation.value = accommodation;
 
   // Calculate and show the rate
   const rate = getCurrentRate();
-  alert(`Selected: ${accommodation}\nRate: ₱${rate.toFixed(2)}`);
+  console.log(`Selected: ${accommodation}, Rate: ₱${rate.toFixed(2)}`);
 };
 
 const bookEntry = () => {
@@ -453,10 +501,41 @@ const bookEntry = () => {
     vehicle: selectedVehicleDetails.value,
   };
 
+  // Handle seat blocking
   if (editingIndex.value !== null) {
+    // When editing, unblock the old seat if it changed
+    const oldSeat = passengers.value[editingIndex.value].seat;
+    const newSeat = entry.seat;
+
+    if (oldSeat !== newSeat) {
+      // Unblock the old seat
+      const oldSeatObj = availableSeats.value.find(
+        (s) => s.seat_no === oldSeat,
+      );
+      if (oldSeatObj) {
+        oldSeatObj.blocked = false;
+      }
+
+      // Block the new seat
+      const newSeatObj = availableSeats.value.find(
+        (s) => s.seat_no === newSeat,
+      );
+      if (newSeatObj) {
+        newSeatObj.blocked = true;
+      }
+    }
+
     passengers.value[editingIndex.value] = entry;
     editingIndex.value = null;
   } else {
+    // When adding new passenger, block the selected seat
+    const seatToBlock = availableSeats.value.find(
+      (s) => s.seat_no === entry.seat,
+    );
+    if (seatToBlock) {
+      seatToBlock.blocked = true;
+    }
+
     passengers.value.push(entry);
   }
 
@@ -584,6 +663,17 @@ watch(stepInstruction, async () => {
 });
 
 const removePassenger = (idx) => {
+  // Unblock the seat before removing the passenger
+  const passenger = passengers.value[idx];
+  if (passenger && passenger.seat) {
+    const seatToUnblock = availableSeats.value.find(
+      (s) => s.seat_no === passenger.seat,
+    );
+    if (seatToUnblock) {
+      seatToUnblock.blocked = false;
+    }
+  }
+
   passengers.value.splice(idx, 1);
 };
 
@@ -624,6 +714,13 @@ const editPassengerFromModal = (passenger) => {
     selectedDiscount.value = passenger.discount;
     fullname.value = passenger.fullname;
     selectedVehicleDetails.value = passenger.vehicle;
+
+    // Set the selected seat for editing
+    const seat = availableSeats.value.find((s) => s.seat_no === passenger.seat);
+    if (seat) {
+      selectedSeat.value = seat;
+    }
+
     editingIndex.value = idx;
     isViewPassengerOpen.value = false; // Close the modal
   }
@@ -1141,53 +1238,93 @@ const editPassengerFromModal = (passenger) => {
             <!-- Seatmap -->
             <div
               v-else-if="availableSeats.length > 0"
-              class="bg-white p-6 rounded-lg border border-gray-300"
+              class="bg-white p-4 rounded-lg border border-gray-300"
             >
-              <!-- Legend -->
-              <div class="flex gap-4 mb-4 text-xs">
-                <div class="flex items-center gap-1">
-                  <div class="w-8 h-8 bg-green-500 rounded"></div>
-                  <span>Available</span>
-                </div>
-                <div class="flex items-center gap-1">
-                  <div class="w-8 h-8 bg-blue-900 rounded"></div>
-                  <span>Selected</span>
-                </div>
-                <div class="flex items-center gap-1">
-                  <div class="w-8 h-8 bg-gray-400 rounded"></div>
-                  <span>Blocked/Path</span>
+              <!-- Title and Selected Class -->
+              <div class="flex items-center justify-center gap-3 mb-3">
+                <p class="text-sm font-medium text-gray-700">Seatmap Preview</p>
+                <span
+                  class="px-3 py-1 bg-blue-900 text-white text-xs font-semibold rounded-full"
+                >
+                  {{ selectedAccommodation }}
+                </span>
+              </div>
+
+              <!-- Seatmap Container -->
+              <div
+                class="relative h-[350px] overflow-auto border rounded-lg p-2 bg-gray-50"
+              >
+                <div class="relative w-full h-full">
+                  <!-- Seats with Absolute Positioning -->
+                  <div
+                    v-for="seat in availableSeats"
+                    :key="seat.seat_no"
+                    :data-row="seat.row"
+                    :data-col="seat.col"
+                    class="absolute flex items-center justify-center border rounded-md text-xs font-medium cursor-pointer select-none transition-all duration-200"
+                    :style="{
+                      width: '40px',
+                      height: '40px',
+                      top: seat.row * 40 + 'px',
+                      left: seat.col * 40 + 'px',
+                    }"
+                    :class="{
+                      'bg-gray-300 cursor-not-allowed': seat.path,
+                      'bg-red-700 text-white cursor-not-allowed': seat.blocked,
+                      'bg-gray-100 hover:bg-green-100':
+                        !seat.path &&
+                        !seat.blocked &&
+                        !seat.facility &&
+                        selectedSeat?.seat_no !== seat.seat_no,
+                      'bg-orange-400 text-white cursor-not-allowed':
+                        seat.facility,
+                      'bg-blue-600 text-white shadow-lg ring-2 ring-blue-400':
+                        selectedSeat?.seat_no === seat.seat_no,
+                    }"
+                    @click="
+                      !seat.blocked && !seat.path && !seat.facility
+                        ? (selectedSeat = seat)
+                        : null
+                    "
+                  >
+                    <span v-if="!seat.blocked && !seat.path && !seat.facility">
+                      {{ seat.seat_no }}
+                    </span>
+                    <span
+                      v-if="seat.facility"
+                      class="pointer-events-none font-bold text-white"
+                      :style="{ opacity: 0.7 }"
+                    >
+                      {{ seat.facility }}
+                    </span>
+                    <span
+                      v-if="seat.blocked"
+                      class="pointer-events-none text-white text-xl font-bold"
+                    >
+                      ✕
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <!-- Seats Grid -->
-              <div
-                class="grid gap-2"
-                :style="{
-                  gridTemplateColumns: `repeat(${Math.max(...availableSeats.map((s) => s.col)) + 1}, minmax(0, 1fr))`,
-                }"
-              >
-                <button
-                  v-for="seat in availableSeats"
-                  :key="`${seat.row}-${seat.col}`"
-                  @click="
-                    !seat.blocked && !seat.path && !seat.facility
-                      ? (selectedSeat = seat)
-                      : null
-                  "
-                  :disabled="seat.blocked || seat.path || seat.facility"
-                  :class="[
-                    'w-10 h-10 rounded text-xs font-semibold transition-all duration-200',
-                    seat.blocked || seat.path || seat.facility
-                      ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                      : selectedSeat?.seat_no === seat.seat_no
-                        ? 'bg-blue-900 text-white shadow-lg scale-110'
-                        : 'bg-green-500 text-white hover:bg-green-600 hover:scale-105 cursor-pointer',
-                  ]"
-                  :style="{ gridColumn: seat.col + 1, gridRow: seat.row + 1 }"
-                  :title="seat.renaming || seat.seat_no"
-                >
-                  {{ seat.renaming || seat.seat_no }}
-                </button>
+              <!-- Legend -->
+              <div class="flex gap-4 mt-4 text-xs justify-center">
+                <div class="flex items-center gap-1">
+                  <div class="w-6 h-6 bg-gray-100 border rounded"></div>
+                  <span>Available</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <div class="w-6 h-6 bg-blue-600 rounded"></div>
+                  <span>Selected</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <div class="w-6 h-6 bg-gray-300 rounded"></div>
+                  <span>Path</span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <div class="w-6 h-6 bg-red-700 rounded"></div>
+                  <span>Blocked</span>
+                </div>
               </div>
 
               <!-- Selected Seat Info -->
@@ -1197,9 +1334,7 @@ const editPassengerFromModal = (passenger) => {
               >
                 <p class="text-sm font-medium text-blue-900">
                   Selected Seat:
-                  <span class="font-bold">{{
-                    selectedSeat.renaming || selectedSeat.seat_no
-                  }}</span>
+                  <span class="font-bold">{{ selectedSeat.seat_no }}</span>
                 </p>
               </div>
             </div>
