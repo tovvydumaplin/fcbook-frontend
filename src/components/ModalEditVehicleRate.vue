@@ -2,6 +2,8 @@
 import { ref, reactive } from "vue";
 
 const emit = defineEmits(["close", "save"]);
+const isLoading = ref(false);
+const errorMsg = ref("");
 
 const props = defineProps({
   vehicle: {
@@ -10,8 +12,6 @@ const props = defineProps({
   },
 });
 
-console.log(props.vehicle);
-
 const form = reactive({
   vehicleType: props.vehicle?.vehicleType || "",
   vehicleClass: props.vehicle?.vehicleClass || "",
@@ -19,9 +19,6 @@ const form = reactive({
   status: props.vehicle?.status || "active",
   vehicleRateId: props.vehicle?.vehicleRateId || "",
 });
-
-const isLoading = ref(false);
-const errorMsg = ref("");
 
 const saveVehicleRate = async () => {
   if (!form.vehicleRate) {
