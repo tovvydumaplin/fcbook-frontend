@@ -1,20 +1,11 @@
 <script setup>
 import { ref, watch } from "vue";
-
-const props = defineProps({
-  ia: {
-    type: Object,
-    required: true,
-  },
-});
+import Swal from "sweetalert2";
 
 const emit = defineEmits(["close", "save"]);
-
 const apiBase = import.meta.env.VITE_API_URL;
-
 const isLoading = ref(false);
 const errorMsg = ref("");
-
 const iaName = ref("");
 const address = ref("");
 const email = ref("");
@@ -26,6 +17,13 @@ const effectiveDate = ref("");
 const eocDate = ref("");
 const paymentType = ref("");
 
+const props = defineProps({
+  ia: {
+    type: Object,
+    required: true,
+  },
+});
+
 const formatDate = (dateString) => {
   if (!dateString) return "";
 
@@ -36,27 +34,21 @@ const formatDate = (dateString) => {
   return date.toISOString().split("T")[0];
 };
 
-watch(
-  () => props.ia,
-  (newIA) => {
-    if (!newIA) return;
-
-    iaName.value = newIA.iaName || "";
-    address.value = newIA.address || "";
-    email.value = newIA.email || "";
-    contactPerson.value = newIA.contactPerson || "";
-    contactNumber.value = newIA.contactNumber || "";
-    area.value = newIA.area || "";
-    paymentMode.value = newIA.paymentMode || "";
-    paymentType.value = newIA.paymentType || "";
-    effectiveDate.value = formatDate(newIA.effectiveDate);
-    eocDate.value = formatDate(newIA.eocDate);
-  },
-  { immediate: true },
-);
-
 const updateIA = async () => {
   errorMsg.value = "";
+
+  const confirm = await Swal.fire({
+    title: "Are you sure?",
+    text: "Do you want to edit this institutional account?",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: "Confirm",
+    cancelButtonText: "Cancel",
+    reverseButtons: true,
+  });
+
+  if (!confirm.isConfirmed) return;
+
   isLoading.value = true;
 
   try {
@@ -102,6 +94,25 @@ const updateIA = async () => {
     isLoading.value = false;
   }
 };
+
+watch(
+  () => props.ia,
+  (newIA) => {
+    if (!newIA) return;
+
+    iaName.value = newIA.iaName || "";
+    address.value = newIA.address || "";
+    email.value = newIA.email || "";
+    contactPerson.value = newIA.contactPerson || "";
+    contactNumber.value = newIA.contactNumber || "";
+    area.value = newIA.area || "";
+    paymentMode.value = newIA.paymentMode || "";
+    paymentType.value = newIA.paymentType || "";
+    effectiveDate.value = formatDate(newIA.effectiveDate);
+    eocDate.value = formatDate(newIA.eocDate);
+  },
+  { immediate: true },
+);
 </script>
 
 <template>

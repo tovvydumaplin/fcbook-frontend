@@ -3,9 +3,7 @@ import { ref, computed } from "vue";
 import Swal from "sweetalert2";
 
 const emit = defineEmits(["close", "save"]);
-
 const apiBase = import.meta.env.VITE_API_URL;
-
 const isLoading = ref(false);
 const errorMsg = ref("");
 const discountName = ref("");
@@ -51,7 +49,7 @@ const createIADiscount = async () => {
 
   const confirm = await Swal.fire({
     title: "Are you sure?",
-    text: "Do you want to save this institutional account?",
+    text: "Do you want to create this discount?",
     icon: "question",
     showCancelButton: true,
     confirmButtonText: "Confirm",
@@ -73,7 +71,6 @@ const createIADiscount = async () => {
       discount_type: discountType.value,
     };
 
-    console.log(payload);
     const response = await fetch(
       `${apiBase}/institutional-accounts/discounts`,
       {
@@ -89,14 +86,14 @@ const createIADiscount = async () => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to save IA Discount");
+      throw new Error(errorData.message || "Failed to create IA discount");
     }
 
     emit("save");
     emit("close");
   } catch (err) {
     console.error(err);
-    errorMsg.value = "Failed to save discount.";
+    errorMsg.value = "Failed to create IA discount.";
   } finally {
     isLoading.value = false;
   }

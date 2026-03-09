@@ -1,12 +1,5 @@
 <script setup>
-import {
-  ArrowDown,
-  ChevronDown,
-  ChevronUp,
-  Edit,
-  Plus,
-  Trash2,
-} from "lucide-vue-next";
+import { ChevronDown, Edit, Plus, Trash2 } from "lucide-vue-next";
 import { onMounted, ref, watch, computed } from "vue";
 import Swal from "sweetalert2";
 import ModalCreateIADiscount from "./ModalCreateIADiscount.vue";
@@ -33,34 +26,9 @@ const props = defineProps({
   },
 });
 
-const openCreateIADiscountModal = () => {
-  isCreateIADiscountModalOpen.value = true;
-};
-
 const openEditIADiscountModal = (iad) => {
   selectedIADiscount.value = iad;
   isEditIADiscountModalOpen.value = true;
-};
-
-const closeCreateIADiscountModal = () => {
-  isCreateIADiscountModalOpen.value = false;
-};
-
-const closeEditIADiscountModal = () => {
-  isEditIADiscountModalOpen.value = false;
-};
-
-const createdIADiscount = async () => {
-  closeCreateIADiscountModal();
-  await Swal.fire({
-    icon: "success",
-    title: "Success!",
-    text: `Discount has been created.`,
-    timer: 2000,
-    showConfirmButton: false,
-  });
-
-  await fetchIADiscounts();
 };
 
 const toggleRouteDropdown = () => {
@@ -89,11 +57,87 @@ const filteredIADiscounts = computed(() => {
   );
 });
 
+const createdIADiscount = async () => {
+  isCreateIADiscountModalOpen.value = false;
+  await Swal.fire({
+    icon: "success",
+    title: "Success!",
+    text: `Discount has been created.`,
+    timer: 2000,
+    showConfirmButton: false,
+  });
+
+  await fetchIADiscounts();
+};
+
+const updatedIADiscount = async () => {
+  isEditIADiscountModalOpen.value = false;
+  await Swal.fire({
+    icon: "success",
+    title: "Success!",
+    text: `Discount has been updated.`,
+    timer: 2000,
+    showConfirmButton: false,
+  });
+
+  await fetchIADiscounts();
+};
+
+const deleteIADiscount = async (iad) => {
+  errorMsg.value = "";
+
+  const confirm = await Swal.fire({
+    title: "Are you sure?",
+    text: "Do you want to delete this discount?",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Confirm",
+    cancelButtonText: "Cancel",
+    reverseButtons: true,
+  });
+
+  if (!confirm.isConfirmed) return;
+
+  isLoading.value = true;
+
+  try {
+    const response = await fetch(
+      `${apiBase}/institutional-accounts/${iad.iaDiscountId}/discounts`,
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      },
+    );
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to delete IA discount");
+    }
+  } catch (err) {
+    console.error(err);
+    errorMsg.value = "Failed to delete IA discount.";
+  } finally {
+    isLoading.value = false;
+    await Swal.fire({
+      icon: "success",
+      title: "Success!",
+      text: `Discount has been deleted.`,
+      timer: 2000,
+      showConfirmButton: false,
+    });
+
+    await fetchIADiscounts();
+  }
+};
+
 const fetchIADiscounts = async () => {
   try {
     isTableLoading.value = true;
     const res = await fetch(
-      `${apiBase}/institutional-accounts/discounts/${props.ia.iaId}`,
+      `${apiBase}/institutional-accounts/${props.ia.iaId}/discounts`,
       {
         headers: {
           "Content-Type": "application/json",
@@ -268,7 +312,7 @@ onMounted(async () => {
             </div>
           </div>
           <button
-            @click="openCreateIADiscountModal"
+            @click="isCreateIADiscountModalOpen = true"
             type="button"
             class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 flex items-center gap-2 cursor-pointer"
           >
@@ -314,7 +358,7 @@ onMounted(async () => {
                     Discount Name
                   </th>
                   <th
-                    class="w-40 px-6 py-4 text-left border-t border-b border-gray-300"
+                    class="w-35 px-6 py-4 text-left border-t border-b border-gray-300"
                   >
                     Discount Value
                   </th>
@@ -329,7 +373,7 @@ onMounted(async () => {
                     Effective Date
                   </th>
                   <th
-                    class="w-32 px-6 py-4 text-left border-t border-b border-gray-300"
+                    class="w-25 px-6 py-4 text-left border-t border-b border-gray-300"
                   >
                     Updated
                   </th>
@@ -372,7 +416,10 @@ onMounted(async () => {
                         <Edit class="w-4 h-4" />
                       </button>
 
-                      <button class="text-red-600 hover:text-red-900">
+                      <button
+                        @click="deleteIADiscount(iad)"
+                        class="text-red-600 hover:text-red-900"
+                      >
                         <Trash2 class="w-4 h-4" />
                       </button>
                     </div>
@@ -388,14 +435,15 @@ onMounted(async () => {
               :routes="routes"
               :ia-id="props.ia.iaId"
               @save="createdIADiscount"
-              @close="closeCreateIADiscountModal"
+              @close="isCreateIADiscountModalOpen = false"
             />
           </transition>
           <transition name="modal-fade">
             <ModalEditIADiscount
               v-if="isEditIADiscountModalOpen"
               :iad="selectedIADiscount"
-              @close="closeEditIADiscountModal"
+              @save="updatedIADiscount"
+              @close="isEditIADiscountModalOpen = false"
             />
           </transition>
         </form>
