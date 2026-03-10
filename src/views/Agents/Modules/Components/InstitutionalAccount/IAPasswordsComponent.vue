@@ -112,52 +112,79 @@ onMounted(fetchInstitutionalAccounts);
   </div>
 
   <div class="p-4">
-    <table class="min-w-full table-fixed divide-y divide-gray-200">
-      <thead class="bg-gray-50">
-        <tr>
-          <th class="w-16 px-6 py-3 text-left text-xs text-gray-500">#</th>
+    <!-- Loading -->
+    <div
+      v-if="isTableLoading"
+      class="flex justify-center items-center py-8 min-h-[40vh]"
+    >
+      <div
+        class="flex items-center gap-3 bg-white border border-blue-600 shadow-lg px-5 py-3 rounded-lg"
+      >
+        <span
+          class="inline-block w-6 h-6 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"
+        ></span>
+        <span class="font-semibold text-blue-700 text-base">
+          Loading Institutional Accounts...
+        </span>
+      </div>
+    </div>
 
-          <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
-            Account Name
-          </th>
-          <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">Email</th>
+    <!-- Table -->
+    <div v-else-if="institutionalAccounts.length > 0">
+      <table class="min-w-full table-fixed divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="w-16 px-6 py-3 text-left text-xs text-gray-500">#</th>
 
-          <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">Action</th>
-        </tr>
-      </thead>
+            <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
+              Account Name
+            </th>
+            <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">
+              Email
+            </th>
 
-      <tbody class="bg-white divide-y divide-gray-200">
-        <!-- Loading -->
-        <tr v-if="isTableLoading">
-          <td colspan="7" class="text-center py-6 text-gray-500">
-            Loading institutional accounts...
-          </td>
-        </tr>
+            <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">
+              Action
+            </th>
+          </tr>
+        </thead>
 
-        <tr
-          v-else-if="institutionalAccounts.length > 0"
-          v-for="(ia, index) in institutionalAccounts"
-          :key="ia.iaId"
-          class="hover:bg-gray-50"
-        >
-          <td class="px-6 py-4 text-sm">{{ index + 1 }}</td>
-          <td class="px-6 py-4 text-sm">{{ ia.iaName }}</td>
-          <td class="px-6 py-4 text-sm">{{ ia.email }}</td>
-          <td class="px-6 py-4 text-sm">
-            <button
-              @click="resetPassword(ia)"
-              :disabled="isResetting"
-              class="font-medium text-blue-600 hover:text-blue-900 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <RefreshCw class="w-5 h-5 animate-spin" v-if="isResetting" />
-              <span v-if="isResetting">Resetting</span>
-              <span v-else class="flex gap-2"
-                ><RefreshCw class="w-5 h-5" />Reset PW</span
+        <tbody class="bg-white divide-y divide-gray-200">
+          <!-- Loading -->
+          <tr v-if="isTableLoading">
+            <td colspan="7" class="text-center py-6 text-gray-500">
+              Loading institutional accounts...
+            </td>
+          </tr>
+
+          <tr
+            v-for="(ia, index) in institutionalAccounts"
+            :key="ia.iaId"
+            class="hover:bg-gray-50"
+          >
+            <td class="px-6 py-4 text-sm">{{ index + 1 }}</td>
+            <td class="px-6 py-4 text-sm">{{ ia.iaName }}</td>
+            <td class="px-6 py-4 text-sm">{{ ia.email }}</td>
+            <td class="px-6 py-4 text-sm">
+              <button
+                @click="resetPassword(ia)"
+                :disabled="isResetting"
+                class="font-medium text-blue-600 hover:text-blue-900 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+                <RefreshCw class="w-5 h-5 animate-spin" v-if="isResetting" />
+                <span v-if="isResetting">Resetting</span>
+                <span v-else class="flex gap-2"
+                  ><RefreshCw class="w-5 h-5" />Reset PW</span
+                >
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- Empty State -->
+    <div v-else class="text-center py-10 text-gray-500 font-medium">
+      No Institutional Accounts Found
+    </div>
   </div>
 </template>
