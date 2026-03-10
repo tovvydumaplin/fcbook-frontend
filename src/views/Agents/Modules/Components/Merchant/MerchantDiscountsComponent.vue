@@ -1,25 +1,25 @@
 <script setup>
 import { Eye, Search } from "lucide-vue-next";
 import { ref, onMounted } from "vue";
-import ModalIADiscounts from "../../../../../components/ModalIADiscounts.vue";
+import ModalMerchantDiscounts from "../../../../../components/ModalMerchantDiscounts.vue";
 
 const apiBase = import.meta.env.VITE_API_URL;
-const isIADiscountsModalOpen = ref(false);
-const selectedInstitutionalAccount = ref({});
+const isMerchantDiscountsModalOpen = ref(false);
+const selectedMerchant = ref({});
 const isTableLoading = ref(false);
-const institutionalAccounts = ref([]);
+const merchants = ref([]);
 const search = ref("");
 
-const openIADiscountsModal = (ia) => {
-  selectedInstitutionalAccount.value = ia;
-  isIADiscountsModalOpen.value = true;
+const openMerchantDiscountsModal = (merchant) => {
+  selectedMerchant.value = merchant;
+  isMerchantDiscountsModalOpen.value = true;
 };
 
-const fetchInstitutionalAccounts = async () => {
+const fetchMerchants = async () => {
   try {
     isTableLoading.value = true;
 
-    const res = await fetch(`${apiBase}/institutional-accounts`, {
+    const res = await fetch(`${apiBase}/merchants`, {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
@@ -27,34 +27,39 @@ const fetchInstitutionalAccounts = async () => {
       },
     });
 
-    if (!res.ok) throw new Error("Failed to fetch institutional accounts");
+    if (!res.ok) throw new Error("Failed to fetch merchants");
 
     const data = await res.json();
 
-    institutionalAccounts.value = data.data.institutional_accounts.map(
-      (ia) => ({
-        iaId: ia.ia_id,
-        iaName: ia.ia_name,
-        address: ia.address,
-        email: ia.email,
-        contactPerson: ia.contact_person,
-        contactNumber: ia.contact_number,
-        area: ia.area,
-        paymentMode: ia.payment_mode,
-        effectiveDate: ia.effective_date,
-        eocDate: ia.eoc_date,
-        paymentType: ia.payment_type,
-        updatedAt: new Date(ia.updated_at).toLocaleDateString(),
-      }),
-    );
+    merchants.value = data.data.merchants.map((merchant) => ({
+      merchantId: merchant.merchant_id ?? "-",
+      merchantName: merchant.merchant_name ?? "-",
+      address: merchant.address ?? "-",
+      email: merchant.email ?? "-",
+      contactPerson: merchant.contact_person ?? "-",
+      contactNumber: merchant.contact_number ?? "-",
+      area: merchant.area ?? "-",
+      paymentMode: merchant.payment_mode ?? "-",
+      paymentType: merchant.payment_type ?? "-",
+      effectiveDate: merchant.effective_date
+        ? new Date(merchant.effective_date).toLocaleDateString()
+        : "-",
+      eocDate: merchant.eoc_date
+        ? new Date(merchant.eoc_date).toLocaleDateString()
+        : "-",
+      updatedAt: merchant.updated_at
+        ? new Date(merchant.updated_at).toLocaleDateString()
+        : "-",
+    }));
   } catch (err) {
     console.error("Fetch error:", err);
+    Swal.fire("Error", "Failed to fetch merchants.", "error");
   } finally {
     isTableLoading.value = false;
   }
 };
 
-onMounted(fetchInstitutionalAccounts);
+onMounted(fetchMerchants);
 </script>
 
 <template>
@@ -75,6 +80,7 @@ onMounted(fetchInstitutionalAccounts);
       </div>
     </div>
   </div>
+
   <div class="p-4">
     <!-- Loading -->
     <div
@@ -88,18 +94,18 @@ onMounted(fetchInstitutionalAccounts);
           class="inline-block w-6 h-6 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"
         ></span>
         <span class="font-semibold text-blue-700 text-base">
-          Loading Institutional Accounts...
+          Loading Merchants...
         </span>
       </div>
     </div>
-    <div v-else-if="institutionalAccounts.length > 0">
+    <!-- Table -->
+    <div v-else-if="merchants.length > 0">
       <table class="min-w-full table-fixed divide-y divide-gray-200">
         <thead class="bg-gray-50">
           <tr>
             <th class="w-16 px-6 py-3 text-left text-xs text-gray-500">#</th>
-
             <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
-              Account Name
+              Merchant Name
             </th>
             <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
               Payment Mode
@@ -107,31 +113,26 @@ onMounted(fetchInstitutionalAccounts);
             <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
               Payment Type
             </th>
+
             <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">
               Action
             </th>
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
-          <!-- Loading -->
-          <tr v-if="isTableLoading">
-            <td colspan="7" class="text-center py-6 text-gray-500">
-              Loading institutional accounts...
-            </td>
-          </tr>
           <tr
-            v-for="(ia, index) in institutionalAccounts"
-            :key="ia.iaId"
+            v-for="(merchant, index) in merchants"
+            :key="merchant.merchantId"
             class="hover:bg-gray-50"
           >
             <td class="px-6 py-4 text-sm">{{ index + 1 }}</td>
-            <td class="px-6 py-4 text-sm">{{ ia.iaName }}</td>
-            <td class="px-6 py-4 text-sm">{{ ia.paymentMode }}</td>
-            <td class="px-6 py-4 text-sm">{{ ia.paymentType }}</td>
+            <td class="px-6 py-4 text-sm">{{ merchant.merchantName }}</td>
+            <td class="px-6 py-4 text-sm">{{ merchant.paymentMode }}</td>
+            <td class="px-6 py-4 text-sm">{{ merchant.paymentType }}</td>
 
             <td class="px-6 py-4 text-sm">
               <button
-                @click="openIADiscountsModal(ia)"
+                @click="openMerchantDiscountsModal(merchant)"
                 type="button"
                 class="font-medium text-blue-600 hover:text-blue-900 flex items-center gap-2"
               >
@@ -145,14 +146,14 @@ onMounted(fetchInstitutionalAccounts);
     </div>
     <!-- Empty State -->
     <div v-else class="text-center py-10 text-gray-500 font-medium">
-      No Institutional Accounts Found
+      No merchants Found
     </div>
   </div>
   <transition name="modal-fade">
-    <ModalIADiscounts
-      v-if="isIADiscountsModalOpen"
-      :ia="selectedInstitutionalAccount"
-      @close="isIADiscountsModalOpen = false"
+    <ModalMerchantDiscounts
+      v-if="isMerchantDiscountsModalOpen"
+      :merchant="selectedMerchant"
+      @close="isMerchantDiscountsModalOpen = false"
     />
   </transition>
 </template>
