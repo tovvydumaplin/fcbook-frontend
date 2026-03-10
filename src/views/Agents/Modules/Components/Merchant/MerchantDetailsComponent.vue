@@ -1,54 +1,56 @@
 <script setup>
 import { Edit, Plus, Search } from "lucide-vue-next";
 import { ref, onMounted } from "vue";
-import ModalEditIA from "../../../../../components/ModalEditIA.vue";
-import ModalCreateIA from "../../../../../components/ModalCreateIA.vue";
 import Swal from "sweetalert2";
+import ModalEditMerchant from "../../../../../components/ModalEditMerchant.vue";
+import ModalCreateMerchant from "../../../../../components/ModalCreateMerchant.vue";
 
 const apiBase = import.meta.env.VITE_API_URL;
 const isTableLoading = ref(false);
 const isEditModalOpen = ref(false);
 const isCreateModalOpen = ref(false);
-const selectedInstitutionalAccount = ref({});
-const institutionalAccounts = ref([]);
+const selectedMerchant = ref({});
+const merchants = ref([]);
 const search = ref("");
 
-const openEditIA = (ia) => {
-  selectedInstitutionalAccount.value = ia;
+const openEditMerchant = (merchant) => {
+  selectedMerchant.value = merchant;
   isEditModalOpen.value = true;
 };
 
 const handleEditSaved = async () => {
   isEditModalOpen.value = false;
+
   await Swal.fire({
     icon: "success",
     title: "Updated!",
-    text: `${selectedInstitutionalAccount.value.iaName} has been updated.`,
+    text: `${selectedMerchant.value.merchantName} has been updated.`,
     timer: 2000,
     showConfirmButton: false,
   });
 
-  await fetchInstitutionalAccounts();
+  await fetchMerchants();
 };
 
 const handleCreateSaved = async () => {
   isCreateModalOpen.value = false;
+
   await Swal.fire({
     icon: "success",
     title: "Created!",
-    text: `New institutional account has been created.`,
+    text: `New merchant has been created.`,
     timer: 2000,
     showConfirmButton: false,
   });
 
-  await fetchInstitutionalAccounts();
+  await fetchMerchants();
 };
 
-const fetchInstitutionalAccounts = async () => {
+const fetchMerchants = async () => {
   try {
     isTableLoading.value = true;
 
-    const res = await fetch(`${apiBase}/institutional-accounts`, {
+    const res = await fetch(`${apiBase}/merchants`, {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
@@ -56,39 +58,39 @@ const fetchInstitutionalAccounts = async () => {
       },
     });
 
-    if (!res.ok) throw new Error("Failed to fetch institutional accounts");
+    if (!res.ok) throw new Error("Failed to fetch merchants");
 
     const data = await res.json();
 
-    institutionalAccounts.value = data.data.institutional_accounts.map(
-      (ia) => ({
-        iaId: ia.ia_id ?? "-",
-        iaName: ia.ia_name ?? "-",
-        address: ia.address ?? "-",
-        email: ia.email ?? "-",
-        contactPerson: ia.contact_person ?? "-",
-        contactNumber: ia.contact_number ?? "-",
-        area: ia.area ?? "-",
-        paymentMode: ia.payment_mode ?? "-",
-        effectiveDate: ia.effective_date
-          ? new Date(ia.effective_date).toLocaleDateString()
-          : "-",
-        eocDate: ia.eoc_date ? new Date(ia.eoc_date).toLocaleDateString() : "-",
-        paymentType: ia.payment_type ?? "-",
-        updatedAt: ia.updated_at
-          ? new Date(ia.updated_at).toLocaleDateString()
-          : "-",
-      }),
-    );
+    merchants.value = data.data.merchants.map((merchant) => ({
+      merchantId: merchant.merchant_id ?? "-",
+      merchantName: merchant.merchant_name ?? "-",
+      address: merchant.address ?? "-",
+      email: merchant.email ?? "-",
+      contactPerson: merchant.contact_person ?? "-",
+      contactNumber: merchant.contact_number ?? "-",
+      area: merchant.area ?? "-",
+      paymentMode: merchant.payment_mode ?? "-",
+      effectiveDate: merchant.effective_date
+        ? new Date(merchant.effective_date).toLocaleDateString()
+        : "-",
+      eocDate: merchant.eoc_date
+        ? new Date(merchant.eoc_date).toLocaleDateString()
+        : "-",
+      paymentType: merchant.payment_type ?? "-",
+      updatedAt: merchant.updated_at
+        ? new Date(merchant.updated_at).toLocaleDateString()
+        : "-",
+    }));
   } catch (err) {
     console.error("Fetch error:", err);
-    Swal.fire("Error", "Failed to fetch institutional accounts.", "error");
+    Swal.fire("Error", "Failed to fetch merchants.", "error");
   } finally {
     isTableLoading.value = false;
   }
 };
 
-onMounted(fetchInstitutionalAccounts);
+onMounted(fetchMerchants);
 </script>
 
 <template>
@@ -109,7 +111,7 @@ onMounted(fetchInstitutionalAccounts);
       </div>
       <div class="flex justify-end">
         <button
-          @click="openCreateIA"
+          @click="isCreateModalOpen = true"
           type="button"
           class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 flex items-center gap-2 cursor-pointer"
         >
@@ -119,6 +121,7 @@ onMounted(fetchInstitutionalAccounts);
       </div>
     </div>
   </div>
+
   <div class="p-4">
     <!-- Loading -->
     <div
@@ -132,18 +135,19 @@ onMounted(fetchInstitutionalAccounts);
           class="inline-block w-6 h-6 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"
         ></span>
         <span class="font-semibold text-blue-700 text-base">
-          Loading Institutional Accounts...
+          Loading Merchants...
         </span>
       </div>
     </div>
+
     <!-- Table -->
-    <div v-else-if="institutionalAccounts.length > 0">
+    <div v-else-if="merchants.length > 0">
       <table class="min-w-full table-fixed divide-y divide-gray-200">
         <thead class="bg-gray-50">
           <tr>
             <th class="w-16 px-6 py-3 text-left text-xs text-gray-500">#</th>
             <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
-              Account Name
+              Merchant Name
             </th>
             <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">Area</th>
             <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">
@@ -166,23 +170,25 @@ onMounted(fetchInstitutionalAccounts);
             </th>
           </tr>
         </thead>
+
         <tbody class="bg-white divide-y divide-gray-200">
           <tr
-            v-for="(ia, index) in institutionalAccounts"
-            :key="ia.iaId"
+            v-for="(merchant, index) in merchants"
+            :key="merchant.merchantId"
             class="hover:bg-gray-50"
           >
             <td class="px-6 py-4 text-sm">{{ index + 1 }}</td>
-            <td class="px-6 py-4 text-sm">{{ ia.iaName }}</td>
-            <td class="px-6 py-4 text-sm">{{ ia.area }}</td>
-            <td class="px-6 py-4 text-sm">{{ ia.address }}</td>
-            <td class="px-6 py-4 text-sm">{{ ia.contactPerson }}</td>
-            <td class="px-6 py-4 text-sm">{{ ia.contactNumber }}</td>
-            <td class="px-6 py-4 text-sm">{{ ia.effectiveDate }}</td>
-            <td class="px-6 py-4 text-sm">{{ ia.eocDate }}</td>
+            <td class="px-6 py-4 text-sm">{{ merchant.merchantName }}</td>
+            <td class="px-6 py-4 text-sm">{{ merchant.area }}</td>
+            <td class="px-6 py-4 text-sm">{{ merchant.address }}</td>
+            <td class="px-6 py-4 text-sm">{{ merchant.contactPerson }}</td>
+            <td class="px-6 py-4 text-sm">{{ merchant.contactNumber }}</td>
+            <td class="px-6 py-4 text-sm">{{ merchant.effectiveDate }}</td>
+            <td class="px-6 py-4 text-sm">{{ merchant.eocDate }}</td>
+
             <td class="px-6 py-4 text-sm">
               <button
-                @click="openEditIA(ia)"
+                @click="openEditMerchant(merchant)"
                 class="font-medium text-blue-600 hover:text-blue-900 flex items-center gap-2"
               >
                 <Edit class="w-5 h-5" />
@@ -193,23 +199,24 @@ onMounted(fetchInstitutionalAccounts);
         </tbody>
       </table>
     </div>
+
     <!-- Empty State -->
     <div v-else class="text-center py-10 text-gray-500 font-medium">
-      No Institutional Accounts Found
+      No merchants Found
     </div>
   </div>
   <transition name="modal-fade">
-    <ModalEditIA
+    <ModalEditMerchant
       v-if="isEditModalOpen"
-      :ia="selectedInstitutionalAccount"
+      :merchant="selectedMerchant"
       @close="isEditModalOpen = false"
       @save="handleEditSaved"
     />
   </transition>
   <transition name="modal-fade">
-    <ModalCreateIA
+    <ModalCreateMerchant
       v-if="isCreateModalOpen"
-      :ia="selectedInstitutionalAccount"
+      :merchant="selectedMerchant"
       @close="isCreateModalOpen = false"
       @save="handleCreateSaved"
     />

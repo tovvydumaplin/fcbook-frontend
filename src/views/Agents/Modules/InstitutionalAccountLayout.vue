@@ -8,7 +8,7 @@ import IAPasswordsComponent from "./Components/InstitutionalAccount/IAPasswordsC
 const activeTab = ref("ia-details");
 
 const tabs = [
-  { id: "ia-details", name: "Account Details", icon: User },
+  { id: "ia-details", name: "Details", icon: User },
   { id: "ia-discounts", name: "Discounts", icon: Tag },
   { id: "ia-passwords", name: "Password", icon: LockKeyhole },
 ];
