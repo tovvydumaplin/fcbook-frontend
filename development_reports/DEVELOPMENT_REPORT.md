@@ -475,6 +475,190 @@ const editPassengerFromModal = (passenger) => {
 **Cause:** Fresh seat data loaded without checking existing passenger assignments
 **Fix:** Added logic to re-block seats assigned to passengers after loading new seatmap data
 
+### Institutional Account Integration
+
+#### 9. Institutional Account Selection Modal
+
+**Feature Overview:**
+Added institutional account selection capability to the teller booking module. When a teller selects "Institutional Account" as the passenger type, a modal opens displaying all available institutional accounts with their logos and names.
+
+**Implementation:**
+
+**Modal Component (`IaModal.vue`):**
+
+- Grid layout displaying institutional accounts with logos
+- Search functionality to filter accounts by name
+- Loading states during API fetch
+- Visual selection indicators
+- Confirmation workflow before applying selection
+
+**API Integration:**
+
+```javascript
+// Fetch institutional accounts
+const response = await fetch(`${apiBase}/institutional-accounts`, {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  }
+});
+
+// Response structure
+{
+  success: true,
+  status: 200,
+  message: "Institutional accounts retrieved successfully",
+  data: {
+    institutional_accounts: [
+      {
+        ia_id: 1,
+        ia_name: "Philtranco",
+        ia_image: "seeders/images/philtranco.jpg"
+      }
+    ]
+  }
+}
+```
+
+**User Flow:**
+
+1. **Trigger:** Teller selects "Institutional Account" from passenger type options
+2. **Modal Opens:** Displays grid of available institutional accounts
+3. **Search:** Teller can search by account name to filter results
+4. **Selection:** Click on an account card to select it (shows blue border and checkmark)
+5. **Confirmation:** Click "Confirm Selection" button to apply
+6. **Display:** Selected account shows in a blue info box with logo and "Change" button
+7. **Booking:** Selected IA information is included in the passenger entry
+
+**Visual Design:**
+
+```vue
+<!-- Selected IA Display -->
+<div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+  <div class="flex items-center gap-3">
+    <div class="w-12 h-12 rounded-lg overflow-hidden bg-white">
+      <img :src="ia.ia_image" :alt="ia.ia_name" />
+    </div>
+    <div class="flex-1">
+      <p class="text-xs text-gray-600 font-medium">Selected Institution</p>
+      <p class="text-sm font-bold text-blue-900">{{ ia.ia_name }}</p>
+    </div>
+    <button class="text-blue-600 hover:text-blue-800">Change</button>
+  </div>
+</div>
+```
+
+**Data Storage:**
+
+- Selected IA stored in `selectedInstitutionalAccount` ref
+- Included in passenger entry as `institutionalAccount` property
+- Cleared on form reset and after successful booking
+- Persists through accommodation and seat selection
+
+**Features:**
+
+- **Responsive Grid:** 2-3 columns depending on screen size
+- **Image Fallback:** Shows first letter of account name if no logo
+- **Search Filter:** Real-time filtering by account name
+- **Loading State:** Spinner and message during API fetch
+- **Empty State:** Clear message when no accounts found
+- **Selection Indicator:** Blue border, background, and checkmark icon
+- **Change Option:** Can reopen modal to change selection without restarting flow
+
+**Benefits:**
+
+- Streamlined booking process for institutional passengers
+- Visual account recognition with logos
+- Search capability for quick account location
+- Clear feedback on current selection
+- Maintains selection through multi-step booking process
+- Reduces manual data entry errors
+
+**Integration Points:**
+
+- Triggered by `watch(selectedType)` when value is "Institutional Account"
+- Modal state managed by `isIaModalOpen` ref
+- Selection handler: `handleIaSelect(ia)`
+- Reset in `bookEntry()` and `resetForm()` functions
+
+**Future Enhancements:**
+
+- [ ] Auto-apply institutional discounts based on selected account
+- [ ] Display discount eligibility in the IA selection modal
+- [ ] Show account balance or credit limit
+- [ ] Pre-fill passenger details for frequent institutional travelers
+- [ ] Bulk booking for multiple IA passengers
+
+#### 10. Vehicle Selection Preview Display
+
+**Feature Overview:**
+Added a visual preview display for selected vehicles in the Driver category, similar to the institutional account display. Shows vehicle details with the ability to change selection.
+
+**Implementation:**
+
+**Visual Display:**
+
+```vue
+<!-- Selected Vehicle Display -->
+<div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+  <div class="flex items-center gap-3">
+    <div class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
+      <svg class="w-7 h-7 text-blue-600"><!-- Vehicle icon --></svg>
+    </div>
+    <div class="flex-1">
+      <p class="text-xs text-gray-600 font-medium">Selected Vehicle</p>
+      <p class="text-sm font-bold text-blue-900">
+        {{ vehicleType }} - {{ vehicleBrand }}
+      </p>
+      <p class="text-xs text-gray-600 mt-0.5">Plate: {{ plateNumber }}</p>
+    </div>
+    <button class="text-blue-600 hover:text-blue-800">Change</button>
+  </div>
+</div>
+```
+
+**Display Conditions:**
+
+- Shows when `selectedCategory === 'Driver'`
+- Only appears after vehicle selection is confirmed
+- Displays vehicle type, brand, and plate number
+- Blue color scheme matching IA display for consistency
+
+**Features:**
+
+- **Vehicle Icon:** Lightning bolt icon representing vehicle/speed
+- **Type Display:** Converts camelCase to readable format (e.g., "lightcar" → "Light Car")
+- **Brand Display:** Shows selected vehicle brand
+- **Plate Number:** Displays plate if provided (bicycles don't require plates)
+- **Change Button:** Reopens vehicle selection modal
+- **Blue Theme:** Consistent with institutional account display
+
+**User Experience:**
+
+1. Teller selects "Driver" category → Vehicle modal opens
+2. Select vehicle type, brand, and enter plate number
+3. Confirm selection
+4. Blue preview box appears showing vehicle details
+5. Can click "Change" to modify selection anytime
+6. Vehicle info saved with passenger booking
+
+**Benefits:**
+
+- Clear visual confirmation of selected vehicle
+- Easy to verify details before finalizing booking
+- Quick access to change selection if mistake made
+- Consistent UI pattern with IA display
+- Reduces cognitive load by showing summary
+
+**Styling Details:**
+
+- Background: `bg-blue-50` with `border-blue-200`
+- Icon background: `bg-blue-100` with blue vehicle icon
+- Text colors: Blue for emphasis, gray for labels
+- Hover states on "Change" button
+- Compact layout matching IA display
+
 ---
 
 ## Schedule Management Module

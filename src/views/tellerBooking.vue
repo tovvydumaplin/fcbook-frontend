@@ -3,6 +3,7 @@ import { nextTick, ref, watch } from "vue";
 import ModalPaymentSelection from "../components/Modals/Teller/ModalPaymentSelection.vue";
 import VehicleSelection from "../components/Modals/Teller/VehicleSelection.vue";
 import ViewTellerPassenger from "../components/Modals/Teller/ViewTellerPassenger.vue";
+import IaModal from "../components/Modals/Teller/IaModal.vue";
 import TellerHeader from "../components/TellerHeader.vue";
 import { onMounted } from "vue";
 import {
@@ -17,9 +18,13 @@ const bookingActive = ref(false);
 
 const isPaymentModalOpen = ref(false);
 const isVehicleModalOpen = ref(false);
+const isIaModalOpen = ref(false);
 
 // Store selected vehicle details from modal
 const selectedVehicleDetails = ref(null);
+
+// Store selected institutional account
+const selectedInstitutionalAccount = ref(null);
 
 const handleVehicleSave = (vehicle) => {
   selectedVehicleDetails.value = vehicle;
@@ -499,6 +504,7 @@ const bookEntry = () => {
     adminFee: adminFee.toFixed(2),
     discountAmount: discountAmount.toFixed(2),
     vehicle: selectedVehicleDetails.value,
+    institutionalAccount: selectedInstitutionalAccount.value,
   };
 
   // Handle seat blocking
@@ -550,6 +556,7 @@ const bookEntry = () => {
   selectedGender.value = "Male";
   selectedType.value = "Regular Passenger";
   selectedVehicleDetails.value = null;
+  selectedInstitutionalAccount.value = null;
   selectedDate.value = "";
   selectedSeat.value = null;
 };
@@ -563,6 +570,7 @@ const resetForm = () => {
   selectedType.value = "Regular Passenger";
   passengers.value = [];
   selectedVehicleDetails.value = null;
+  selectedInstitutionalAccount.value = null;
   selectedDate.value = "";
   showSuccess.value = true;
   setTimeout(() => (showSuccess.value = false), 2000);
@@ -573,6 +581,18 @@ watch(selectedCategory, (newVal) => {
     isVehicleModalOpen.value = true;
   }
 });
+
+watch(selectedType, (newVal) => {
+  if (newVal === "Institutional Account") {
+    isIaModalOpen.value = true;
+  }
+});
+
+const handleIaSelect = (ia) => {
+  selectedInstitutionalAccount.value = ia;
+  console.log("Selected IA:", ia);
+  // You can add additional logic here, such as applying discounts
+};
 
 const handlePaymentSelected = (method) => {
   // isPaymentModalOpen.value = false;
@@ -765,6 +785,13 @@ const editPassengerFromModal = (passenger) => {
     :isOpen="isVehicleModalOpen"
     @close="isVehicleModalOpen = false"
     @save="handleVehicleSave"
+  />
+
+  <!-- Institutional Account Modal -->
+  <IaModal
+    :isOpen="isIaModalOpen"
+    @close="isIaModalOpen = false"
+    @select="handleIaSelect"
   />
 
   <main>
@@ -1180,6 +1207,64 @@ const editPassengerFromModal = (passenger) => {
             </div>
           </div>
 
+          <!-- Selected Vehicle Display -->
+          <div
+            v-if="selectedCategory === 'Driver' && selectedVehicleDetails"
+            class="p-4 bg-blue-50 rounded-lg border border-blue-200"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center"
+              >
+                <svg
+                  class="w-7 h-7 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                  />
+                </svg>
+              </div>
+              <div class="flex-1">
+                <p class="text-xs text-gray-600 font-medium">
+                  Selected Vehicle
+                </p>
+                <p class="text-sm font-bold text-blue-900">
+                  {{
+                    selectedVehicleDetails.type
+                      ? selectedVehicleDetails.type
+                          .replace(/([A-Z])/g, " $1")
+                          .trim()
+                      : "Vehicle"
+                  }}
+                  <span
+                    v-if="selectedVehicleDetails.brand"
+                    class="text-gray-600 font-normal"
+                  >
+                    - {{ selectedVehicleDetails.brand }}
+                  </span>
+                </p>
+                <p
+                  v-if="selectedVehicleDetails.plate"
+                  class="text-xs text-gray-600 mt-0.5"
+                >
+                  Plate: {{ selectedVehicleDetails.plate }}
+                </p>
+              </div>
+              <button
+                @click="isVehicleModalOpen = true"
+                class="text-blue-600 hover:text-blue-800 text-xs font-medium"
+              >
+                Change
+              </button>
+            </div>
+          </div>
+
           <div v-if="selectedCategory">
             <h3 class="text-base font-medium text-gray-700 mb-3">
               Choose Passenger Type
@@ -1200,6 +1285,46 @@ const editPassengerFromModal = (passenger) => {
               </button>
             </div>
           </div>
+
+          <!-- Selected Institutional Account Display -->
+          <div
+            v-if="
+              selectedType === 'Institutional Account' &&
+              selectedInstitutionalAccount
+            "
+            class="p-4 bg-blue-50 rounded-lg border border-blue-200"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-12 h-12 rounded-lg overflow-hidden bg-white flex items-center justify-center"
+              >
+                <img
+                  v-if="selectedInstitutionalAccount.ia_image"
+                  :src="`${apiBase}/${selectedInstitutionalAccount.ia_image}`"
+                  :alt="selectedInstitutionalAccount.ia_name"
+                  class="w-full h-full object-cover"
+                />
+                <span v-else class="text-xl font-bold text-gray-400">
+                  {{ selectedInstitutionalAccount.ia_name.charAt(0) }}
+                </span>
+              </div>
+              <div class="flex-1">
+                <p class="text-xs text-gray-600 font-medium">
+                  Selected Institution
+                </p>
+                <p class="text-sm font-bold text-blue-900">
+                  {{ selectedInstitutionalAccount.ia_name }}
+                </p>
+              </div>
+              <button
+                @click="isIaModalOpen = true"
+                class="text-blue-600 hover:text-blue-800 text-xs font-medium"
+              >
+                Change
+              </button>
+            </div>
+          </div>
+
           <div v-if="selectedType">
             <h3 class="text-base font-medium text-gray-700 mb-3">
               Choose Passenger Accommodation
