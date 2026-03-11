@@ -1,0 +1,407 @@
+<script setup>
+import { ref, computed, onMounted } from "vue";
+import { Plus, BarChart3, AlertCircle, Search } from "lucide-vue-next";
+import ModalCreatePort from "../components/Modals/Port/ModalCreatePort.vue";
+import ModalViewPort from "../components/Modals/Port/ModalViewPort.vue";
+
+const isModalOpen = ref(false);
+const isLoading = ref(false);
+const activeTab = ref("all");
+const searchQuery = ref("");
+const apiBase = import.meta.env.VITE_API_URL;
+const tabs = [
+  { id: "all", name: "All Ports" },
+  { id: "active", name: "Active Ports" },
+  { id: "closed", name: "Closed Ports" },
+];
+
+const ports = ref([]);
+const totalPorts = computed(() => ports.value.length);
+const closedPorts = computed(
+  () => ports.value.filter((p) => p.status === "Offline").length,
+);
+const zeroTransactionPorts = ref(0);
+
+const selectedPort = ref(null);
+const selectedPortPassengers = ref([]);
+
+const filteredPorts = computed(() => {
+  let filtered = ports.value;
+
+  if (activeTab.value === "active")
+    filtered = filtered.filter(
+      (p) => p.status === "Online" || p.status === "Available",
+    );
+  else if (activeTab.value === "closed")
+    filtered = filtered.filter((p) => p.status === "Offline");
+
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase();
+    filtered = filtered.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.corridor.toLowerCase().includes(q) ||
+        p.updatedBy.toLowerCase().includes(q),
+    );
+  }
+  return filtered;
+});
+
+const getStatusClass = (status) => {
+  if (status === "Available" || status === "Online")
+    return "bg-green-100 text-green-800";
+  return "bg-gray-100 text-gray-800";
+};
+
+const handleAction = (port) => {
+  selectedPort.value = port;
+  selectedPortPassengers.value = [
+    {
+      id: 1,
+      fullname: "Towy B. Dumaplin",
+      bookingNo: "BF09KLDXZ",
+      departureDate: "2025-08-02",
+      transactionDate: "2025-08-02",
+      status: "Paid",
+    },
+    {
+      id: 2,
+      fullname: "Johnny D. Doe",
+      bookingNo: "BF09KLDXZ",
+      departureDate: "2025-08-02",
+      transactionDate: "2025-08-02",
+      status: "Cancelled",
+    },
+    {
+      id: 3,
+      fullname: "Jade L. Smith",
+      bookingNo: "BF09KLDXZ",
+      departureDate: "2025-08-02",
+      transactionDate: "2025-08-02",
+      status: "Paid",
+    },
+    {
+      id: 4,
+      fullname: "Carlsen Y. Not",
+      bookingNo: "BF09KLDXZ",
+      departureDate: "2025-08-02",
+      transactionDate: "2025-08-02",
+      status: "Open",
+    },
+    {
+      id: 5,
+      fullname: "Earl G. Barkawi",
+      bookingNo: "BF09KLDXZ",
+      departureDate: "2025-08-02",
+      transactionDate: "2025-08-02",
+      status: "Paid",
+    },
+    {
+      id: 6,
+      fullname: "Jess L. Smith",
+      bookingNo: "BF09KLDXZ",
+      departureDate: "2025-08-02",
+      transactionDate: "2025-08-02",
+      status: "Open",
+    },
+  ];
+};
+
+const fetchPorts = async () => {
+  isLoading.value = true;
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${apiBase}/ports`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+    });
+    const data = await response.json();
+    if (response.ok && data.success && data.data?.ports) {
+      ports.value = data.data.ports.map((port, idx) => ({
+        id: port.id || idx + 1,
+        name: port.port_name,
+        corridor: port.corridor,
+        facilities: port.facilities,
+        updatedBy: port.last_update_by,
+        status: port.is_active === 1 ? "Available" : "Offline",
+        createdAt: port.created_at
+          ? port.created_at.slice(0, 16).replace("T", " ")
+          : "",
+        lastUpdated: port.updated_at
+          ? port.updated_at.slice(0, 16).replace("T", " ")
+          : "",
+      }));
+    } else {
+      console.error("Failed to fetch ports:", data.message || data);
+    }
+  } catch (err) {
+    console.error("Network error fetching ports:", err);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+onMounted(fetchPorts);
+
+const handleSave = () => {
+  isModalOpen.value = false;
+  fetchPorts();
+};
+</script>
+
+<template>
+  <div class="min-h-full bg-gray-50 p-6">
+    <!-- Header -->
+    <div class="mb-6">
+      <nav class="text-sm text-gray-500 mb-2">
+        <span>Dashboard</span>
+        <span class="mx-2">></span>
+        <span class="text-gray-900">Ports</span>
+      </nav>
+      <div class="flex justify-between items-center">
+        <h1 class="text-2xl font-semibold text-gray-900">Port Management</h1>
+        <button
+          @click="isModalOpen = true"
+          type="button"
+          class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+          :disabled="isLoading"
+        >
+          <Plus class="w-4 h-4" />
+          {{ isLoading ? "Loading..." : "Create" }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div class="bg-white rounded-lg p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-medium text-gray-600">Total Ports</h3>
+        </div>
+        <div class="text-3xl font-bold text-gray-900 mb-1">
+          {{ isLoading ? "—" : totalPorts }}
+        </div>
+        <p class="text-sm text-gray-500">
+          {{
+            isLoading
+              ? "Loading data..."
+              : `${closedPorts} closed ports as of today`
+          }}
+        </p>
+      </div>
+
+      <div class="bg-white rounded-lg p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-medium text-gray-600">Closed Ports</h3>
+          <BarChart3 class="w-5 h-5 text-blue-600" />
+        </div>
+        <div class="text-3xl font-bold text-gray-900 mb-1">
+          {{ isLoading ? "—" : closedPorts }}
+        </div>
+        <p class="text-sm text-gray-500">Across all available ports</p>
+      </div>
+
+      <div class="bg-white rounded-lg p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-medium text-gray-600">
+            Zero-Transaction Ports
+          </h3>
+          <AlertCircle class="w-5 h-5 text-blue-600" />
+        </div>
+        <div class="text-3xl font-bold text-gray-900 mb-1">
+          {{ isLoading ? "—" : zeroTransactionPorts }}
+        </div>
+        <p class="text-sm text-gray-500">
+          Total of active ports without transaction
+        </p>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="bg-white rounded-lg shadow-sm">
+      <div class="border-b border-gray-200">
+        <nav class="flex space-x-8 px-6">
+          <button
+            v-for="tab in tabs"
+            :key="tab.id"
+            @click="activeTab = tab.id"
+            :class="[
+              'py-4 px-1 border-b-2 font-medium text-sm',
+              activeTab === tab.id
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+            ]"
+          >
+            {{ tab.name }}
+          </button>
+        </nav>
+      </div>
+
+      <!-- List of Ports Section -->
+      <div class="p-6">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-lg font-medium text-gray-900">List of Ports</h2>
+          <div class="relative">
+            <Search
+              class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4"
+            />
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="Search"
+              class="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="relative">
+          <div class="overflow-x-auto">
+            <div class="max-h-[245px] overflow-y-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      #
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Port Name
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Corridor
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Facilities
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Updated by
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Status
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Created at
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Last updated
+                    </th>
+                    <th
+                      class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    >
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <tr v-if="isLoading">
+                    <td
+                      colspan="9"
+                      class="px-6 py-8 text-center text-sm text-gray-500"
+                    >
+                      Loading ports...
+                    </td>
+                  </tr>
+                  <tr
+                    v-else
+                    v-for="port in filteredPorts"
+                    :key="port.id"
+                    class="hover:bg-gray-50"
+                  >
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                    >
+                      {{ port.id }}
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                    >
+                      {{ port.name }}
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                    >
+                      {{ port.corridor }}
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                    >
+                      {{ port.facilities }}
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                    >
+                      {{ port.updatedBy }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span
+                        :class="getStatusClass(port.status)"
+                        class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
+                      >
+                        {{ port.status }}
+                      </span>
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                    >
+                      {{ port.createdAt }}
+                    </td>
+                    <td
+                      class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"
+                    >
+                      {{ port.lastUpdated }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                      <button
+                        @click="handleAction(port)"
+                        class="font-medium text-blue-600 hover:text-blue-900"
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal rendered only when open -->
+    <transition name="modal-fade">
+      <ModalCreatePort
+        v-if="isModalOpen"
+        @close="isModalOpen = false"
+        @save="handleSave"
+      />
+    </transition>
+
+    <!-- Port View Modal -->
+    <transition name="modal-fade">
+      <ModalViewPort
+        v-if="selectedPort"
+        :port="selectedPort"
+        :passengers="selectedPortPassengers"
+        @close="selectedPort = null"
+      />
+    </transition>
+  </div>
+</template>
