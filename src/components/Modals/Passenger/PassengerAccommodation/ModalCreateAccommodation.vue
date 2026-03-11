@@ -2,9 +2,7 @@
 import { ref } from "vue";
 
 const emit = defineEmits(["save", "close"]);
-
 const apiBase = import.meta.env.VITE_API_URL;
-
 const passengerAccommodation = ref("");
 const isLoading = ref(false);
 const errorMsg = ref("");
@@ -35,8 +33,8 @@ const saveAccommodation = async () => {
       throw new Error("Failed to save accommodation");
     }
 
-    emit("save"); // notify parent
-    emit("close"); // close modal
+    emit("save");
+    emit("close");
   } catch (error) {
     console.error(error);
     errorMsg.value = "Something went wrong while saving.";

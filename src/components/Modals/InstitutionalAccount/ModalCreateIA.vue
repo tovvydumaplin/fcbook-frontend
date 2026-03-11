@@ -5,10 +5,8 @@ import Swal from "sweetalert2";
 const emit = defineEmits(["close", "save"]);
 
 const apiBase = import.meta.env.VITE_API_URL;
-
 const isLoading = ref(false);
 const errorMsg = ref("");
-
 const iaName = ref("");
 const address = ref("");
 const email = ref("");

@@ -1,4 +1,78 @@
-<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\components\ModalCreateRoute.vue -->
+<script setup>
+import { ref, onMounted } from "vue";
+
+const emit = defineEmits(["save", "close"]);
+const apiBase = import.meta.env.VITE_API_URL;
+const isLoading = ref(false);
+const errorMsg = ref("");
+
+const ports = ref([]);
+const route = ref({
+  port_a_id: "",
+  port_b_id: "",
+});
+
+onMounted(async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${apiBase}/ports`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+    });
+    const data = await response.json();
+    if (response.ok && data.success && data.data?.ports) {
+      ports.value = data.data.ports;
+    } else {
+      ports.value = [];
+      console.error("Failed to fetch ports:", data.message || data);
+    }
+  } catch (err) {
+    ports.value = [];
+    console.error("Network error fetching ports:", err);
+  }
+});
+
+const saveRoute = async () => {
+  errorMsg.value = "";
+  isLoading.value = true;
+  try {
+    const token = localStorage.getItem("token");
+    const payload = {
+      port_a_id: route.value.port_a_id,
+      port_b_id: route.value.port_b_id,
+    };
+    console.log("Sending route payload:", JSON.stringify(payload));
+    const response = await fetch(`${apiBase}/routes`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    if (response.ok && data.success) {
+      emit("save", { ...payload });
+      route.value = {
+        port_a_id: "",
+        port_b_id: "",
+      };
+      emit("close");
+    } else if (data.error) {
+      errorMsg.value = data.error;
+    } else {
+      errorMsg.value = data.message || "Failed to save route.";
+    }
+  } catch (err) {
+    errorMsg.value = "Network error. Please try again.";
+  } finally {
+    isLoading.value = false;
+  }
+};
+</script>
+
 <template>
   <div
     class="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50"
@@ -122,78 +196,3 @@
     </div>
   </div>
 </template>
-
-<script setup>
-import { ref, onMounted } from "vue";
-
-const emit = defineEmits(["save", "close"]);
-const apiBase = import.meta.env.VITE_API_URL;
-const isLoading = ref(false);
-const errorMsg = ref("");
-
-const ports = ref([]);
-const route = ref({
-  port_a_id: "",
-  port_b_id: "",
-});
-
-onMounted(async () => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await fetch(`${apiBase}/ports`, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-    });
-    const data = await response.json();
-    if (response.ok && data.success && data.data?.ports) {
-      ports.value = data.data.ports;
-    } else {
-      ports.value = [];
-      console.error("Failed to fetch ports:", data.message || data);
-    }
-  } catch (err) {
-    ports.value = [];
-    console.error("Network error fetching ports:", err);
-  }
-});
-
-const saveRoute = async () => {
-  errorMsg.value = "";
-  isLoading.value = true;
-  try {
-    const token = localStorage.getItem("token");
-    const payload = {
-      port_a_id: route.value.port_a_id,
-      port_b_id: route.value.port_b_id,
-    };
-    console.log("Sending route payload:", JSON.stringify(payload));
-    const response = await fetch(`${apiBase}/routes`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-      body: JSON.stringify(payload),
-    });
-    const data = await response.json();
-    if (response.ok && data.success) {
-      emit("save", { ...payload });
-      route.value = {
-        port_a_id: "",
-        port_b_id: "",
-      };
-      emit("close");
-    } else if (data.error) {
-      errorMsg.value = data.error;
-    } else {
-      errorMsg.value = data.message || "Failed to save route.";
-    }
-  } catch (err) {
-    errorMsg.value = "Network error. Please try again.";
-  } finally {
-    isLoading.value = false;
-  }
-};
-</script>

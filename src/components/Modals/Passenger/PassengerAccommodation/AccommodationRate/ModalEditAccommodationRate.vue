@@ -1,23 +1,15 @@
 <script setup>
 import { reactive, watch } from "vue";
 
-const props = defineProps({
-  accommodationRate: Object,
-  route: Object,
-});
 const emit = defineEmits(["close", "save"]);
 const form = reactive({
   baseRate: props.accommodationRate?.baseRate ?? 0,
 });
 
-watch(
-  () => props.accommodationRate,
-  (newVal) => {
-    if (newVal) {
-      form.baseRate = newVal.baseRate ?? 0;
-    }
-  },
-);
+const props = defineProps({
+  accommodationRate: Object,
+  route: Object,
+});
 
 const handleSubmit = async () => {
   try {
@@ -48,6 +40,15 @@ const handleSubmit = async () => {
     console.error("Network error:", err);
   }
 };
+
+watch(
+  () => props.accommodationRate,
+  (newVal) => {
+    if (newVal) {
+      form.baseRate = newVal.baseRate ?? 0;
+    }
+  },
+);
 </script>
 
 <template>

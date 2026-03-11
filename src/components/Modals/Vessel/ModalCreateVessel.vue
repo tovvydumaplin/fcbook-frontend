@@ -1,4 +1,68 @@
-<!-- filepath: src/components/ModalCreateVessel.vue -->
+<script setup>
+import { reactive, ref } from "vue";
+
+const apiBase = import.meta.env.VITE_API_URL;
+const emit = defineEmits(["save", "close"]);
+
+const isLoading = ref(false);
+const prefix = ref("");
+
+const vesselInfo = reactive({
+  name: "",
+  details: "",
+  status: "Available",
+});
+
+const saveVessel = async () => {
+  if (!vesselInfo.name) return alert("Enter vessel code!");
+
+  const fullName = prefix.value
+    ? `${prefix.value}${vesselInfo.name}`
+    : vesselInfo.name;
+
+  const payload = {
+    vessel_name: fullName,
+    description: vesselInfo.details,
+    status: "Available",
+    capacity: 0,
+  };
+
+  try {
+    isLoading.value = true;
+
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(`${apiBase}/vessels`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      alert("Vessel created successfully!");
+      emit("save", data.data);
+      emit("close");
+
+      vesselInfo.name = "";
+      vesselInfo.details = "";
+      prefix.value = "";
+    } else {
+      alert(data.message || "Failed to create vessel.");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Server error while creating vessel.");
+  } finally {
+    isLoading.value = false;
+  }
+};
+</script>
+
 <template>
   <div
     class="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50"
@@ -122,68 +186,3 @@
     </div>
   </div>
 </template>
-
-<script setup>
-import { reactive, ref } from "vue";
-
-const apiBase = import.meta.env.VITE_API_URL;
-const emit = defineEmits(["save", "close"]);
-
-const isLoading = ref(false);
-const prefix = ref("");
-
-const vesselInfo = reactive({
-  name: "",
-  details: "",
-  status: "Available",
-});
-
-const saveVessel = async () => {
-  if (!vesselInfo.name) return alert("Enter vessel code!");
-
-  const fullName = prefix.value
-    ? `${prefix.value}${vesselInfo.name}`
-    : vesselInfo.name;
-
-  const payload = {
-    vessel_name: fullName,
-    description: vesselInfo.details,
-    status: "Available",
-    capacity: 0,
-  };
-
-  try {
-    isLoading.value = true;
-
-    const token = localStorage.getItem("token");
-
-    const res = await fetch(`${apiBase}/vessels`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await res.json();
-
-    if (res.ok && data.success) {
-      alert("Vessel created successfully!");
-      emit("save", data.data);
-      emit("close");
-
-      vesselInfo.name = "";
-      vesselInfo.details = "";
-      prefix.value = "";
-    } else {
-      alert(data.message || "Failed to create vessel.");
-    }
-  } catch (err) {
-    console.error(err);
-    alert("Server error while creating vessel.");
-  } finally {
-    isLoading.value = false;
-  }
-};
-</script>

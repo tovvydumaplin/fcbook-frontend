@@ -2,25 +2,13 @@
 import { ref, watch } from "vue";
 
 const emit = defineEmits(["save", "close"]);
+const isLoading = ref(false);
+const errorMsg = ref("");
+const accommodationName = ref("");
 
 const props = defineProps({
   accommodation: Object,
 });
-
-const isLoading = ref(false);
-
-const errorMsg = ref("");
-const accommodationName = ref("");
-
-watch(
-  () => props.accommodation,
-  (val) => {
-    if (val) {
-      accommodationName.value = val.accommodation_name;
-    }
-  },
-  { immediate: true },
-);
 
 const handleSubmit = async () => {
   if (!accommodationName.value.trim()) {
@@ -38,7 +26,7 @@ const handleSubmit = async () => {
     const res = await fetch(
       `${import.meta.env.VITE_API_URL}/passenger-accommodations/${props.accommodation.accommodation_id}`,
       {
-        method: "PUT", // or PUT if your API distinguishes create/update
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -58,6 +46,16 @@ const handleSubmit = async () => {
     console.error("Network error:", err);
   }
 };
+
+watch(
+  () => props.accommodation,
+  (val) => {
+    if (val) {
+      accommodationName.value = val.accommodation_name;
+    }
+  },
+  { immediate: true },
+);
 </script>
 
 <template>

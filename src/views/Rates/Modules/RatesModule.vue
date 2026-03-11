@@ -44,14 +44,10 @@ const fetchRoutes = async () => {
 };
 
 const handleAddOnSaved = async () => {
-  closeModal();
+  isModalOpen.value = false;
   if (selectedRoute.value) {
     await fetchRouteAccRates(selectedRoute.value);
   }
-};
-
-const closeModal = () => {
-  isModalOpen.value = false;
 };
 
 onMounted(async () => {
@@ -202,7 +198,7 @@ onMounted(async () => {
   <transition name="modal-fade">
     <ModalCreateAddOn
       v-if="isModalOpen"
-      @close="closeModal"
+      @close="isModalOpen = false"
       @saved="handleAddOnSaved"
     />
   </transition>

@@ -15,8 +15,8 @@ const value_type = ref(null);
 const addOnName = ref("");
 const isEditMode = ref(false);
 const editingId = ref(null);
-
 const addOns = ref([]);
+
 const setValue = (type, newValue) => {
   if (newValue === "" || newValue === null) {
     value_type.value = null;
@@ -304,7 +304,6 @@ onMounted(async () => {
                 </svg>
               </button>
             </div>
-
             <!-- ADD ONS LIST TABLE -->
             <div
               v-if="isTableLoading"

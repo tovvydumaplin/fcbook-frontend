@@ -1,4 +1,96 @@
-<!-- filepath: src/components/ModalCreateRoute.vue -->
+<script setup>
+import { ref, watch } from "vue";
+
+const emit = defineEmits(["saved", "close"]);
+const apiBase = import.meta.env.VITE_API_URL;
+const waived = ref(false);
+const isLoading = ref(false);
+const errorMsg = ref("");
+
+const props = defineProps({
+  editData: { type: Object, default: null },
+});
+
+const passengerType = ref({
+  passengerTypeName: "",
+  selectedDiscount: "",
+});
+
+const savePassengerType = async () => {
+  if (!passengerType.value.passengerTypeName) {
+    errorMsg.value = "Passenger type name is required.";
+    return;
+  }
+
+  isLoading.value = true;
+  errorMsg.value = "";
+
+  try {
+    const token = localStorage.getItem("token");
+
+    const payload = {
+      type: passengerType.value.passengerTypeName.trim(),
+      // UI percent → DB decimal
+      discount: Number(passengerType.value.selectedDiscount) / 100,
+      waived: waived.value,
+    };
+
+    const isEdit = !!props.editData;
+    const url = isEdit
+      ? `${apiBase}/passenger-types/${props.editData.p_id}`
+      : `${apiBase}/passenger-types`;
+
+    const method = isEdit ? "PUT" : "POST";
+
+    const res = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+
+    if (res.ok && data.success) {
+      emit("saved", data.data);
+      emit("close");
+    } else {
+      errorMsg.value = data?.error?.includes("Duplicate entry")
+        ? "This passenger type already exists."
+        : data.message || "Failed to save passenger type.";
+    }
+  } catch (err) {
+    console.error(err);
+    errorMsg.value = "Network error. Please try again.";
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+watch(
+  () => props.editData,
+  (newVal) => {
+    if (newVal) {
+      passengerType.value.passengerTypeName = newVal.type || "";
+
+      // DB decimal → UI percent
+      passengerType.value.selectedDiscount =
+        newVal.discount != null ? Number(newVal.discount) * 100 : "";
+
+      waived.value = newVal.waived ?? false;
+    } else {
+      passengerType.value.passengerTypeName = "";
+      passengerType.value.selectedDiscount = "";
+      waived.value = false;
+    }
+  },
+  { immediate: true },
+);
+</script>
+
++
 <template>
   <div
     class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
@@ -124,98 +216,3 @@
     </div>
   </div>
 </template>
-
-<script setup>
-import { ref, watch } from "vue";
-
-const emit = defineEmits(["saved", "close"]);
-const props = defineProps({
-  editData: { type: Object, default: null },
-});
-
-const apiBase = import.meta.env.VITE_API_URL;
-
-const waived = ref(false);
-const isLoading = ref(false);
-const errorMsg = ref("");
-
-const passengerType = ref({
-  passengerTypeName: "",
-  selectedDiscount: "",
-});
-
-/* ---------------- EDIT MODE HANDLER ---------------- */
-watch(
-  () => props.editData,
-  (newVal) => {
-    if (newVal) {
-      passengerType.value.passengerTypeName = newVal.type || "";
-
-      // DB decimal → UI percent
-      passengerType.value.selectedDiscount =
-        newVal.discount != null ? Number(newVal.discount) * 100 : "";
-
-      waived.value = newVal.waived ?? false;
-    } else {
-      passengerType.value.passengerTypeName = "";
-      passengerType.value.selectedDiscount = "";
-      waived.value = false;
-    }
-  },
-  { immediate: true },
-);
-
-/* ---------------- SAVE ---------------- */
-const savePassengerType = async () => {
-  if (!passengerType.value.passengerTypeName) {
-    errorMsg.value = "Passenger type name is required.";
-    return;
-  }
-
-  isLoading.value = true;
-  errorMsg.value = "";
-
-  try {
-    const token = localStorage.getItem("token");
-
-    const payload = {
-      type: passengerType.value.passengerTypeName.trim(),
-      // UI percent → DB decimal
-      discount: Number(passengerType.value.selectedDiscount) / 100,
-      waived: waived.value,
-    };
-
-    const isEdit = !!props.editData;
-    const url = isEdit
-      ? `${apiBase}/passenger-types/${props.editData.p_id}`
-      : `${apiBase}/passenger-types`;
-
-    const method = isEdit ? "PUT" : "POST";
-
-    const res = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const data = await res.json();
-
-    if (res.ok && data.success) {
-      emit("saved", data.data);
-      emit("close");
-    } else {
-      errorMsg.value = data?.error?.includes("Duplicate entry")
-        ? "This passenger type already exists."
-        : data.message || "Failed to save passenger type.";
-    }
-  } catch (err) {
-    console.error(err);
-    errorMsg.value = "Network error. Please try again.";
-  } finally {
-    isLoading.value = false;
-  }
-};
-</script>

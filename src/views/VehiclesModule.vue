@@ -16,10 +16,6 @@ const apiBase = import.meta.env.VITE_API_URL;
 
 const vehicleTypes = [1, 2, 3, 4, 5];
 
-const openCreateVehicle = () => {
-  isCreateModalOpen.value = true;
-};
-
 const openEditVehicle = (vehicle) => {
   selectedVehicle.value = vehicle;
   isEditModalOpen.value = true;
@@ -88,7 +84,7 @@ onMounted(fetchVehicles);
           Vehicles Management
         </h1>
         <button
-          @click="openCreateVehicle"
+          @click="isCreateModalOpen = true"
           type="button"
           class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 flex items-center gap-2 cursor-pointer"
         >

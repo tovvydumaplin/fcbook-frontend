@@ -1,4 +1,52 @@
-<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\components\ModalViewPort.vue -->
+<script setup>
+import { ref, computed } from "vue";
+
+const props = defineProps({
+  port: Object,
+  passengers: Array,
+});
+
+const filterType = ref("selfbook");
+const search = ref("");
+const dateFrom = ref("");
+const dateTo = ref("");
+const isLoading = ref(false);
+
+// Switch states for ramp and port status
+const rampStatus = ref(true);
+const portStatus = ref(false);
+
+// Example: filter by type, search, and date range
+const filteredPassengers = computed(() => {
+  let list = props.passengers || [];
+  // Filter by type (assuming each passenger has a 'type' field)
+  if (filterType.value === "selfbook") {
+    list = list.filter((p) => !p.type || p.type === "selfbook");
+  } else if (filterType.value === "teller") {
+    list = list.filter((p) => p.type === "teller");
+  } else if (filterType.value === "institutional") {
+    list = list.filter((p) => p.type === "institutional");
+  }
+  // Filter by search
+  if (search.value) {
+    const q = search.value.toLowerCase();
+    list = list.filter(
+      (p) =>
+        p.fullname.toLowerCase().includes(q) ||
+        p.bookingNo.toLowerCase().includes(q),
+    );
+  }
+  // Filter by date range (departureDate)
+  if (dateFrom.value) {
+    list = list.filter((p) => p.departureDate >= dateFrom.value);
+  }
+  if (dateTo.value) {
+    list = list.filter((p) => p.departureDate <= dateTo.value);
+  }
+  return list;
+});
+</script>
+
 <template>
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
     <div
@@ -280,52 +328,3 @@
     </div>
   </div>
 </template>
-
-<script setup>
-import { ref, computed } from "vue";
-
-const props = defineProps({
-  port: Object,
-  passengers: Array,
-});
-
-const filterType = ref("selfbook");
-const search = ref("");
-const dateFrom = ref("");
-const dateTo = ref("");
-const isLoading = ref(false);
-
-// Switch states for ramp and port status
-const rampStatus = ref(true);
-const portStatus = ref(false);
-
-// Example: filter by type, search, and date range
-const filteredPassengers = computed(() => {
-  let list = props.passengers || [];
-  // Filter by type (assuming each passenger has a 'type' field)
-  if (filterType.value === "selfbook") {
-    list = list.filter((p) => !p.type || p.type === "selfbook");
-  } else if (filterType.value === "teller") {
-    list = list.filter((p) => p.type === "teller");
-  } else if (filterType.value === "institutional") {
-    list = list.filter((p) => p.type === "institutional");
-  }
-  // Filter by search
-  if (search.value) {
-    const q = search.value.toLowerCase();
-    list = list.filter(
-      (p) =>
-        p.fullname.toLowerCase().includes(q) ||
-        p.bookingNo.toLowerCase().includes(q)
-    );
-  }
-  // Filter by date range (departureDate)
-  if (dateFrom.value) {
-    list = list.filter((p) => p.departureDate >= dateFrom.value);
-  }
-  if (dateTo.value) {
-    list = list.filter((p) => p.departureDate <= dateTo.value);
-  }
-  return list;
-});
-</script>

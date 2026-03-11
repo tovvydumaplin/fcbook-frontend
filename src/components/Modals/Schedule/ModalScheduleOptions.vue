@@ -1,3 +1,132 @@
+<script setup>
+import { ref, watch, computed } from "vue";
+
+const emit = defineEmits(["close", "save"]);
+const isSaving = ref(false);
+const portASchedules = ref([]);
+const portBSchedules = ref([]);
+
+const props = defineProps({
+  selectedRoute: {
+    type: Object,
+    required: true,
+  },
+});
+const routeName = computed(() => {
+  if (!props.selectedRoute) return "";
+  return `${props.selectedRoute.portA?.port_name || ""} - ${props.selectedRoute.portB?.port_name || ""}`;
+});
+
+const portAName = computed(
+  () => props.selectedRoute.portA?.port_name || "Port A",
+);
+const portBName = computed(
+  () => props.selectedRoute.portB?.port_name || "Port B",
+);
+
+const visibilityToCheckboxes = (visibility) => {
+  const vis = visibility ?? 7;
+
+  return {
+    online: [1, 3, 5, 7].includes(vis),
+    teller: [2, 3, 6, 7].includes(vis),
+    merchant: [4, 5, 6, 7].includes(vis),
+    all: vis === 7,
+  };
+};
+
+const checkboxesToVisibility = (online, teller, merchant) => {
+  if (online && teller && merchant) return 7;
+  if (teller && merchant) return 6;
+  if (online && merchant) return 5;
+  if (merchant) return 4;
+  if (online && teller) return 3;
+  if (teller) return 2;
+  if (online) return 1;
+  return 0;
+};
+
+// Handle when "All" checkbox is clicked
+const handleAllCheckbox = (schedule) => {
+  if (schedule.all) {
+    schedule.online = true;
+    schedule.teller = true;
+    schedule.merchant = true;
+    schedule.visibility = 7;
+  } else {
+    schedule.online = false;
+    schedule.teller = false;
+    schedule.merchant = false;
+    schedule.visibility = 0;
+  }
+};
+
+// Update "All" checkbox and visibility based on individual options
+const updateAllCheckbox = (schedule) => {
+  schedule.visibility = checkboxesToVisibility(
+    schedule.online,
+    schedule.teller,
+    schedule.merchant,
+  );
+
+  schedule.all = schedule.online && schedule.teller && schedule.merchant;
+};
+
+const handleSave = async () => {
+  isSaving.value = true;
+
+  try {
+    const scheduleOptions = {
+      route_id: props.selectedRoute.route_id,
+      portA: portASchedules.value.map((sched) => ({
+        sched_id: sched.sched_id,
+        visibility: sched.visibility,
+      })),
+      portB: portBSchedules.value.map((sched) => ({
+        sched_id: sched.sched_id,
+        visibility: sched.visibility,
+      })),
+    };
+
+    emit("save", scheduleOptions);
+
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  } finally {
+    isSaving.value = false;
+  }
+};
+
+watch(
+  () => props.selectedRoute,
+  (newRoute) => {
+    if (newRoute) {
+      portASchedules.value = (newRoute.portA?.schedules || []).map((sched) => {
+        const checkboxes = visibilityToCheckboxes(sched.visibility);
+        return {
+          sched_id: sched.sched_id,
+          departure_time: sched.departure_time,
+          arrival_time: sched.arrival_time,
+          visibility: sched.visibility ?? 7,
+          ...checkboxes,
+        };
+      });
+
+      portBSchedules.value = (newRoute.portB?.schedules || []).map((sched) => {
+        const checkboxes = visibilityToCheckboxes(sched.visibility);
+        return {
+          sched_id: sched.sched_id,
+          departure_time: sched.departure_time,
+          arrival_time: sched.arrival_time,
+          visibility: sched.visibility ?? 7,
+          ...checkboxes,
+        };
+      });
+    }
+  },
+  { immediate: true },
+);
+</script>
+
 <template>
   <div
     class="fixed inset-0 bg-black/30 flex items-center justify-center z-50"
@@ -334,136 +463,3 @@
     </div>
   </div>
 </template>
-
-<script setup>
-import { ref, watch, computed } from "vue";
-
-const props = defineProps({
-  selectedRoute: {
-    type: Object,
-    required: true,
-  },
-});
-
-const emit = defineEmits(["close", "save"]);
-
-const isSaving = ref(false);
-
-const routeName = computed(() => {
-  if (!props.selectedRoute) return "";
-  return `${props.selectedRoute.portA?.port_name || ""} - ${props.selectedRoute.portB?.port_name || ""}`;
-});
-
-const portAName = computed(
-  () => props.selectedRoute.portA?.port_name || "Port A",
-);
-const portBName = computed(
-  () => props.selectedRoute.portB?.port_name || "Port B",
-);
-
-const visibilityToCheckboxes = (visibility) => {
-  const vis = visibility ?? 7;
-
-  return {
-    online: [1, 3, 5, 7].includes(vis),
-    teller: [2, 3, 6, 7].includes(vis),
-    merchant: [4, 5, 6, 7].includes(vis),
-    all: vis === 7,
-  };
-};
-
-const checkboxesToVisibility = (online, teller, merchant) => {
-  if (online && teller && merchant) return 7;
-  if (teller && merchant) return 6;
-  if (online && merchant) return 5;
-  if (merchant) return 4;
-  if (online && teller) return 3;
-  if (teller) return 2;
-  if (online) return 1;
-  return 0;
-};
-
-const portASchedules = ref([]);
-const portBSchedules = ref([]);
-
-watch(
-  () => props.selectedRoute,
-  (newRoute) => {
-    if (newRoute) {
-      portASchedules.value = (newRoute.portA?.schedules || []).map((sched) => {
-        const checkboxes = visibilityToCheckboxes(sched.visibility);
-        return {
-          sched_id: sched.sched_id,
-          departure_time: sched.departure_time,
-          arrival_time: sched.arrival_time,
-          visibility: sched.visibility ?? 7,
-          ...checkboxes,
-        };
-      });
-
-      portBSchedules.value = (newRoute.portB?.schedules || []).map((sched) => {
-        const checkboxes = visibilityToCheckboxes(sched.visibility);
-        return {
-          sched_id: sched.sched_id,
-          departure_time: sched.departure_time,
-          arrival_time: sched.arrival_time,
-          visibility: sched.visibility ?? 7,
-          ...checkboxes,
-        };
-      });
-    }
-  },
-  { immediate: true },
-);
-
-// Handle when "All" checkbox is clicked
-const handleAllCheckbox = (schedule) => {
-  if (schedule.all) {
-    schedule.online = true;
-    schedule.teller = true;
-    schedule.merchant = true;
-    schedule.visibility = 7;
-  } else {
-    schedule.online = false;
-    schedule.teller = false;
-    schedule.merchant = false;
-    schedule.visibility = 0;
-  }
-};
-
-// Update "All" checkbox and visibility based on individual options
-const updateAllCheckbox = (schedule) => {
-  schedule.visibility = checkboxesToVisibility(
-    schedule.online,
-    schedule.teller,
-    schedule.merchant,
-  );
-
-  schedule.all = schedule.online && schedule.teller && schedule.merchant;
-};
-
-const handleSave = async () => {
-  isSaving.value = true;
-
-  try {
-    const scheduleOptions = {
-      route_id: props.selectedRoute.route_id,
-      portA: portASchedules.value.map((sched) => ({
-        sched_id: sched.sched_id,
-        visibility: sched.visibility,
-      })),
-      portB: portBSchedules.value.map((sched) => ({
-        sched_id: sched.sched_id,
-        visibility: sched.visibility,
-      })),
-    };
-
-    emit("save", scheduleOptions);
-
-    // Add a small delay to show the loading state
-    await new Promise((resolve) => setTimeout(resolve, 300));
-  } finally {
-    isSaving.value = false;
-  }
-};
-</script>

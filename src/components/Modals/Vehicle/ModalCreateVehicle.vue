@@ -3,18 +3,11 @@ import { Plus, Trash2 } from "lucide-vue-next";
 import { ref, watch } from "vue";
 
 const emit = defineEmits(["close", "save"]);
-
 const apiBase = import.meta.env.VITE_API_URL;
-
 const selectedType = ref("");
 const vehicleClasses = ref([]);
-
 const isLoading = ref(false);
 const errorMsg = ref("");
-
-watch(selectedType, () => {
-  vehicleClasses.value = [];
-});
 
 const addClassField = () => {
   vehicleClasses.value.push("");
@@ -71,6 +64,10 @@ const saveVehicle = async () => {
     isLoading.value = false;
   }
 };
+
+watch(selectedType, () => {
+  vehicleClasses.value = [];
+});
 </script>
 
 <template>

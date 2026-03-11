@@ -1,4 +1,58 @@
-<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\components\ModalCreatePort.vue -->
+<script setup>
+import { ref } from "vue";
+
+const emit = defineEmits(["save", "close"]);
+const isLoading = ref(false);
+const errorMsg = ref("");
+
+// Get user name from localStorage
+const user = JSON.parse(localStorage.getItem("user"));
+const lastUpdateBy = user?.name || user?.email || "Unknown";
+const apiBase = import.meta.env.VITE_API_URL;
+const port = ref({
+  port_name: "",
+  corridor: "",
+  facilities: "",
+  last_update_by: lastUpdateBy,
+  is_active: 1,
+});
+
+const savePort = async () => {
+  console.log("Saving port...", port.value);
+  errorMsg.value = "";
+  isLoading.value = true;
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${apiBase}/ports`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+      body: JSON.stringify(port.value),
+    });
+    const data = await response.json();
+    if (response.ok && data.success) {
+      emit("save", { ...port.value });
+      port.value = {
+        port_name: "",
+        corridor: "",
+        facilities: "",
+        last_update_by: lastUpdateBy,
+        is_active: 1,
+      };
+      emit("close");
+    } else {
+      errorMsg.value = data.message || "Failed to save port.";
+    }
+  } catch (err) {
+    errorMsg.value = "Network error. Please try again.";
+  } finally {
+    isLoading.value = false;
+  }
+};
+</script>
+
 <template>
   <div
     class="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50"
@@ -132,58 +186,3 @@
     </div>
   </div>
 </template>
-
-<script setup>
-import { ref } from "vue";
-
-const emit = defineEmits(["save", "close"]);
-const isLoading = ref(false);
-const errorMsg = ref("");
-
-// Get user name from localStorage
-const user = JSON.parse(localStorage.getItem("user"));
-const lastUpdateBy = user?.name || user?.email || "Unknown";
-const apiBase = import.meta.env.VITE_API_URL;
-const port = ref({
-  port_name: "",
-  corridor: "",
-  facilities: "",
-  last_update_by: lastUpdateBy,
-  is_active: 1,
-});
-
-const savePort = async () => {
-  console.log("Saving port...", port.value);
-  errorMsg.value = "";
-  isLoading.value = true;
-  try {
-    const token = localStorage.getItem("token");
-    const response = await fetch(`${apiBase}/ports`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-      body: JSON.stringify(port.value),
-    });
-    const data = await response.json();
-    if (response.ok && data.success) {
-      emit("save", { ...port.value });
-      port.value = {
-        port_name: "",
-        corridor: "",
-        facilities: "",
-        last_update_by: lastUpdateBy,
-        is_active: 1,
-      };
-      emit("close");
-    } else {
-      errorMsg.value = data.message || "Failed to save port.";
-    }
-  } catch (err) {
-    errorMsg.value = "Network error. Please try again.";
-  } finally {
-    isLoading.value = false;
-  }
-};
-</script>

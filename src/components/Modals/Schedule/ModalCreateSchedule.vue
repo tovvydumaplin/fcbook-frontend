@@ -1,4 +1,188 @@
-<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\components\ModalCreateSchedule.vue -->
+<script setup>
+import { ref, computed, watch, onMounted } from "vue";
+
+const props = defineProps({
+  routes: { type: Array, default: () => [] },
+  selectedRouteId: { type: [String, Number], default: "" },
+  portASchedules: { type: Array, default: () => [] },
+  portBSchedules: { type: Array, default: () => [] },
+  mode: { type: String, default: "create" },
+});
+
+const emit = defineEmits(["close", "save", "update:selectedRouteId"]);
+const apiBase = import.meta.env.VITE_API_URL;
+
+const routes = ref(props.routes || []);
+watch(
+  () => props.routes,
+  (v) => (routes.value = v || []),
+);
+
+const mode = props.mode || "create";
+
+const selectedRouteId = ref(props.selectedRouteId || "");
+watch(
+  () => props.selectedRouteId,
+  (v) => (selectedRouteId.value = v || ""),
+);
+watch(selectedRouteId, (v) => emit("update:selectedRouteId", v));
+
+const selectedRoute = computed(() =>
+  routes.value.find((r) => r.route_id == selectedRouteId.value),
+);
+
+const buildExistingRows = (schedules) =>
+  (schedules || []).map((s) => ({
+    sched_id: s.sched_id,
+    departure: s.departure_time || "",
+    arrival: s.arrival_time || "",
+    existing: true,
+  }));
+
+const localPortASchedules = ref(
+  props.portASchedules && props.portASchedules.length
+    ? JSON.parse(JSON.stringify(props.portASchedules))
+    : [{ departure: "", arrival: "", vessel: "" }],
+);
+const localPortBSchedules = ref(
+  props.portBSchedules && props.portBSchedules.length
+    ? JSON.parse(JSON.stringify(props.portBSchedules))
+    : [{ departure: "", arrival: "", vessel: "" }],
+);
+
+const isSyncingFromRoute = ref(false);
+
+watch(
+  () => props.portASchedules,
+  (v) => (localPortASchedules.value = JSON.parse(JSON.stringify(v || []))),
+);
+watch(
+  () => props.portBSchedules,
+  (v) => (localPortBSchedules.value = JSON.parse(JSON.stringify(v || []))),
+);
+
+watch(
+  selectedRoute,
+  (route) => {
+    if (!route || mode !== "create") return;
+    const existingA = buildExistingRows(route.portA?.schedules);
+    const existingB = buildExistingRows(route.portB?.schedules);
+    isSyncingFromRoute.value = true;
+    localPortASchedules.value = existingA.length
+      ? [...existingA, { departure: "", arrival: "", vessel: "" }]
+      : [{ departure: "", arrival: "", vessel: "" }];
+    localPortBSchedules.value = existingB.length
+      ? [...existingB, { departure: "", arrival: "", vessel: "" }]
+      : [{ departure: "", arrival: "", vessel: "" }];
+    isSyncingFromRoute.value = false;
+  },
+  { immediate: true },
+);
+
+const addRow = (port) => {
+  if (port === "a")
+    localPortASchedules.value.push({ departure: "", arrival: "", vessel: "" });
+  else
+    localPortBSchedules.value.push({ departure: "", arrival: "", vessel: "" });
+};
+
+const fetchRoutes = async () => {
+  if (routes.value && routes.value.length) return;
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${apiBase}/routes/with-schedules`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+    });
+    const data = await response.json();
+    if (response.ok && data.success && data.data?.routes) {
+      routes.value = data.data.routes.map((route) => ({
+        route_id: route.route_id,
+        portA: route.portA,
+        portB: route.portB,
+      }));
+    } else {
+      routes.value = [];
+    }
+  } catch (err) {
+    routes.value = [];
+  }
+};
+
+onMounted(fetchRoutes);
+
+const saveSchedule = async () => {
+  const token = localStorage.getItem("token");
+  // ensure we have selectedRoute
+  if (!selectedRoute.value) {
+    alert("Select a route before saving");
+    return;
+  }
+
+  // Helper to POST new schedule
+  const postSchedule = async (payload) => {
+    await fetch(`${apiBase}/schedules`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+      body: JSON.stringify(payload),
+    });
+  };
+
+  // Helper to PUT update schedule when sched_id is present
+  const putSchedule = async (schedId, payload) => {
+    await fetch(`${apiBase}/schedules/${schedId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+      body: JSON.stringify(payload),
+    });
+  };
+
+  // Port A
+  for (const row of localPortASchedules.value) {
+    if (row.existing) continue;
+    if (!row.departure) continue;
+    const payload = {
+      departure_time: row.departure,
+      arrival_time: row.arrival || null,
+      port_id: selectedRoute.value.portA.port_id,
+    };
+    if (mode === "edit" && row.sched_id) {
+      await putSchedule(row.sched_id, payload);
+    } else {
+      await postSchedule(payload);
+    }
+  }
+
+  // Port B
+  for (const row of localPortBSchedules.value) {
+    if (row.existing) continue;
+    if (!row.departure) continue;
+    const payload = {
+      departure_time: row.departure,
+      arrival_time: row.arrival || null,
+      port_id: selectedRoute.value.portB.port_id,
+    };
+    if (mode === "edit" && row.sched_id) {
+      await putSchedule(row.sched_id, payload);
+    } else {
+      await postSchedule(payload);
+    }
+  }
+
+  emit("save");
+  emit("close");
+};
+</script>
+
+
 <template>
   <div
     class="fixed inset-0 bg-black/30 flex items-center justify-center z-50"
@@ -190,187 +374,3 @@
   </div>
 </template>
 
-<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\components\ModalCreateSchedule.vue -->
-<script setup>
-import { ref, computed, watch, onMounted } from "vue";
-
-const props = defineProps({
-  routes: { type: Array, default: () => [] },
-  selectedRouteId: { type: [String, Number], default: "" },
-  portASchedules: { type: Array, default: () => [] },
-  portBSchedules: { type: Array, default: () => [] },
-  mode: { type: String, default: "create" },
-});
-
-const emit = defineEmits(["close", "save", "update:selectedRouteId"]);
-const apiBase = import.meta.env.VITE_API_URL;
-
-const routes = ref(props.routes || []);
-watch(
-  () => props.routes,
-  (v) => (routes.value = v || []),
-);
-
-const mode = props.mode || "create";
-
-const selectedRouteId = ref(props.selectedRouteId || "");
-watch(
-  () => props.selectedRouteId,
-  (v) => (selectedRouteId.value = v || ""),
-);
-watch(selectedRouteId, (v) => emit("update:selectedRouteId", v));
-
-const selectedRoute = computed(() =>
-  routes.value.find((r) => r.route_id == selectedRouteId.value),
-);
-
-const buildExistingRows = (schedules) =>
-  (schedules || []).map((s) => ({
-    sched_id: s.sched_id,
-    departure: s.departure_time || "",
-    arrival: s.arrival_time || "",
-    existing: true,
-  }));
-
-const localPortASchedules = ref(
-  props.portASchedules && props.portASchedules.length
-    ? JSON.parse(JSON.stringify(props.portASchedules))
-    : [{ departure: "", arrival: "", vessel: "" }],
-);
-const localPortBSchedules = ref(
-  props.portBSchedules && props.portBSchedules.length
-    ? JSON.parse(JSON.stringify(props.portBSchedules))
-    : [{ departure: "", arrival: "", vessel: "" }],
-);
-
-const isSyncingFromRoute = ref(false);
-
-watch(
-  () => props.portASchedules,
-  (v) => (localPortASchedules.value = JSON.parse(JSON.stringify(v || []))),
-);
-watch(
-  () => props.portBSchedules,
-  (v) => (localPortBSchedules.value = JSON.parse(JSON.stringify(v || []))),
-);
-
-watch(
-  selectedRoute,
-  (route) => {
-    if (!route || mode !== "create") return;
-    const existingA = buildExistingRows(route.portA?.schedules);
-    const existingB = buildExistingRows(route.portB?.schedules);
-    isSyncingFromRoute.value = true;
-    localPortASchedules.value = existingA.length
-      ? [...existingA, { departure: "", arrival: "", vessel: "" }]
-      : [{ departure: "", arrival: "", vessel: "" }];
-    localPortBSchedules.value = existingB.length
-      ? [...existingB, { departure: "", arrival: "", vessel: "" }]
-      : [{ departure: "", arrival: "", vessel: "" }];
-    isSyncingFromRoute.value = false;
-  },
-  { immediate: true },
-);
-
-const addRow = (port) => {
-  if (port === "a")
-    localPortASchedules.value.push({ departure: "", arrival: "", vessel: "" });
-  else
-    localPortBSchedules.value.push({ departure: "", arrival: "", vessel: "" });
-};
-
-const fetchRoutes = async () => {
-  if (routes.value && routes.value.length) return;
-  try {
-    const token = localStorage.getItem("token");
-    const response = await fetch(`${apiBase}/routes/with-schedules`, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-    });
-    const data = await response.json();
-    if (response.ok && data.success && data.data?.routes) {
-      routes.value = data.data.routes.map((route) => ({
-        route_id: route.route_id,
-        portA: route.portA,
-        portB: route.portB,
-      }));
-    } else {
-      routes.value = [];
-    }
-  } catch (err) {
-    routes.value = [];
-  }
-};
-
-onMounted(fetchRoutes);
-
-const saveSchedule = async () => {
-  const token = localStorage.getItem("token");
-  // ensure we have selectedRoute
-  if (!selectedRoute.value) {
-    alert("Select a route before saving");
-    return;
-  }
-
-  // Helper to POST new schedule
-  const postSchedule = async (payload) => {
-    await fetch(`${apiBase}/schedules`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-      body: JSON.stringify(payload),
-    });
-  };
-
-  // Helper to PUT update schedule when sched_id is present
-  const putSchedule = async (schedId, payload) => {
-    await fetch(`${apiBase}/schedules/${schedId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-      body: JSON.stringify(payload),
-    });
-  };
-
-  // Port A
-  for (const row of localPortASchedules.value) {
-    if (row.existing) continue;
-    if (!row.departure) continue;
-    const payload = {
-      departure_time: row.departure,
-      arrival_time: row.arrival || null,
-      port_id: selectedRoute.value.portA.port_id,
-    };
-    if (mode === "edit" && row.sched_id) {
-      await putSchedule(row.sched_id, payload);
-    } else {
-      await postSchedule(payload);
-    }
-  }
-
-  // Port B
-  for (const row of localPortBSchedules.value) {
-    if (row.existing) continue;
-    if (!row.departure) continue;
-    const payload = {
-      departure_time: row.departure,
-      arrival_time: row.arrival || null,
-      port_id: selectedRoute.value.portB.port_id,
-    };
-    if (mode === "edit" && row.sched_id) {
-      await putSchedule(row.sched_id, payload);
-    } else {
-      await postSchedule(payload);
-    }
-  }
-
-  emit("save");
-  emit("close");
-};
-</script>
