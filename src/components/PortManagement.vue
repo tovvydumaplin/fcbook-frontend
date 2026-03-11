@@ -1,3 +1,94 @@
+<script setup>
+import { ref, computed } from "vue";
+import { Plus, BarChart3, AlertCircle, Search } from "lucide-vue-next";
+import ModalCreatePort from "../components/Modals/Port/ModalCreatePort.vue";
+
+const activeTab = ref("all");
+const searchQuery = ref("");
+const isModalOpen = ref(false);
+
+const tabs = [
+  { id: "all", name: "All Ports" },
+  { id: "active", name: "Active Ports" },
+  { id: "closed", name: "Closed Ports" },
+];
+
+const ports = ref([
+  {
+    id: 1,
+    name: "Batangas Port",
+    corridor: "Western",
+    facilities: "Ramp",
+    updatedBy: "Tovvy B. Dumaplin",
+    status: "Available",
+    createdAt: "2025-05-02 9:24",
+    lastUpdated: "2025-08-02 9:24",
+  },
+  {
+    id: 2,
+    name: "Calapan Port",
+    corridor: "Western",
+    facilities: "Ramp",
+    updatedBy: "Tovvy B. Dumaplin",
+    status: "Online",
+    createdAt: "2025-05-02 9:24",
+    lastUpdated: "2025-08-02 9:24",
+  },
+]);
+
+const totalPorts = computed(() => ports.value.length);
+const closedPorts = computed(
+  () => ports.value.filter((port) => port.status === "Offline").length,
+);
+const zeroTransactionPorts = ref(0);
+
+const filteredPorts = computed(() => {
+  let filtered = ports.value;
+
+  if (activeTab.value === "active") {
+    filtered = filtered.filter((port) => port.status !== "Offline");
+  } else if (activeTab.value === "closed") {
+    filtered = filtered.filter((port) => port.status === "Offline");
+  }
+
+  if (searchQuery.value) {
+    filtered = filtered.filter(
+      (port) =>
+        port.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+        port.corridor.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+        port.updatedBy.toLowerCase().includes(searchQuery.value.toLowerCase()),
+    );
+  }
+
+  return filtered;
+});
+
+const getStatusClass = (status) => {
+  switch (status) {
+    case "Available":
+      return "bg-green-100 text-green-800";
+    case "Online":
+      return "bg-green-100 text-green-800";
+    case "Offline":
+      return "bg-gray-100 text-gray-800";
+    default:
+      return "bg-gray-100 text-gray-800";
+  }
+};
+
+const handleAction = (port) => {
+  console.log(
+    `${port.status === "Available" ? "Viewing" : "Opening"} port:`,
+    port.name,
+  );
+};
+
+const handleSave = (newPort) => {
+  ports.value.unshift(newPort);
+  isModalOpen.value = false;
+};
+</script>
+
 <template>
   <div class="min-h-full bg-gray-50 p-6">
     <!-- Header -->
@@ -215,94 +306,3 @@
     </transition>
   </div>
 </template>
-
-<script setup>
-import { ref, computed } from "vue";
-import { Plus, BarChart3, AlertCircle, Search } from "lucide-vue-next";
-import ModalCreatePort from "@/components/ModalCreatePort.vue";
-
-const activeTab = ref("all");
-const searchQuery = ref("");
-const isModalOpen = ref(false);
-
-const tabs = [
-  { id: "all", name: "All Ports" },
-  { id: "active", name: "Active Ports" },
-  { id: "closed", name: "Closed Ports" },
-];
-
-const ports = ref([
-  {
-    id: 1,
-    name: "Batangas Port",
-    corridor: "Western",
-    facilities: "Ramp",
-    updatedBy: "Tovvy B. Dumaplin",
-    status: "Available",
-    createdAt: "2025-05-02 9:24",
-    lastUpdated: "2025-08-02 9:24",
-  },
-  {
-    id: 2,
-    name: "Calapan Port",
-    corridor: "Western",
-    facilities: "Ramp",
-    updatedBy: "Tovvy B. Dumaplin",
-    status: "Online",
-    createdAt: "2025-05-02 9:24",
-    lastUpdated: "2025-08-02 9:24",
-  },
-]);
-
-const totalPorts = computed(() => ports.value.length);
-const closedPorts = computed(
-  () => ports.value.filter((port) => port.status === "Offline").length
-);
-const zeroTransactionPorts = ref(0);
-
-const filteredPorts = computed(() => {
-  let filtered = ports.value;
-
-  if (activeTab.value === "active") {
-    filtered = filtered.filter((port) => port.status !== "Offline");
-  } else if (activeTab.value === "closed") {
-    filtered = filtered.filter((port) => port.status === "Offline");
-  }
-
-  if (searchQuery.value) {
-    filtered = filtered.filter(
-      (port) =>
-        port.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-        port.corridor.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-        port.updatedBy.toLowerCase().includes(searchQuery.value.toLowerCase())
-    );
-  }
-
-  return filtered;
-});
-
-const getStatusClass = (status) => {
-  switch (status) {
-    case "Available":
-      return "bg-green-100 text-green-800";
-    case "Online":
-      return "bg-green-100 text-green-800";
-    case "Offline":
-      return "bg-gray-100 text-gray-800";
-    default:
-      return "bg-gray-100 text-gray-800";
-  }
-};
-
-const handleAction = (port) => {
-  console.log(
-    `${port.status === "Available" ? "Viewing" : "Opening"} port:`,
-    port.name
-  );
-};
-
-const handleSave = (newPort) => {
-  ports.value.unshift(newPort);
-  isModalOpen.value = false;
-};
-</script>

@@ -1,4 +1,3 @@
-<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\components\sideBar.vue -->
 <template>
   <div
     class="w-80 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col overflow-y-auto"
@@ -233,7 +232,7 @@ const toggleSystem = () => (isSystemOpen.value = !isSystemOpen.value);
 
 // Sidebar items
 const moduleItems = [
-  { name: "Ports", route: "/create-port", icon: portsIcon },
+  { name: "Ports", route: "/ports", icon: portsIcon },
   { name: "Vessels", route: "/vessels", icon: vesselsIcon },
   { name: "Routes", route: "/routes", icon: routesIcon },
   { name: "Schedule", route: "/schedule", icon: schedulesIcon },

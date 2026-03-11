@@ -1,8 +1,8 @@
 <script setup>
 import { nextTick, ref, watch } from "vue";
-import ModalPaymentSelection from "../components/ModalPaymentSelection.vue";
-import VehicleSelection from "../components/VehicleSelection.vue";
-import ViewTellerPassenger from "../components/ViewTellerPassenger.vue";
+import ModalPaymentSelection from "../components/Modals/Teller/ModalPaymentSelection.vue";
+import VehicleSelection from "../components/Modals/Teller/VehicleSelection.vue";
+import ViewTellerPassenger from "../components/Modals/Teller/ViewTellerPassenger.vue";
 import TellerHeader from "../components/TellerHeader.vue";
 import { onMounted } from "vue";
 import {

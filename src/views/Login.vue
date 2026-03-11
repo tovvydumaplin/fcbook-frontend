@@ -1,4 +1,118 @@
-<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\views\Login.vue -->
+<script setup>
+import { ref, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
+const step = ref(1);
+const username = ref("");
+const password = ref("");
+const staySignedIn = ref(false);
+const showPassword = ref(false);
+const router = useRouter();
+const route = useRoute();
+const errorMsg = ref("");
+const successMsg = ref(null);
+const isLoading = ref(false);
+const apiBase = import.meta.env.VITE_API_URL;
+const handleNext = () => {
+  if (username.value) step.value = 2;
+};
+
+const handleSignIn = async () => {
+  errorMsg.value = "";
+  isLoading.value = true;
+  try {
+    const response = await fetch(`${apiBase}/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: username.value,
+        password: password.value,
+      }),
+    });
+    const data = await response.json();
+    console.log("Login response:", data);
+    console.log("apiBase:", apiBase);
+    if (response.ok && data.success) {
+      localStorage.setItem("token", data.data.token);
+      localStorage.setItem("user", JSON.stringify(data.data.user));
+      router.push({ path: "/dashboard", query: { loggedIn: "1" } });
+    } else {
+      if (data.errors) {
+        if (data.errors.email && data.errors.email.length > 0) {
+          errorMsg.value = data.errors.email[0];
+        } else if (data.errors.password && data.errors.password.length > 0) {
+          errorMsg.value = data.errors.password[0];
+        } else {
+          errorMsg.value = data.message || "Login failed";
+        }
+      } else if (
+        data.message === "Unauthenticated" ||
+        data.error_code === "UNAUTHENTICATED"
+      ) {
+        errorMsg.value = "Incorrect username or password.";
+      } else {
+        errorMsg.value = data.message || "Login failed";
+      }
+    }
+  } catch (err) {
+    errorMsg.value = "Network error";
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const showSuccess = (title, description) => {
+  successMsg.value = { title, description };
+  setTimeout(() => {
+    successMsg.value = null;
+  }, 2200);
+};
+
+watch(
+  () => route.query.loggedOut,
+  (val) => {
+    if (val) {
+      showSuccess(
+        "Signed out",
+        "You’ve been logged out safely. See you next time.",
+      );
+      router.replace({ path: route.path, query: {} });
+    }
+  },
+  { immediate: true },
+);
+</script>
+
+<style scoped>
+.login-card {
+  transition:
+    transform 200ms ease,
+    box-shadow 200ms ease;
+  animation: welcome-drop 600ms ease;
+}
+
+.login-card:focus-within {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.18);
+}
+
+@keyframes welcome-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-card {
+    animation: none;
+  }
+}
+</style>
+
 <template>
   <div class="min-h-screen flex items-center justify-center bg-gray-50">
     <div class="login-card bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
@@ -133,167 +247,54 @@
       enter-to-class="opacity-100 translate-y-0"
       leave-from-class="opacity-100 translate-y-0"
       leave-to-class="opacity-0 -translate-y-6"
+    >
+      <div
+        v-if="errorMsg"
+        class="flex items-center gap-2 text-red-500 absolute top-[50px] left-1/2 -translate-x-1/2 p-3 bg-red-100 rounded-xl shadow-lg"
+      >
+        <AlertCircle class="w-5 h-5 flex-shrink-0" />
+        <span>{{ errorMsg }}</span>
+      </div>
+    </transition>
+    <transition
+      name="slide-down"
+      enter-active-class="transition-all duration-300"
+      leave-active-class="transition-all duration-200"
+      enter-from-class="opacity-0 -translate-y-6"
+      enter-to-class="opacity-100 translate-y-0"
+      leave-from-class="opacity-100 translate-y-0"
+      leave-to-class="opacity-0 -translate-y-6"
+    >
+      <div
+        v-if="successMsg"
+        class="fixed top-6 right-6 z-50 flex items-start gap-3 rounded-2xl border border-gray-200 bg-white/90 px-4 py-3 text-gray-900 shadow-md shadow-gray-200/60 backdrop-blur"
       >
         <div
-          v-if="errorMsg"
-          class="flex items-center gap-2 text-red-500 absolute top-[50px] left-1/2 -translate-x-1/2 p-3 bg-red-100 rounded-xl shadow-lg"
+          class="flex h-8 w-8 items-center justify-center rounded-full bg-green-100"
         >
-          <AlertCircle class="w-5 h-5 flex-shrink-0" />
-          <span>{{ errorMsg }}</span>
-        </div>
-      </transition>
-      <transition
-        name="slide-down"
-        enter-active-class="transition-all duration-300"
-        leave-active-class="transition-all duration-200"
-        enter-from-class="opacity-0 -translate-y-6"
-        enter-to-class="opacity-100 translate-y-0"
-        leave-from-class="opacity-100 translate-y-0"
-        leave-to-class="opacity-0 -translate-y-6"
-      >
-        <div
-          v-if="successMsg"
-          class="fixed top-6 right-6 z-50 flex items-start gap-3 rounded-2xl border border-gray-200 bg-white/90 px-4 py-3 text-gray-900 shadow-md shadow-gray-200/60 backdrop-blur"
-        >
-          <div
-            class="flex h-8 w-8 items-center justify-center rounded-full bg-green-100"
+          <svg
+            class="h-5 w-5 text-green-600"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            viewBox="0 0 24 24"
           >
-            <svg
-              class="h-5 w-5 text-green-600"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M5 13l4 4L19 7"
+            />
+          </svg>
+        </div>
+        <div class="text-left">
+          <div class="font-semibold leading-5 text-green-700">
+            {{ successMsg.title }}
           </div>
-          <div class="text-left">
-            <div class="font-semibold leading-5 text-green-700">
-              {{ successMsg.title }}
-            </div>
-            <div class="text-xs text-gray-600">
-              {{ successMsg.description }}
-            </div>
+          <div class="text-xs text-gray-600">
+            {{ successMsg.description }}
           </div>
         </div>
-      </transition>
-    </div>
+      </div>
+    </transition>
+  </div>
 </template>
-
-<script setup>
-import { ref, watch } from "vue";
-import { useRouter, useRoute } from "vue-router";
-const step = ref(1);
-const username = ref("");
-const password = ref("");
-const staySignedIn = ref(false);
-const showPassword = ref(false);
-const router = useRouter();
-const route = useRoute();
-const errorMsg = ref("");
-const successMsg = ref(null);
-const isLoading = ref(false);
-const apiBase = import.meta.env.VITE_API_URL;
-const handleNext = () => {
-  if (username.value) step.value = 2;
-};
-
-const handleSignIn = async () => {
-  errorMsg.value = "";
-  isLoading.value = true;
-  try {
-    const response = await fetch(`${apiBase}/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: username.value,
-        password: password.value,
-      }),
-    });
-    const data = await response.json();
-    console.log("Login response:", data);
-    console.log("apiBase:", apiBase);
-    if (response.ok && data.success) {
-      localStorage.setItem("token", data.data.token);
-      localStorage.setItem("user", JSON.stringify(data.data.user));
-      router.push({ path: "/dashboard", query: { loggedIn: "1" } });
-    } else {
-      if (data.errors) {
-        if (data.errors.email && data.errors.email.length > 0) {
-          errorMsg.value = data.errors.email[0];
-        } else if (data.errors.password && data.errors.password.length > 0) {
-          errorMsg.value = data.errors.password[0];
-        } else {
-          errorMsg.value = data.message || "Login failed";
-        }
-      } else if (
-        data.message === "Unauthenticated" ||
-        data.error_code === "UNAUTHENTICATED"
-      ) {
-        errorMsg.value = "Incorrect username or password.";
-      } else {
-        errorMsg.value = data.message || "Login failed";
-      }
-    }
-  } catch (err) {
-    errorMsg.value = "Network error";
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-const showSuccess = (title, description) => {
-  successMsg.value = { title, description };
-  setTimeout(() => {
-    successMsg.value = null;
-  }, 2200);
-};
-
-watch(
-  () => route.query.loggedOut,
-  (val) => {
-    if (val) {
-      showSuccess(
-        "Signed out",
-        "You’ve been logged out safely. See you next time."
-      );
-      router.replace({ path: route.path, query: {} });
-    }
-  },
-  { immediate: true }
-);
-</script>
-
-<style scoped>
-.login-card {
-  transition: transform 200ms ease, box-shadow 200ms ease;
-  animation: welcome-drop 600ms ease;
-}
-
-.login-card:focus-within {
-  transform: translateY(-2px);
-  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.18);
-}
-
-@keyframes welcome-drop {
-  0% {
-    opacity: 0;
-    transform: translateY(-12px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .login-card {
-    animation: none;
-  }
-}
-</style>

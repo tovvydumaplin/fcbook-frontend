@@ -1,4 +1,3 @@
-<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\views\ScheduleModule.vue -->
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import {
@@ -9,15 +8,22 @@ import {
   Edit,
   List,
 } from "lucide-vue-next";
-import ModalCreateSchedule from "../components/ModalCreateSchedule.vue";
-import ModalScheduleOptions from "../components/ModalScheduleOptions.vue";
+import ModalCreateSchedule from "../components/Modals/Schedule/ModalCreateSchedule.vue";
+import ModalScheduleOptions from "../components/Modals/Schedule/ModalScheduleOptions.vue";
 
 const apiBase = import.meta.env.VITE_API_URL;
+const vessels = ref([]);
+const routes = ref([]);
 const activeTab = ref("all");
 const searchQuery = ref("");
+const modalMode = ref("create");
+const modalRouteId = ref("");
 const isTableLoading = ref(false);
 const selectedRoute = ref(null);
-const vessels = ref([]);
+const isCreateScheduleModalOpen = ref(false);
+const isOptionsModalOpen = ref(false);
+const modalPortASchedules = ref([{ departure: "", arrival: "" }]);
+const modalPortBSchedules = ref([{ departure: "", arrival: "" }]);
 
 const tabs = [
   { id: "all", name: "All Routes" },
@@ -25,7 +31,13 @@ const tabs = [
   { id: "closed", name: "Closed Route" },
 ];
 
-const routes = ref([]);
+const activeSchedules = computed(
+  () => routes.value.filter((r) => r.status === "active").length,
+);
+
+const closedSchedules = computed(
+  () => routes.value.filter((r) => r.status !== "active").length,
+);
 
 const normalizeRouteStatus = (status) => {
   if (!status) return "inactive";
@@ -53,12 +65,6 @@ const totalSchedules = computed(() =>
       (r.portB?.schedules?.length || 0),
     0,
   ),
-);
-const activeSchedules = computed(
-  () => routes.value.filter((r) => r.status === "active").length,
-);
-const closedSchedules = computed(
-  () => routes.value.filter((r) => r.status !== "active").length,
 );
 
 const filteredRoutes = computed(() => {
@@ -144,11 +150,6 @@ const fetchVessels = async () => {
   }
 };
 
-onMounted(() => {
-  fetchRoutes();
-  fetchVessels();
-});
-
 const selectRoute = async (route) => {
   selectedRoute.value = route;
 };
@@ -188,7 +189,6 @@ const handleVesselChange = async (scheduleId, vesselId) => {
     const data = await response.json();
     console.log("Response data:", data);
     if (response.ok && data.success) {
-      // Update successful
       await fetchRoutes();
     } else {
       console.error("Failed to update vessel:", data.message || data);
@@ -219,7 +219,6 @@ const handleStatusToggle = async (scheduleId, currentStatus) => {
     const data = await response.json();
     console.log("Response data:", data);
     if (response.ok && data.success) {
-      // Update successful
       await fetchRoutes();
     } else {
       console.error("Failed to update status:", data.message || data);
@@ -230,16 +229,6 @@ const handleStatusToggle = async (scheduleId, currentStatus) => {
     alert("Network error updating schedule status");
   }
 };
-
-const isCreateScheduleModalOpen = ref(false);
-const isOptionsModalOpen = ref(false);
-
-const modalMode = ref("create");
-
-// Sched modal
-const modalRouteId = ref("");
-const modalPortASchedules = ref([{ departure: "", arrival: "" }]);
-const modalPortBSchedules = ref([{ departure: "", arrival: "" }]);
 
 const openCreateModal = () => {
   modalMode.value = "create";
@@ -319,30 +308,14 @@ const handleSaveScheduleOptions = async (scheduleOptions) => {
     alert("Failed to save schedule options");
   }
 };
+
+onMounted(() => {
+  fetchRoutes();
+  fetchVessels();
+});
 </script>
 
 <template>
-  <transition name="modal-fade">
-    <ModalCreateSchedule
-      v-if="isCreateScheduleModalOpen"
-      :routes="routes"
-      :selectedRouteId="modalRouteId"
-      :portASchedules="modalPortASchedules"
-      :portBSchedules="modalPortBSchedules"
-      :mode="modalMode"
-      @update:selectedRouteId="modalRouteId = $event"
-      @close="isCreateScheduleModalOpen = false"
-      @save="handleSaveSchedule"
-    />
-  </transition>
-  <transition name="modal-fade">
-    <ModalScheduleOptions
-      v-if="isOptionsModalOpen && selectedRoute"
-      :selectedRoute="selectedRoute"
-      @close="isOptionsModalOpen = false"
-      @save="handleSaveScheduleOptions"
-    />
-  </transition>
   <div class="min-h-full bg-gray-50 p-6">
     <!-- Header -->
     <div class="mb-6">
@@ -402,10 +375,9 @@ const handleSaveScheduleOptions = async (scheduleOptions) => {
         <p class="text-sm text-gray-500">Total of inactive routes</p>
       </div>
     </div>
-
     <!-- Tabs -->
     <div
-      class="border border-gray-300 mb-2 rounded-lg bg-gray-200 inline-block mb-8"
+      class="border border-gray-300 rounded-lg bg-gray-200 inline-block mb-8"
     >
       <nav class="flex space-x-4 px-2 py-2">
         <button
@@ -528,7 +500,7 @@ const handleSaveScheduleOptions = async (scheduleOptions) => {
         <!-- Right: Schedule Details for selected route -->
         <div class="col-span-2 bg-white rounded-lg border border-gray-200">
           <div
-            class="flex justify-between items-center mb-2 px-4 py-3 border-b border-gray-200 mb-4"
+            class="flex justify-between items-center px-4 py-3 border-b border-gray-200 mb-4"
           >
             <h2 class="text-lg font-medium text-gray-900">
               {{
@@ -745,4 +717,25 @@ const handleSaveScheduleOptions = async (scheduleOptions) => {
       </div>
     </div>
   </div>
+  <transition name="modal-fade">
+    <ModalCreateSchedule
+      v-if="isCreateScheduleModalOpen"
+      :routes="routes"
+      :selectedRouteId="modalRouteId"
+      :portASchedules="modalPortASchedules"
+      :portBSchedules="modalPortBSchedules"
+      :mode="modalMode"
+      @update:selectedRouteId="modalRouteId = $event"
+      @close="isCreateScheduleModalOpen = false"
+      @save="handleSaveSchedule"
+    />
+  </transition>
+  <transition name="modal-fade">
+    <ModalScheduleOptions
+      v-if="isOptionsModalOpen && selectedRoute"
+      :selectedRoute="selectedRoute"
+      @close="isOptionsModalOpen = false"
+      @save="handleSaveScheduleOptions"
+    />
+  </transition>
 </template>

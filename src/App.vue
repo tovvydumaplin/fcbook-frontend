@@ -1,7 +1,5 @@
 <script setup>
-import HelloWorld from "./components/HelloWorld.vue";
-import MyForm from "./components/MyForm.vue";
-import sideBar from "./components/sideBar.vue";
+import SideBar from "./components/SideBar.vue";
 import Header from "./components/Header.vue";
 import { useRoute } from "vue-router";
 const route = useRoute();
@@ -13,8 +11,8 @@ const route = useRoute();
     <Header v-if="route.path !== '/' && route.path !== '/teller-booking'" />
 
     <div class="flex flex-1">
-      <!-- Sidebar -->
-      <sideBar
+      <!-- SideBar -->
+      <SideBar
         v-if="route.path !== '/' && route.path !== '/teller-booking'"
         class="w-80 bg-gray-100 min-h-screen"
       />

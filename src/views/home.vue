@@ -1,3 +1,57 @@
+<script setup>
+import { ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { Settings } from "lucide-vue-next";
+
+const route = useRoute();
+const router = useRouter();
+const successMsg = ref(null);
+
+const showSuccess = (title, description) => {
+  successMsg.value = { title, description };
+  setTimeout(() => {
+    successMsg.value = null;
+  }, 2200);
+};
+
+watch(
+  () => route.query.loggedIn,
+  (val) => {
+    if (val) {
+      showSuccess(
+        "Welcome back!",
+        "You’re signed in. Redirecting to your dashboard.",
+      );
+      router.replace({ path: route.path, query: {} });
+    }
+  },
+  { immediate: true },
+);
+</script>
+
+<style scoped>
+.welcome-card {
+  animation: welcome-drop 600ms ease;
+}
+
+@keyframes welcome-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-card {
+    animation: none;
+  }
+}
+</style>
+
 <template>
   <div class="min-h-full flex items-center justify-center bg-gray-50">
     <div
@@ -12,7 +66,7 @@
       </p>
       <router-link
         to="/"
-        class="inline-block px-6 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700 transition flex items-center justify-center gap-2"
+        class="px-6 py-2 bg-blue-600 text-white rounded-md shadow hover:bg-blue-700 transition flex items-center justify-center gap-2"
       >
         <div class="flex gap-2 items-center">
           <Settings class="w-5 h-5 animate-spin" />
@@ -62,56 +116,3 @@
     </transition>
   </div>
 </template>
-<script setup>
-import { ref, watch } from "vue";
-import { useRoute, useRouter } from "vue-router";
-import { Settings } from "lucide-vue-next";
-
-const route = useRoute();
-const router = useRouter();
-const successMsg = ref(null);
-
-const showSuccess = (title, description) => {
-  successMsg.value = { title, description };
-  setTimeout(() => {
-    successMsg.value = null;
-  }, 2200);
-};
-
-watch(
-  () => route.query.loggedIn,
-  (val) => {
-    if (val) {
-      showSuccess(
-        "Welcome back!",
-        "You’re signed in. Redirecting to your dashboard."
-      );
-      router.replace({ path: route.path, query: {} });
-    }
-  },
-  { immediate: true }
-);
-</script>
-
-<style scoped>
-.welcome-card {
-  animation: welcome-drop 600ms ease;
-}
-
-@keyframes welcome-drop {
-  0% {
-    opacity: 0;
-    transform: translateY(-12px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .welcome-card {
-    animation: none;
-  }
-}
-</style>
