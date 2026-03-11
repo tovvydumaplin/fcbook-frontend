@@ -64,11 +64,7 @@ const fetchRouteVehicleRates = async (routeId) => {
 watch(
   () => props.selectedRoute,
   (newRoute) => {
-    if (newRoute) {
-      fetchRouteVehicleRates(newRoute.id);
-    } else {
-      accommodations.value = [];
-    }
+    fetchRouteVehicleRates(newRoute.id);
   },
   { immediate: true },
 );
