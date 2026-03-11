@@ -1,4 +1,51 @@
-<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\components\ModalCreateRoute.vue -->
+<script setup>
+import { ref } from "vue";
+
+const emit = defineEmits(["save", "close"]);
+
+const apiBase = import.meta.env.VITE_API_URL;
+
+const passengerAccommodation = ref("");
+const isLoading = ref(false);
+const errorMsg = ref("");
+
+const saveAccommodation = async () => {
+  if (!passengerAccommodation.value.trim()) {
+    errorMsg.value = "Accommodation name is required";
+    return;
+  }
+
+  isLoading.value = true;
+  errorMsg.value = "";
+
+  try {
+    const response = await fetch(`${apiBase}/passenger-accommodations`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify({
+        accommodation_name: passengerAccommodation.value,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to save accommodation");
+    }
+
+    emit("save"); // notify parent
+    emit("close"); // close modal
+  } catch (error) {
+    console.error(error);
+    errorMsg.value = "Something went wrong while saving.";
+  } finally {
+    isLoading.value = false;
+  }
+};
+</script>
+
 <template>
   <div
     class="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50"
@@ -92,51 +139,3 @@
     </div>
   </div>
 </template>
-
-<script setup>
-import { ref } from "vue";
-
-const emit = defineEmits(["save", "close"]);
-
-const apiBase = import.meta.env.VITE_API_URL;
-
-const passengerAccommodation = ref("");
-const isLoading = ref(false);
-const errorMsg = ref("");
-
-const saveAccommodation = async () => {
-  if (!passengerAccommodation.value.trim()) {
-    errorMsg.value = "Accommodation name is required";
-    return;
-  }
-
-  isLoading.value = true;
-  errorMsg.value = "";
-
-  try {
-    const response = await fetch(`${apiBase}/passenger-accommodations`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-      body: JSON.stringify({
-        accommodation_name: passengerAccommodation.value,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to save accommodation");
-    }
-
-    emit("save"); // notify parent
-    emit("close"); // close modal
-  } catch (error) {
-    console.error(error);
-    errorMsg.value = "Something went wrong while saving.";
-  } finally {
-    isLoading.value = false;
-  }
-};
-</script>

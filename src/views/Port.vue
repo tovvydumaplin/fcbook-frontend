@@ -1,4 +1,156 @@
-<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\views\createPort.vue -->
+<script setup>
+import { ref, computed, onMounted } from "vue";
+import { Plus, BarChart3, AlertCircle, Search } from "lucide-vue-next";
+import ModalCreatePort from "../components/Modals/Port/ModalCreatePort.vue";
+import ModalViewPort from "../components/Modals/Port/ModalViewPort.vue";
+
+const isModalOpen = ref(false);
+const isLoading = ref(false);
+const activeTab = ref("all");
+const searchQuery = ref("");
+const apiBase = import.meta.env.VITE_API_URL;
+const tabs = [
+  { id: "all", name: "All Ports" },
+  { id: "active", name: "Active Ports" },
+  { id: "closed", name: "Closed Ports" },
+];
+
+const ports = ref([]);
+const totalPorts = computed(() => ports.value.length);
+const closedPorts = computed(
+  () => ports.value.filter((p) => p.status === "Offline").length,
+);
+const zeroTransactionPorts = ref(0);
+
+const selectedPort = ref(null);
+const selectedPortPassengers = ref([]);
+
+const filteredPorts = computed(() => {
+  let filtered = ports.value;
+
+  if (activeTab.value === "active")
+    filtered = filtered.filter(
+      (p) => p.status === "Online" || p.status === "Available",
+    );
+  else if (activeTab.value === "closed")
+    filtered = filtered.filter((p) => p.status === "Offline");
+
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase();
+    filtered = filtered.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.corridor.toLowerCase().includes(q) ||
+        p.updatedBy.toLowerCase().includes(q),
+    );
+  }
+  return filtered;
+});
+
+const getStatusClass = (status) => {
+  if (status === "Available" || status === "Online")
+    return "bg-green-100 text-green-800";
+  return "bg-gray-100 text-gray-800";
+};
+
+const handleAction = (port) => {
+  selectedPort.value = port;
+  selectedPortPassengers.value = [
+    {
+      id: 1,
+      fullname: "Towy B. Dumaplin",
+      bookingNo: "BF09KLDXZ",
+      departureDate: "2025-08-02",
+      transactionDate: "2025-08-02",
+      status: "Paid",
+    },
+    {
+      id: 2,
+      fullname: "Johnny D. Doe",
+      bookingNo: "BF09KLDXZ",
+      departureDate: "2025-08-02",
+      transactionDate: "2025-08-02",
+      status: "Cancelled",
+    },
+    {
+      id: 3,
+      fullname: "Jade L. Smith",
+      bookingNo: "BF09KLDXZ",
+      departureDate: "2025-08-02",
+      transactionDate: "2025-08-02",
+      status: "Paid",
+    },
+    {
+      id: 4,
+      fullname: "Carlsen Y. Not",
+      bookingNo: "BF09KLDXZ",
+      departureDate: "2025-08-02",
+      transactionDate: "2025-08-02",
+      status: "Open",
+    },
+    {
+      id: 5,
+      fullname: "Earl G. Barkawi",
+      bookingNo: "BF09KLDXZ",
+      departureDate: "2025-08-02",
+      transactionDate: "2025-08-02",
+      status: "Paid",
+    },
+    {
+      id: 6,
+      fullname: "Jess L. Smith",
+      bookingNo: "BF09KLDXZ",
+      departureDate: "2025-08-02",
+      transactionDate: "2025-08-02",
+      status: "Open",
+    },
+  ];
+};
+
+const fetchPorts = async () => {
+  isLoading.value = true;
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${apiBase}/ports`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+    });
+    const data = await response.json();
+    if (response.ok && data.success && data.data?.ports) {
+      ports.value = data.data.ports.map((port, idx) => ({
+        id: port.id || idx + 1,
+        name: port.port_name,
+        corridor: port.corridor,
+        facilities: port.facilities,
+        updatedBy: port.last_update_by,
+        status: port.is_active === 1 ? "Available" : "Offline",
+        createdAt: port.created_at
+          ? port.created_at.slice(0, 16).replace("T", " ")
+          : "",
+        lastUpdated: port.updated_at
+          ? port.updated_at.slice(0, 16).replace("T", " ")
+          : "",
+      }));
+    } else {
+      console.error("Failed to fetch ports:", data.message || data);
+    }
+  } catch (err) {
+    console.error("Network error fetching ports:", err);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+onMounted(fetchPorts);
+
+const handleSave = () => {
+  isModalOpen.value = false;
+  fetchPorts();
+};
+</script>
+
 <template>
   <div class="min-h-full bg-gray-50 p-6">
     <!-- Header -->
@@ -32,7 +184,11 @@
           {{ isLoading ? "—" : totalPorts }}
         </div>
         <p class="text-sm text-gray-500">
-          {{ isLoading ? "Loading data..." : `${closedPorts} closed ports as of today` }}
+          {{
+            isLoading
+              ? "Loading data..."
+              : `${closedPorts} closed ports as of today`
+          }}
         </p>
       </div>
 
@@ -249,157 +405,3 @@
     </transition>
   </div>
 </template>
-
-<script setup>
-import { ref, computed, onMounted } from "vue";
-import { Plus, BarChart3, AlertCircle, Search } from "lucide-vue-next";
-import ModalCreatePort from "../components/ModalCreatePort.vue";
-import ModalViewPort from "../components/ModalViewPort.vue";
-
-  const isModalOpen = ref(false);
-  const isLoading = ref(false);
-const activeTab = ref("all");
-const searchQuery = ref("");
-const apiBase = import.meta.env.VITE_API_URL;
-const tabs = [
-  { id: "all", name: "All Ports" },
-  { id: "active", name: "Active Ports" },
-  { id: "closed", name: "Closed Ports" },
-];
-
-const ports = ref([]);
-const totalPorts = computed(() => ports.value.length);
-const closedPorts = computed(
-  () => ports.value.filter((p) => p.status === "Offline").length
-);
-const zeroTransactionPorts = ref(0);
-
-const selectedPort = ref(null);
-const selectedPortPassengers = ref([]);
-
-const filteredPorts = computed(() => {
-  let filtered = ports.value;
-
-  if (activeTab.value === "active")
-    filtered = filtered.filter(
-      (p) => p.status === "Online" || p.status === "Available"
-    );
-  else if (activeTab.value === "closed")
-    filtered = filtered.filter((p) => p.status === "Offline");
-
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase();
-    filtered = filtered.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.corridor.toLowerCase().includes(q) ||
-        p.updatedBy.toLowerCase().includes(q)
-    );
-  }
-  return filtered;
-});
-
-const getStatusClass = (status) => {
-  if (status === "Available" || status === "Online")
-    return "bg-green-100 text-green-800";
-  return "bg-gray-100 text-gray-800";
-};
-
-const handleAction = (port) => {
-  selectedPort.value = port;
-  // Example passengers, replace with real data as needed
-  selectedPortPassengers.value = [
-    {
-      id: 1,
-      fullname: "Towy B. Dumaplin",
-      bookingNo: "BF09KLDXZ",
-      departureDate: "2025-08-02",
-      transactionDate: "2025-08-02",
-      status: "Paid",
-    },
-    {
-      id: 2,
-      fullname: "Johnny D. Doe",
-      bookingNo: "BF09KLDXZ",
-      departureDate: "2025-08-02",
-      transactionDate: "2025-08-02",
-      status: "Cancelled",
-    },
-    {
-      id: 3,
-      fullname: "Jade L. Smith",
-      bookingNo: "BF09KLDXZ",
-      departureDate: "2025-08-02",
-      transactionDate: "2025-08-02",
-      status: "Paid",
-    },
-    {
-      id: 4,
-      fullname: "Carlsen Y. Not",
-      bookingNo: "BF09KLDXZ",
-      departureDate: "2025-08-02",
-      transactionDate: "2025-08-02",
-      status: "Open",
-    },
-    {
-      id: 5,
-      fullname: "Earl G. Barkawi",
-      bookingNo: "BF09KLDXZ",
-      departureDate: "2025-08-02",
-      transactionDate: "2025-08-02",
-      status: "Paid",
-    },
-    {
-      id: 6,
-      fullname: "Jess L. Smith",
-      bookingNo: "BF09KLDXZ",
-      departureDate: "2025-08-02",
-      transactionDate: "2025-08-02",
-      status: "Open",
-    },
-  ];
-};
-
-  const fetchPorts = async () => {
-    isLoading.value = true;
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${apiBase}/ports`, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token,
-        },
-      });
-    const data = await response.json();
-    if (response.ok && data.success && data.data?.ports) {
-      ports.value = data.data.ports.map((port, idx) => ({
-        id: port.id || idx + 1,
-        name: port.port_name,
-        corridor: port.corridor,
-        facilities: port.facilities,
-        updatedBy: port.last_update_by,
-        status: port.is_active === 1 ? "Available" : "Offline",
-        createdAt: port.created_at
-          ? port.created_at.slice(0, 16).replace("T", " ")
-          : "",
-        lastUpdated: port.updated_at
-          ? port.updated_at.slice(0, 16).replace("T", " ")
-          : "",
-      }));
-    } else {
-      console.error("Failed to fetch ports:", data.message || data);
-    }
-    } catch (err) {
-      console.error("Network error fetching ports:", err);
-    } finally {
-      isLoading.value = false;
-    }
-  };
-
-onMounted(fetchPorts);
-
-const handleSave = () => {
-  isModalOpen.value = false;
-  fetchPorts(); // reload the table after a new port is added
-};
-</script>

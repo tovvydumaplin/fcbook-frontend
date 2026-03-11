@@ -1,8 +1,8 @@
 <script setup>
 import { Edit, Plus, Search } from "lucide-vue-next";
 import { ref, computed, onMounted } from "vue";
-import ModalCreateVehicle from "../components/ModalCreateVehicle.vue";
-import ModalEditVehicle from "../components/ModalEditVehicle.vue";
+import ModalCreateVehicle from "../components/Modals/Vehicle/ModalCreateVehicle.vue";
+import ModalEditVehicle from "../components/Modals/Vehicle/ModalEditVehicle.vue";
 
 const isTableLoading = ref(false);
 const isEditModalOpen = ref(false);
@@ -25,20 +25,13 @@ const openEditVehicle = (vehicle) => {
   isEditModalOpen.value = true;
 };
 
-const closeEditModal = () => {
-  isEditModalOpen.value = false;
-};
-const closeCreateModal = () => {
-  isCreateModalOpen.value = false;
-};
-
 const handleCreateSaved = async () => {
-  closeCreateModal();
+  isCreateModalOpen.value = false;
   await fetchVehicles();
 };
 
 const handleEditSaved = async () => {
-  closeEditModal();
+  isEditModalOpen.value = false;
   await fetchVehicles();
 };
 
@@ -215,7 +208,7 @@ onMounted(fetchVehicles);
   <transition name="modal-fade">
     <ModalCreateVehicle
       v-if="isCreateModalOpen"
-      @close="closeCreateModal"
+      @close="isCreateModalOpen = false"
       @save="handleCreateSaved"
     />
   </transition>
@@ -223,7 +216,7 @@ onMounted(fetchVehicles);
     <ModalEditVehicle
       v-if="isEditModalOpen"
       :vehicle="selectedVehicle"
-      @close="closeEditModal"
+      @close="isEditModalOpen = false"
       @save="handleEditSaved"
     />
   </transition>

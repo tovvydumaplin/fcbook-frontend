@@ -1,12 +1,12 @@
 import { createRouter, createWebHistory } from "vue-router";
 import Dashboard from "../views/home.vue";
 import Login from "../views/Login.vue";
-import createPort from "../views/createPort.vue";
+import Port from "../views/Port.vue";
 import tellerBooking from "../views/tellerBooking.vue";
 import ScheduleModule from "../views/ScheduleModule.vue";
 import RoutesModule from "../views/RoutesModule.vue";
 import VesselsModule from "../views/VesselsModule.vue";
-import RatesModule from "../views/RatePassengerLayout.vue";
+import RatesModule from "../views/Rates/RatePassengerLayout.vue";
 import PassengerMonitoringModule from "../views/PassengerMonitoringModule.vue";
 import PassengerAccommodation from "../views/PassengerAccommodation.vue";
 import VehiclesModule from "../views/VehiclesModule.vue";
@@ -15,7 +15,7 @@ import AgentsModule from "../views/Agents/AgentsLayout.vue";
 const routes = [
   { path: "/", component: Login },
   { path: "/dashboard", component: Dashboard },
-  { path: "/create-port", component: createPort },
+  { path: "/ports", component: Port },
   { path: "/teller-booking", component: tellerBooking },
   { path: "/schedule", component: ScheduleModule },
   { path: "/routes", component: RoutesModule },

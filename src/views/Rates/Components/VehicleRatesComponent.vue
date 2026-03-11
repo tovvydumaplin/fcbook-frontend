@@ -1,34 +1,38 @@
 <script setup>
-import { Edit, Plus } from "lucide-vue-next";
+import { Edit } from "lucide-vue-next";
 import { ref, watch } from "vue";
-import ModalAddEditRate from "../../../components/ModalAddEditRate.vue";
+import ModalEditVehicleRate from "../../../components/Modals/Vehicle/VehicleRate/ModalEditVehicleRate.vue";
 
 const apiBase = import.meta.env.VITE_API_URL;
 
-const selectedAccommodationRate = ref(null);
-const accommodations = ref([]);
+const isEditModalOpen = ref(false);
+
+const selectedVehicleRate = ref(null);
+const vehicles = ref([]);
 const isRateLoading = ref(false);
-const isRateModalOpen = ref(false);
+
 const emit = defineEmits(["edit", "saved"]);
+
 const props = defineProps({
   selectedRoute: Object,
   isRateLoading: Boolean,
 });
 
-const openRateModal = (acc) => {
-  selectedAccommodationRate.value = acc;
-  isRateModalOpen.value = true;
+const openEditVehicleRate = (vehicle) => {
+  selectedVehicleRate.value = vehicle;
+  isEditModalOpen.value = true;
 };
 
-const handleAccRateSaved = async () => {
-  console.log("saved");
+const saveEditVehicleRate = async () => {
+  isEditModalOpen.value = false;
+  await fetchRouteVehicleRates();
 };
 
-const fetchRouteAccRates = async (routeId) => {
+const fetchRouteVehicleRates = async (routeId) => {
   try {
     isRateLoading.value = true;
 
-    const res = await fetch(`${apiBase}/accommodation-rates/route/${routeId}`, {
+    const res = await fetch(`${apiBase}/vehicle-rates/route/${routeId}`, {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
@@ -36,18 +40,18 @@ const fetchRouteAccRates = async (routeId) => {
       },
     });
 
-    if (!res.ok) throw new Error("Failed to fetch accommodation rates");
+    if (!res.ok) throw new Error("Failed to fetch vehicle rates");
 
     const data = await res.json();
 
-    accommodations.value = data.data.accRates.map((acc) => ({
-      accommodationRateId: acc.acc_rate_id,
-      accommodationName: acc.accommodation?.accommodation_name,
-      baseRate: acc.base_rate,
-      withoutAC: acc.without_ac,
-      status: acc.status,
-      updatedAt: acc.updated_at
-        ? new Date(acc.updated_at).toLocaleDateString()
+    vehicles.value = data.data.vehicleRates.map((vehicle) => ({
+      vehicleRateId: vehicle.vehicle_rate_id,
+      vehicleType: vehicle.vehicle?.vehicle_type,
+      vehicleClass: vehicle.vehicle?.vehicle_class,
+      vehicleRate: vehicle.vehicle_rate,
+      status: vehicle.status,
+      updatedAt: vehicle.updated_at
+        ? new Date(vehicle.updated_at).toLocaleDateString()
         : null,
     }));
   } catch (err) {
@@ -60,11 +64,7 @@ const fetchRouteAccRates = async (routeId) => {
 watch(
   () => props.selectedRoute,
   (newRoute) => {
-    if (newRoute) {
-      fetchRouteAccRates(newRoute.id);
-    } else {
-      accommodations.value = [];
-    }
+    fetchRouteVehicleRates(newRoute.id);
   },
   { immediate: true },
 );
@@ -80,7 +80,7 @@ watch(
         class="w-6 h-6 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"
       ></span>
       <span class="font-semibold text-blue-700 text-base"
-        >Loading Accommodation Rates...</span
+        >Loading Vehicles Rates...</span
       >
     </div>
   </div>
@@ -90,7 +90,7 @@ watch(
     Select a route to view details.
   </div>
 
-  <!-- RATE TABLE -->
+  <!-- TABLE -->
   <div v-else class="overflow-auto max-h-[400px]">
     <table class="min-w-full divide-y divide-gray-200">
       <thead class="bg-gray-50">
@@ -99,13 +99,13 @@ watch(
             #
           </th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">
-            Type name
+            Type Number
           </th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">
-            Base Rate
+            Type Class
           </th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">
-            W/O AC
+            Vehicle Rate
           </th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">
             Updated
@@ -123,32 +123,29 @@ watch(
       </thead>
       <tbody class="bg-white divide-y divide-gray-200">
         <tr
-          v-for="(acc, index) in accommodations"
-          :key="acc.accommodationRateId"
+          v-for="(vehicle, index) in vehicles"
+          :key="vehicle.vehicleRateId"
           class="hover:bg-gray-50"
         >
           <td class="px-6 py-4 text-sm">{{ index + 1 }}</td>
-          <td class="px-6 py-4 text-sm">{{ acc.accommodationName }}</td>
+          <td class="px-6 py-4 text-sm">{{ vehicle.vehicleType }}</td>
+          <td class="px-6 py-4 text-sm">{{ vehicle.vehicleClass }}</td>
           <td class="px-6 py-4 text-sm">
-            <span v-if="acc.baseRate === null">—</span>
-            <span v-else>₱{{ acc.baseRate }}</span>
+            <span v-if="vehicle.vehicleRate === null">—</span>
+            <span v-else>₱{{ vehicle.vehicleRate }}</span>
           </td>
           <td class="px-6 py-4 text-sm text-gray-500">
-            <span v-if="acc.withoutAC === null">—</span>
-            <span v-else>₱{{ acc.withoutAC }}</span>
-          </td>
-          <td class="px-6 py-4 text-sm text-gray-500">
-            <span v-if="acc.updatedAt === null">—</span>
-            <span v-else>{{ acc.updatedAt }}</span>
+            <span v-if="vehicle.updatedAt === null">—</span>
+            <span v-else>{{ vehicle.updatedAt }}</span>
           </td>
           <td class="px-6 py-4 text-sm text-gray-500">—</td>
           <td class="px-6 py-4 text-sm text-gray-500">
-            <span v-if="acc.status === null">—</span>
-            <span v-else>{{ acc.status }}</span>
+            <span v-if="vehicle.status === null">—</span>
+            <span v-else>{{ vehicle.status }}</span>
           </td>
           <td class="px-6 py-4 text-sm">
             <button
-              @click="openRateModal(acc)"
+              @click="openEditVehicleRate(vehicle)"
               class="font-medium text-blue-600 hover:text-blue-900 flex items-center"
             >
               <Edit class="w-4 h-4 mr-1" />
@@ -158,13 +155,13 @@ watch(
       </tbody>
     </table>
   </div>
+
   <transition name="modal-fade">
-    <ModalAddEditRate
-      v-if="isRateModalOpen"
-      :accommodationRate="selectedAccommodationRate"
-      :route="selectedRoute"
-      @close="isRateModalOpen = false"
-      @saved="handleAccRateSaved"
+    <ModalEditVehicleRate
+      v-if="isEditModalOpen"
+      :vehicle="selectedVehicleRate"
+      @close="isEditModalOpen = false"
+      @save="saveEditVehicleRate"
     />
   </transition>
 </template>

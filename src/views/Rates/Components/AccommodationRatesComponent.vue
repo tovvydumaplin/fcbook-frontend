@@ -1,38 +1,34 @@
 <script setup>
 import { Edit } from "lucide-vue-next";
 import { ref, watch } from "vue";
-import ModalEditVehicleRate from "../../../components/ModalEditVehicleRate.vue";
+import ModalEditAccommodationRate from "../../../components/Modals/Passenger/PassengerAccommodation/AccommodationRate/ModalEditAccommodationRate.vue";
 
 const apiBase = import.meta.env.VITE_API_URL;
 
-const isEditModalOpen = ref(false);
-
-const selectedVehicleRate = ref(null);
-const vehicles = ref([]);
+const selectedAccommodationRate = ref(null);
+const accommodations = ref([]);
 const isRateLoading = ref(false);
-
+const isRateModalOpen = ref(false);
 const emit = defineEmits(["edit", "saved"]);
-
 const props = defineProps({
   selectedRoute: Object,
   isRateLoading: Boolean,
 });
 
-const openEditVehicleRate = (vehicle) => {
-  selectedVehicleRate.value = vehicle;
-  isEditModalOpen.value = true;
+const openRateModal = (acc) => {
+  selectedAccommodationRate.value = acc;
+  isRateModalOpen.value = true;
 };
 
-const saveEditVehicleRate = async () => {
-  isEditModalOpen.value = false;
-  await fetchRouteVehicleRates();
+const handleAccRateSaved = async () => {
+  console.log("saved");
 };
 
-const fetchRouteVehicleRates = async (routeId) => {
+const fetchRouteAccRates = async (routeId) => {
   try {
     isRateLoading.value = true;
 
-    const res = await fetch(`${apiBase}/vehicle-rates/route/${routeId}`, {
+    const res = await fetch(`${apiBase}/accommodation-rates/route/${routeId}`, {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
@@ -40,18 +36,18 @@ const fetchRouteVehicleRates = async (routeId) => {
       },
     });
 
-    if (!res.ok) throw new Error("Failed to fetch vehicle rates");
+    if (!res.ok) throw new Error("Failed to fetch accommodation rates");
 
     const data = await res.json();
 
-    vehicles.value = data.data.vehicleRates.map((vehicle) => ({
-      vehicleRateId: vehicle.vehicle_rate_id,
-      vehicleType: vehicle.vehicle?.vehicle_type,
-      vehicleClass: vehicle.vehicle?.vehicle_class,
-      vehicleRate: vehicle.vehicle_rate,
-      status: vehicle.status,
-      updatedAt: vehicle.updated_at
-        ? new Date(vehicle.updated_at).toLocaleDateString()
+    accommodations.value = data.data.accRates.map((acc) => ({
+      accommodationRateId: acc.acc_rate_id,
+      accommodationName: acc.accommodation?.accommodation_name,
+      baseRate: acc.base_rate,
+      withoutAC: acc.without_ac,
+      status: acc.status,
+      updatedAt: acc.updated_at
+        ? new Date(acc.updated_at).toLocaleDateString()
         : null,
     }));
   } catch (err) {
@@ -65,7 +61,7 @@ watch(
   () => props.selectedRoute,
   (newRoute) => {
     if (newRoute) {
-      fetchRouteVehicleRates(newRoute.id);
+      fetchRouteAccRates(newRoute.id);
     } else {
       accommodations.value = [];
     }
@@ -84,7 +80,7 @@ watch(
         class="w-6 h-6 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"
       ></span>
       <span class="font-semibold text-blue-700 text-base"
-        >Loading Vehicles Rates...</span
+        >Loading Accommodation Rates...</span
       >
     </div>
   </div>
@@ -94,7 +90,7 @@ watch(
     Select a route to view details.
   </div>
 
-  <!-- TABLE -->
+  <!-- RATE TABLE -->
   <div v-else class="overflow-auto max-h-[400px]">
     <table class="min-w-full divide-y divide-gray-200">
       <thead class="bg-gray-50">
@@ -103,13 +99,13 @@ watch(
             #
           </th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">
-            Type Number
+            Type name
           </th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">
-            Type Class
+            Base Rate
           </th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">
-            Vehicle Rate
+            W/O AC
           </th>
           <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">
             Updated
@@ -127,29 +123,32 @@ watch(
       </thead>
       <tbody class="bg-white divide-y divide-gray-200">
         <tr
-          v-for="(vehicle, index) in vehicles"
-          :key="vehicle.vehicleRateId"
+          v-for="(acc, index) in accommodations"
+          :key="acc.accommodationRateId"
           class="hover:bg-gray-50"
         >
           <td class="px-6 py-4 text-sm">{{ index + 1 }}</td>
-          <td class="px-6 py-4 text-sm">{{ vehicle.vehicleType }}</td>
-          <td class="px-6 py-4 text-sm">{{ vehicle.vehicleClass }}</td>
+          <td class="px-6 py-4 text-sm">{{ acc.accommodationName }}</td>
           <td class="px-6 py-4 text-sm">
-            <span v-if="vehicle.vehicleRate === null">—</span>
-            <span v-else>₱{{ vehicle.vehicleRate }}</span>
+            <span v-if="acc.baseRate === null">—</span>
+            <span v-else>₱{{ acc.baseRate }}</span>
           </td>
           <td class="px-6 py-4 text-sm text-gray-500">
-            <span v-if="vehicle.updatedAt === null">—</span>
-            <span v-else>{{ vehicle.updatedAt }}</span>
+            <span v-if="acc.withoutAC === null">—</span>
+            <span v-else>₱{{ acc.withoutAC }}</span>
+          </td>
+          <td class="px-6 py-4 text-sm text-gray-500">
+            <span v-if="acc.updatedAt === null">—</span>
+            <span v-else>{{ acc.updatedAt }}</span>
           </td>
           <td class="px-6 py-4 text-sm text-gray-500">—</td>
           <td class="px-6 py-4 text-sm text-gray-500">
-            <span v-if="vehicle.status === null">—</span>
-            <span v-else>{{ vehicle.status }}</span>
+            <span v-if="acc.status === null">—</span>
+            <span v-else>{{ acc.status }}</span>
           </td>
           <td class="px-6 py-4 text-sm">
             <button
-              @click="openEditVehicleRate(vehicle)"
+              @click="openRateModal(acc)"
               class="font-medium text-blue-600 hover:text-blue-900 flex items-center"
             >
               <Edit class="w-4 h-4 mr-1" />
@@ -159,13 +158,13 @@ watch(
       </tbody>
     </table>
   </div>
-
   <transition name="modal-fade">
-    <ModalEditVehicleRate
-      v-if="isEditModalOpen"
-      :vehicle="selectedVehicleRate"
-      @close="isEditModalOpen = false"
-      @save="saveEditVehicleRate"
+    <ModalEditAccommodationRate
+      v-if="isRateModalOpen"
+      :accommodationRate="selectedAccommodationRate"
+      :route="selectedRoute"
+      @close="isRateModalOpen = false"
+      @saved="handleAccRateSaved"
     />
   </transition>
 </template>

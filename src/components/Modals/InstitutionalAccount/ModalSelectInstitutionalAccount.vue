@@ -72,15 +72,8 @@
           </h3>
 
           <!-- Loading State -->
-          <div
-            v-if="isLoading"
-            class="grid grid-cols-4 gap-4"
-          >
-            <div
-              v-for="i in 8"
-              :key="i"
-              class="animate-pulse"
-            >
+          <div v-if="isLoading" class="grid grid-cols-4 gap-4">
+            <div v-for="i in 8" :key="i" class="animate-pulse">
               <div
                 class="bg-gray-200 rounded-lg p-6 h-32 flex flex-col items-center justify-center"
               >
@@ -232,7 +225,7 @@ const fetchAccounts = async () => {
       const result = await response.json();
       if (result.success && result.data?.accounts) {
         accounts.value = result.data.accounts.filter(
-          (acc) => acc.status === "active"
+          (acc) => acc.status === "active",
         );
       }
     } else {
@@ -250,7 +243,7 @@ const filteredAccounts = computed(() => {
   if (!searchQuery.value) return accounts.value;
   const query = searchQuery.value.toLowerCase();
   return accounts.value.filter((account) =>
-    account.name.toLowerCase().includes(query)
+    account.name.toLowerCase().includes(query),
   );
 });
 
@@ -286,7 +279,7 @@ watch(
     if (isOpen && accounts.value.length === 0) {
       fetchAccounts();
     }
-  }
+  },
 );
 
 // Reset selection when modal closes
@@ -297,7 +290,7 @@ watch(
       selectedAccount.value = null;
       searchQuery.value = "";
     }
-  }
+  },
 );
 
 onMounted(() => {

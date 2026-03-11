@@ -1,8 +1,8 @@
 <script setup>
 import { ref, watch, onMounted } from "vue";
 import { Search, Edit, Plus } from "lucide-vue-next";
-import ModalCreateAccommodation from "../components/ModalCreateAccommodation.vue";
-import ModalEditAccommodation from "../components/ModalEditAccommodation.vue";
+import ModalCreateAccommodation from "../components/Modals/Passenger/PassengerAccommodation/ModalCreateAccommodation.vue";
+import ModalEditAccommodation from "../components/Modals/Passenger/PassengerAccommodation/ModalEditAccommodation.vue";
 const isModalOpen = ref(false);
 const isEditModalOpen = ref(false);
 

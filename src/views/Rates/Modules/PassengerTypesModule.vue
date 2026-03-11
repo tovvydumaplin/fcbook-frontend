@@ -1,3 +1,52 @@
+<script setup>
+import { ref, onMounted } from "vue";
+import { Plus, Edit } from "lucide-vue-next";
+import ModalCreatePassengerType from "../../../components/Modals/Passenger/PassengerType/ModalCreatePassengerType.vue";
+
+const apiBase = import.meta.env.VITE_API_URL;
+
+const passengerTypes = ref([]);
+const isModalOpen = ref(false);
+const editData = ref(null);
+
+const fetchPassengerTypes = async () => {
+  const token = localStorage.getItem("token");
+  try {
+    const res = await fetch(`${apiBase}/passenger-types`, {
+      headers: { Authorization: token },
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      passengerTypes.value = data.data.types;
+    }
+  } catch (err) {
+    console.error("Failed to fetch passenger types:", err);
+  }
+};
+
+const handleSaved = () => {
+  fetchPassengerTypes();
+  closeModal();
+};
+
+const openCreate = () => {
+  editData.value = null;
+  isModalOpen.value = true;
+};
+
+const edit = (p) => {
+  editData.value = p;
+  isModalOpen.value = true;
+};
+
+const closeModal = () => {
+  isModalOpen.value = false;
+  editData.value = null;
+};
+
+onMounted(fetchPassengerTypes);
+</script>
+
 <template>
   <div class="bg-white rounded-lg shadow-sm">
     <div class="p-6">
@@ -59,59 +108,3 @@
     </transition>
   </div>
 </template>
-
-<script setup>
-import { ref, onMounted } from "vue";
-import { Plus, Edit } from "lucide-vue-next";
-import ModalCreatePassengerType from "../../components/ModalCreatePassengerType.vue";
-
-const apiBase = import.meta.env.VITE_API_URL;
-
-const passengerTypes = ref([]);
-const isModalOpen = ref(false);
-const editData = ref(null);
-
-// Fetch all passenger types
-const fetchPassengerTypes = async () => {
-  const token = localStorage.getItem("token");
-  try {
-    const res = await fetch(`${apiBase}/passenger-types`, {
-      headers: { Authorization: token },
-    });
-    const data = await res.json();
-    if (res.ok && data.success) {
-      passengerTypes.value = data.data.types;
-    }
-  } catch (err) {
-    console.error("Failed to fetch passenger types:", err);
-  }
-};
-
-// Handle saved from child modal
-const handleSaved = () => {
-  // Refetch the table after saving.
-  fetchPassengerTypes();
-  closeModal();
-};
-
-// Open modal for creating new passenger type
-const openCreate = () => {
-  editData.value = null;
-  isModalOpen.value = true;
-};
-
-// Open modal for editing existing passenger type
-const edit = (p) => {
-  editData.value = p;
-  isModalOpen.value = true;
-};
-
-// Close modal
-const closeModal = () => {
-  isModalOpen.value = false;
-  editData.value = null;
-};
-
-// Fetch passenger types on component mount
-onMounted(fetchPassengerTypes);
-</script>

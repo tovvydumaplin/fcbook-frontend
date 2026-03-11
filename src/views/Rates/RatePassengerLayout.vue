@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from "vue";
-import RatesModule from "./ratePassengerTemplates/RatesModule.vue";
-import PassengerTypesModule from "./ratePassengerTemplates/PassengerTypesModule.vue";
+import RatesModule from "./Modules/RatesModule.vue";
+import PassengerTypesModule from "./Modules/PassengerTypesModule.vue";
 
 const activeTab = ref("rate");
 const tabs = [

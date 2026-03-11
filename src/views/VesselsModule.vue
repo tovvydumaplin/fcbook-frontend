@@ -1,4 +1,187 @@
-<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\views\VesselsModule.vue -->
+<script setup>
+import { ref, computed, onMounted } from "vue";
+import {
+  Plus,
+  BarChart3,
+  AlertCircle,
+  Search,
+  Eye,
+  Map,
+} from "lucide-vue-next";
+import ModalCreateVessel from "../components/Modals/Vessel/ModalCreateVessel.vue";
+import ModalCreateSeatmap from "../components/Modals/Vessel/Seatmap/ModalCreateSeatmap.vue";
+
+const apiBase = import.meta.env.VITE_API_URL;
+const activeTab = ref("all");
+const searchQuery = ref("");
+const isTableLoading = ref(false);
+const isLoading = ref(false);
+const vessels = ref([]);
+const isSeatmapLoading = ref(false);
+const cellClass = "px-6 py-4 whitespace-nowrap text-sm text-gray-900";
+const headerClass =
+  "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider";
+
+const modals = ref({
+  createEdit: { open: false },
+  seatmap: { open: false, vessel: null, data: null },
+});
+
+const tabs = [
+  { id: "all", name: "All Vessels" },
+  { id: "available", name: "Available Vessels" },
+  { id: "drydock", name: "Drydock" },
+  { id: "grounded", name: "Grounded" },
+];
+
+// Helpers
+const renderClassList = (vessel, field) => {
+  if (!vessel.classes || vessel.classes.length === 0) return ["-"];
+  return vessel.classes.map((cls) => {
+    switch (field) {
+      case "aircon":
+        return cls.aircon === true ? "✅" : cls.aircon === false ? "❌" : "-";
+      case "wifi":
+        return cls.wifi === true ? "✅" : cls.wifi === false ? "❌" : "-";
+      case "seats":
+        return cls.seats || 0;
+      case "name":
+        return cls.name || "-";
+    }
+  });
+};
+
+const getStatusClass = (status) => {
+  status === "Available"
+    ? "bg-green-100 text-green-800"
+    : "bg-gray-100 text-gray-800";
+};
+// API
+
+const fetchVessels = async () => {
+  isTableLoading.value = true;
+  try {
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${apiBase}/vessels`, {
+      headers: { "Content-Type": "application/json", Authorization: token },
+    });
+    const data = await res.json();
+    console.log("Vessels API Response:", data);
+
+    if (res.ok && data.success && data.data?.vessels) {
+      vessels.value = data.data.vessels.map((v) => ({
+        id: v.id,
+        name: v.vessel_name || v.name,
+        status: v.status,
+        capacity: v.capacity,
+        description: v.description,
+
+        classes: (v.accommodations || []).map((a) => ({
+          name: a.name || a.accommodation_name || "Unknown",
+          rows: a.rows || 0,
+          columns: a.columns || 0,
+          seats: a.seats || 0,
+          facilityLabels: a.facilityLabels || [],
+          aircon: !!a.aircon,
+          wifi: !!a.wifi,
+        })),
+      }));
+      console.log("Parsed vessels:", vessels.value);
+    } else {
+      vessels.value = [];
+      console.error("Failed to parse vessels data:", data);
+    }
+  } catch (err) {
+    vessels.value = [];
+    console.error("Failed to fetch vessels", err);
+  } finally {
+    isTableLoading.value = false;
+  }
+};
+
+// Modal Handlers
+const openCreateModal = () => {
+  modals.value.createEdit.vessel = null;
+  modals.value.createEdit.open = true;
+};
+
+// const openEditModal = (vessel) => {
+//   if (!vessel.classes) vessel.classes = [];
+//   modals.value.createEdit.vessel = vessel;
+//   modals.value.createEdit.open = true;
+// };
+
+const openSeatmapModal = async (vessel) => {
+  try {
+    isSeatmapLoading.value = true;
+    const token = localStorage.getItem("token");
+    const res = await fetch(`${apiBase}/vessels/${vessel.id}/layout`, {
+      headers: { "Content-Type": "application/json", Authorization: token },
+    });
+    const data = await res.json();
+
+    modals.value.seatmap.vessel = vessel;
+    modals.value.seatmap.data = data.classes || [];
+    modals.value.seatmap.open = true;
+  } catch (err) {
+    console.error("Failed to load seatmap:", err);
+    alert("Failed to load seatmap. Please try again.");
+  } finally {
+    isSeatmapLoading.value = false;
+  }
+};
+
+// Computed
+const statusMap = {
+  available: "Available",
+  drydock: "Drydock",
+  grounded: "Grounded",
+};
+
+const filteredVessels = computed(() =>
+  activeTab.value === "all"
+    ? vessels.value
+    : vessels.value.filter((v) => v.status === statusMap[activeTab.value]),
+);
+
+const activeVesselsCount = computed(
+  () => vessels.value.filter((v) => v.status === "Available").length,
+);
+
+const drydockVesselsCount = computed(
+  () => vessels.value.filter((v) => v.status === "Drydock").length,
+);
+
+// Save seatmap
+const handleSeatmapSave = async (payload) => {
+  const vessel = modals.value.seatmap.vessel;
+  if (!vessel) return;
+
+  try {
+    const token = localStorage.getItem("token");
+
+    await fetch(`${apiBase}/vessels/${vessel.id}/layout`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    modals.value.seatmap.open = false;
+    fetchVessels();
+  } catch (err) {
+    console.error("Failed saving seatmap:", err);
+    alert("Failed to save seatmap");
+  }
+};
+
+onMounted(() => {
+  fetchVessels();
+  // fetchAccommodations();
+});
+</script>
 
 <template>
   <div class="min-h-full bg-gray-50 p-6">
@@ -256,188 +439,3 @@
     </transition>
   </div>
 </template>
-
-<script setup>
-import { ref, computed, onMounted } from "vue";
-import {
-  Plus,
-  BarChart3,
-  AlertCircle,
-  Search,
-  Eye,
-  Map,
-} from "lucide-vue-next";
-import ModalCreateVessel from "../components/ModalCreateVessel.vue";
-import ModalCreateSeatmap from "../components/ModalCreateSeatmap.vue";
-
-const cellClass = "px-6 py-4 whitespace-nowrap text-sm text-gray-900";
-const headerClass =
-  "px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider";
-const apiBase = import.meta.env.VITE_API_URL;
-const activeTab = ref("all");
-const searchQuery = ref("");
-const isTableLoading = ref(false);
-const isLoading = ref(false);
-const vessels = ref([]);
-const isSeatmapLoading = ref(false);
-
-const modals = ref({
-  createEdit: { open: false },
-  seatmap: { open: false, vessel: null, data: null },
-});
-
-const tabs = [
-  { id: "all", name: "All Vessels" },
-  { id: "available", name: "Available Vessels" },
-  { id: "drydock", name: "Drydock" },
-  { id: "grounded", name: "Grounded" },
-];
-
-// Helpers
-const renderClassList = (vessel, field) => {
-  if (!vessel.classes || vessel.classes.length === 0) return ["-"];
-  return vessel.classes.map((cls) => {
-    switch (field) {
-      case "aircon":
-        return cls.aircon === true ? "✅" : cls.aircon === false ? "❌" : "-";
-      case "wifi":
-        return cls.wifi === true ? "✅" : cls.wifi === false ? "❌" : "-";
-      case "seats":
-        return cls.seats || 0;
-      case "name":
-        return cls.name || "-";
-    }
-  });
-};
-
-const getStatusClass = (status) =>
-  status === "Available"
-    ? "bg-green-100 text-green-800"
-    : "bg-gray-100 text-gray-800";
-
-// API
-
-const fetchVessels = async () => {
-  isTableLoading.value = true;
-  try {
-    const token = localStorage.getItem("token");
-    const res = await fetch(`${apiBase}/vessels`, {
-      headers: { "Content-Type": "application/json", Authorization: token },
-    });
-    const data = await res.json();
-    console.log("Vessels API Response:", data);
-
-    if (res.ok && data.success && data.data?.vessels) {
-      vessels.value = data.data.vessels.map((v) => ({
-        id: v.id,
-        name: v.vessel_name || v.name,
-        status: v.status,
-        capacity: v.capacity,
-        description: v.description,
-
-        classes: (v.accommodations || []).map((a) => ({
-          name: a.name || a.accommodation_name || "Unknown",
-          rows: a.rows || 0,
-          columns: a.columns || 0,
-          seats: a.seats || 0,
-          facilityLabels: a.facilityLabels || [],
-          aircon: !!a.aircon,
-          wifi: !!a.wifi,
-        })),
-      }));
-      console.log("Parsed vessels:", vessels.value);
-    } else {
-      vessels.value = [];
-      console.error("Failed to parse vessels data:", data);
-    }
-  } catch (err) {
-    vessels.value = [];
-    console.error("Failed to fetch vessels", err);
-  } finally {
-    isTableLoading.value = false;
-  }
-};
-
-onMounted(() => {
-  fetchVessels();
-  // fetchAccommodations();
-});
-
-// Modal Handlers
-const openCreateModal = () => {
-  modals.value.createEdit.vessel = null;
-  modals.value.createEdit.open = true;
-};
-
-// const openEditModal = (vessel) => {
-//   if (!vessel.classes) vessel.classes = [];
-//   modals.value.createEdit.vessel = vessel;
-//   modals.value.createEdit.open = true;
-// };
-
-const openSeatmapModal = async (vessel) => {
-  try {
-    isSeatmapLoading.value = true; // ONLY for seatmap
-    const token = localStorage.getItem("token");
-    const res = await fetch(`${apiBase}/vessels/${vessel.id}/layout`, {
-      headers: { "Content-Type": "application/json", Authorization: token },
-    });
-    const data = await res.json();
-
-    modals.value.seatmap.vessel = vessel;
-    modals.value.seatmap.data = data.classes || [];
-    modals.value.seatmap.open = true;
-  } catch (err) {
-    console.error("Failed to load seatmap:", err);
-    alert("Failed to load seatmap. Please try again.");
-  } finally {
-    isSeatmapLoading.value = false;
-  }
-};
-
-// Computed
-const statusMap = {
-  available: "Available",
-  drydock: "Drydock",
-  grounded: "Grounded",
-};
-
-const filteredVessels = computed(() =>
-  activeTab.value === "all"
-    ? vessels.value
-    : vessels.value.filter((v) => v.status === statusMap[activeTab.value]),
-);
-
-const activeVesselsCount = computed(
-  () => vessels.value.filter((v) => v.status === "Available").length,
-);
-
-const drydockVesselsCount = computed(
-  () => vessels.value.filter((v) => v.status === "Drydock").length,
-);
-
-// Save seatmap
-const handleSeatmapSave = async (payload) => {
-  const vessel = modals.value.seatmap.vessel;
-  if (!vessel) return;
-
-  try {
-    const token = localStorage.getItem("token");
-
-    await fetch(`${apiBase}/vessels/${vessel.id}/layout`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    modals.value.seatmap.open = false;
-    fetchVessels(); // reload table
-  } catch (err) {
-    console.error("Failed saving seatmap:", err);
-    alert("Failed to save seatmap");
-  }
-};
-</script>

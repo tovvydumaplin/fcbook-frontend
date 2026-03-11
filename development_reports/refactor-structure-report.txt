@@ -1,0 +1,305 @@
+================================================================================
+                    DEVELOPMENT REPORT: CODE REFACTOR
+                    PR #9 - Refactor Folder and Code Structure
+================================================================================
+
+PROJECT INFORMATION
+─────────────────────────────────────────────────────────────────────────────
+Repository:         fcbook-frontend
+Owner:              tovvydumaplin
+Author:             yurimarine
+PR Number:          #9
+Branch:             refactor-structure → master
+Status:             Open & Mergeable
+Date:               2026-03-11
+Total Commits:      6
+
+================================================================================
+CHANGE STATISTICS
+─────────────────────────────────────────────────────────────────────────────
+Files Changed:      58
+Lines Added:        +2,214
+Lines Deleted:      -2,668
+Net Change:         -454 lines
+
+================================================================================
+SECTION 1: DELETED COMPONENTS
+─────────────────────────────────────────────────────────────────────────────
+
+1. src/components/HelloWorld.vue
+   Status: Deleted (43 lines)
+   Reason: Unused template component
+
+2. src/components/ModalPaymentSelection.vue
+   Status: Deleted (344 lines)
+   Reason: Moved to organized Teller folder structure
+
+================================================================================
+SECTION 2: RENAMED & REORGANIZED MODALS
+─────────────────────────────────────────────────────────────────────────────
+
+2.1 ADD-ON MODALS
+─────────────────
+ModalCreateAddOn.vue
+  FROM: src/components/ModalCreateAddOn.vue
+  TO:   src/components/Modals/AddOn/ModalCreateAddOn.vue
+
+
+2.2 INSTITUTIONAL ACCOUNT MODALS
+─────────────────────────────────
+ModalCreateIA.vue
+  FROM: src/components/ModalCreateIA.vue
+  TO:   src/components/Modals/InstitutionalAccount/ModalCreateIA.vue
+
+ModalEditIA.vue
+  FROM: src/components/ModalEditIA.vue
+  TO:   src/components/Modals/InstitutionalAccount/ModalEditIA.vue
+
+ModalSelectInstitutionalAccount.vue
+  FROM: src/components/ModalSelectInstitutionalAccount.vue
+  TO:   src/components/Modals/InstitutionalAccount/ModalSelectInstitutionalAccount.vue
+  MODIFIED: Yes (formatting fixes, trailing commas)
+
+ModalCreateIADiscount.vue
+  FROM: src/components/ModalCreateIADiscount.vue
+  TO:   src/components/Modals/InstitutionalAccount/IADiscount/ModalCreateIADiscount.vue
+
+ModalEditIADiscount.vue
+  FROM: src/components/ModalEditIADiscount.vue
+  TO:   src/components/Modals/InstitutionalAccount/IADiscount/ModalEditIADiscount.vue
+
+ModalIADiscounts.vue
+  FROM: src/components/ModalIADiscounts.vue
+  TO:   src/components/Modals/InstitutionalAccount/IADiscount/ModalIADiscounts.vue
+
+
+2.3 MERCHANT MODALS
+────────────────────
+ModalCreateMerchant.vue
+  FROM: src/components/ModalCreateMerchant.vue
+  TO:   src/components/Modals/Merchant/ModalCreateMerchant.vue
+  MODIFIED: Yes (fixed title: "Create Merchant")
+
+ModalEditMerchant.vue
+  FROM: src/components/ModalEditMerchant.vue
+  TO:   src/components/Modals/Merchant/ModalEditMerchant.vue
+
+ModalCreateMerchantDiscount.vue
+  FROM: src/components/ModalCreateMerchantDiscount.vue
+  TO:   src/components/Modals/Merchant/MerchantDiscount/ModalCreateMerchantDiscount.vue
+
+ModalEditMerchantDiscount.vue
+  FROM: src/components/ModalEditMerchantDiscount.vue
+  TO:   src/components/Modals/Merchant/MerchantDiscount/ModalEditMerchantDiscount.vue
+
+ModalMerchantDiscounts.vue
+  FROM: src/components/ModalMerchantDiscounts.vue
+  TO:   src/components/Modals/Merchant/MerchantDiscount/ModalMerchantDiscounts.vue
+
+
+2.4 PASSENGER MODALS
+─────────────────────
+ModalCreateAccommodation.vue
+  FROM: src/components/ModalCreateAccommodation.vue
+  TO:   src/components/Modals/Passenger/PassengerAccommodation/ModalCreateAccommodation.vue
+  MODIFIED: Yes (script moved before template)
+
+ModalEditAccommodation.vue
+  FROM: src/components/ModalEditAccommodation.vue
+  TO:   src/components/Modals/Passenger/PassengerAccommodation/ModalEditAccommodation.vue
+
+ModalAddEditRate.vue
+  FROM: src/components/ModalAddEditRate.vue
+  TO:   src/components/Modals/Passenger/PassengerAccommodation/AccommodationRate/ModalEditAccommodationRate.vue
+
+ModalCreatePassengerType.vue
+  FROM: src/components/ModalCreatePassengerType.vue
+  TO:   src/components/Modals/Passenger/PassengerType/ModalCreatePassengerType.vue
+
+
+2.5 PORT MODALS
+────────────────
+ModalCreatePort.vue
+  FROM: src/components/ModalCreatePort.vue
+  TO:   src/components/Modals/Port/ModalCreatePort.vue
+
+ModalViewPort.vue
+  FROM: src/components/ModalViewPort.vue
+  TO:   src/components/Modals/Port/ModalViewPort.vue
+
+
+2.6 ROUTE MODALS
+─────────────────
+ModalCreateRoute.vue
+  FROM: src/components/ModalCreateRoute.vue
+  TO:   src/components/Modals/Route/ModalCreateRoute.vue
+
+
+2.7 SCHEDULE MODALS
+────────────────────
+ModalCreateSchedule.vue
+  FROM: src/components/ModalCreateSchedule.vue
+  TO:   src/components/Modals/Schedule/ModalCreateSchedule.vue
+
+ModalScheduleOptions.vue
+  FROM: src/components/ModalScheduleOptions.vue
+  TO:   src/components/Modals/Schedule/ModalScheduleOptions.vue
+
+
+2.8 TELLER MODALS (NEW ORGANIZATION)
+─────────────────────────────────────
+ModalPassengerDriver.vue
+  FROM: src/components/ModalPassengerDriver.vue
+  TO:   src/components/Modals/Teller/ModalPassengerDriver.vue
+  STATUS: Renamed
+
+ModalPaymentSelection.vue
+  FROM: src/components/ModalPaymentSelection.vue
+  TO:   src/components/Modals/Teller/ModalPaymentSelection.vue
+  STATUS: Moved (344 lines)
+
+
+2.9 VEHICLE MODALS
+────────────────────
+ModalCreateVehicle.vue
+  FROM: src/components/ModalCreateVehicle.vue
+  TO:   src/components/Modals/Vehicle/ModalCreateVehicle.vue
+
+ModalEditVehicle.vue
+  FROM: src/components/ModalEditVehicle.vue
+  TO:   src/components/Modals/Vehicle/ModalEditVehicle.vue
+
+
+================================================================================
+SECTION 3: NEW COMPONENTS ADDED
+────────────────────────────────���────────────────────────────────────────────
+
+1. VehicleSelection.vue
+   Path: src/components/Modals/Teller/VehicleSelection.vue
+   Lines: 391
+   Purpose: Vehicle type and brand selection modal with search functionality
+
+2. ViewTellerPassenger.vue
+   Path: src/components/Modals/Teller/ViewTellerPassenger.vue
+   Lines: 95
+   Purpose: Display passenger details in a modal view
+
+================================================================================
+SECTION 4: MODIFIED FILES (WITH CHANGES)
+─────────────────────────────────────────────────────────────────────────────
+
+1. src/App.vue
+   Changes: +3 lines, -5 lines
+   Details: 
+   - Removed unused imports: HelloWorld, MyForm
+   - Fixed sideBar → SideBar component casing
+   - Removed redundant component imports
+
+2. src/components/Modals/InstitutionalAccount/ModalSelectInstitutionalAccount.vue
+   Changes: +6 lines, -13 lines
+   Details:
+   - Formatting improvements
+   - Added trailing commas to array/function parameters
+   - Code style standardization
+
+3. src/components/Modals/Merchant/ModalCreateMerchant.vue
+   Changes: +1 line, -3 lines
+   Details:
+   - Fixed modal title from "Create Institutional Account" to "Create Merchant"
+
+4. src/components/Modals/Passenger/PassengerAccommodation/ModalCreateAccommodation.vue
+   Changes: +48 lines, -49 lines
+   Details:
+   - Reordered: Moved script setup block before template
+   - Structural change for code organization
+
+================================================================================
+SECTION 5: FOLDER STRUCTURE OVERVIEW
+─────────────────────────────────────────────────────────────────────────────
+
+Before:
+  src/components/
+  ├── Modal*.vue (30+ files, flat structure)
+  └── Other components
+
+After:
+  src/components/
+  ├── Modals/
+  │   ├── AddOn/
+  │   ├── InstitutionalAccount/
+  │   │   └── IADiscount/
+  │   ├── Merchant/
+  │   │   └── MerchantDiscount/
+  │   ├── Passenger/
+  │   │   ├── PassengerAccommodation/
+  │   │   │   └── AccommodationRate/
+  │   │   └── PassengerType/
+  │   ├── Port/
+  │   ├── Route/
+  │   ├── Schedule/
+  │   ├── Teller/
+  │   └── Vehicle/
+  └── Other components
+
+================================================================================
+SECTION 6: SUMMARY OF CHANGES BY CATEGORY
+─────────────────────────────────────────────────────────────────────────────
+
+DELETED:               2 files (removed unused code)
+RENAMED:              24 files (reorganized into feature folders)
+MODIFIED:              4 files (code style & bug fixes)
+ADDED:                 2 new files (new modal components)
+
+Total Impact:
+├── Improved Component Organization
+├── Removed Dead Code
+├── Fixed Import References
+├── Added New Features
+└── Code Style Standardization
+
+================================================================================
+SECTION 7: TESTING CHECKLIST
+─────────────────────────────────────────────────────────────────────────────
+
+□ Run full test suite for import path validation
+□ Verify all modal imports in parent components
+□ Test newly added VehicleSelection modal
+□ Test newly added ViewTellerPassenger modal
+□ Check component registration (if using global registration)
+□ Verify routing components if any were affected
+□ Test SideBar component casing fix in App.vue
+□ Check merchant modal title fix
+
+================================================================================
+SECTION 8: MERGE READINESS
+─────────────────────────────────────────────────────────────────────────────
+
+Mergeable Status:     ✓ YES
+CI/Build Status:      Requires verification
+PR Description:       ⚠ Missing (should be added)
+Code Review:          Pending approval
+Conflicts:            None detected
+
+================================================================================
+NOTES & RECOMMENDATIONS
+─────────────────────────────────────────────────────────────────────────────
+
+1. Add a comprehensive PR description explaining the refactoring rationale
+2. Update any documentation that references old component paths
+3. Ensure all team members are aware of the new folder structure
+4. Consider creating a COMPONENT_PATHS.md guide for future reference
+5. Update IDE/editor path aliases if any were configured for old paths
+
+================================================================================
+ADDITIONAL INFORMATION
+─────────────────────────────────────────────────────────────────────────────
+
+PR URL: https://github.com/tovvydumaplin/fcbook-frontend/pull/9
+Files List: https://github.com/tovvydumaplin/fcbook-frontend/pull/9/files
+Base Branch: master
+Head Branch: refactor-structure
+Created: 2026-03-11
+
+================================================================================
+End of Report
+================================================================================

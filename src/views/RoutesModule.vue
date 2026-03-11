@@ -1,8 +1,7 @@
-<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\views\RoutesModule.vue -->
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { Plus, BarChart3, AlertCircle, Search, Eye } from "lucide-vue-next";
-import ModalCreateRoute from "../components/ModalCreateRoute.vue";
+import ModalCreateRoute from "../components/Modals/Route/ModalCreateRoute.vue";
 
 const apiBase = import.meta.env.VITE_API_URL;
 const isModalOpen = ref(false);
@@ -87,11 +86,10 @@ onMounted(fetchRoutes);
 
 const handleSave = () => {
   isModalOpen.value = false;
-  fetchRoutes(); // reload after adding a route
+  fetchRoutes();
 };
 
 const handleAction = (route) => {
-  // View or open route logic here
   console.log("View route:", route);
 };
 </script>
@@ -294,8 +292,6 @@ const handleAction = (route) => {
         </div>
       </div>
     </div>
-
-    <!-- Modal rendered only when open -->
     <transition name="modal-fade">
       <ModalCreateRoute
         v-if="isModalOpen"
