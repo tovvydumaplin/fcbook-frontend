@@ -104,9 +104,7 @@ const saveMerchant = async () => {
         class="flex items-center justify-between p-6 border-b border-gray-200"
       >
         <div>
-          <h2 class="text-lg font-semibold text-gray-900">
-            Create Institutional Account
-          </h2>
+          <h2 class="text-lg font-semibold text-gray-900">Create Merchant</h2>
         </div>
         <button
           @click="$emit('close')"

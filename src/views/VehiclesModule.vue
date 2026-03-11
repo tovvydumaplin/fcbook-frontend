@@ -1,8 +1,8 @@
 <script setup>
 import { Edit, Plus, Search } from "lucide-vue-next";
 import { ref, computed, onMounted } from "vue";
-import ModalCreateVehicle from "../components/ModalCreateVehicle.vue";
-import ModalEditVehicle from "../components/ModalEditVehicle.vue";
+import ModalCreateVehicle from "../components/Modals/Vehicle/ModalCreateVehicle.vue";
+import ModalEditVehicle from "../components/Modals/Vehicle/ModalEditVehicle.vue";
 
 const isTableLoading = ref(false);
 const isEditModalOpen = ref(false);

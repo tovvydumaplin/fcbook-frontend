@@ -2,8 +2,8 @@
 import { Edit, Plus, Search } from "lucide-vue-next";
 import { ref, onMounted } from "vue";
 import Swal from "sweetalert2";
-import ModalEditMerchant from "../../../../../components/ModalEditMerchant.vue";
-import ModalCreateMerchant from "../../../../../components/ModalCreateMerchant.vue";
+import ModalEditMerchant from "../../../../../components/Modals/Merchant/ModalEditMerchant.vue";
+import ModalCreateMerchant from "../../../../../components/Modals/Merchant/ModalCreateMerchant.vue";
 
 const apiBase = import.meta.env.VITE_API_URL;
 const isTableLoading = ref(false);

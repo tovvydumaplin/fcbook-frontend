@@ -1,7 +1,7 @@
 <script setup>
 import { Eye, Search } from "lucide-vue-next";
 import { ref, onMounted } from "vue";
-import ModalIADiscounts from "../../../../../components/ModalIADiscounts.vue";
+import ModalIADiscounts from "../../../../../components/Modals/InstitutionalAccount/IADiscount/ModalIADiscounts.vue";
 
 const apiBase = import.meta.env.VITE_API_URL;
 const isIADiscountsModalOpen = ref(false);

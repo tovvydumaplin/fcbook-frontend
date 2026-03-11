@@ -1,7 +1,7 @@
 <script setup>
 import { Eye, Search } from "lucide-vue-next";
 import { ref, onMounted } from "vue";
-import ModalMerchantDiscounts from "../../../../../components/ModalMerchantDiscounts.vue";
+import ModalMerchantDiscounts from "../../../../../components/Modals/Merchant/MerchantDiscount/ModalMerchantDiscounts.vue";
 
 const apiBase = import.meta.env.VITE_API_URL;
 const isMerchantDiscountsModalOpen = ref(false);

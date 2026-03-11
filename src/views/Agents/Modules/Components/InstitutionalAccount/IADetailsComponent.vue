@@ -1,8 +1,8 @@
 <script setup>
 import { Edit, Plus, Search } from "lucide-vue-next";
 import { ref, onMounted } from "vue";
-import ModalEditIA from "../../../../../components/ModalEditIA.vue";
-import ModalCreateIA from "../../../../../components/ModalCreateIA.vue";
+import ModalEditIA from "../../../../../components/Modals/InstitutionalAccount/ModalEditIA.vue";
+import ModalCreateIA from "../../../../../components/Modals/InstitutionalAccount/ModalCreateIA.vue";
 import Swal from "sweetalert2";
 
 const apiBase = import.meta.env.VITE_API_URL;
@@ -109,7 +109,7 @@ onMounted(fetchInstitutionalAccounts);
       </div>
       <div class="flex justify-end">
         <button
-          @click="openCreateIA"
+          @click="isCreateModalOpen = true"
           type="button"
           class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 flex items-center gap-2 cursor-pointer"
         >

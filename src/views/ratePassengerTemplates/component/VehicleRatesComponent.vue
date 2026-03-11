@@ -1,7 +1,7 @@
 <script setup>
 import { Edit } from "lucide-vue-next";
 import { ref, watch } from "vue";
-import ModalEditVehicleRate from "../../../components/ModalEditVehicleRate.vue";
+import ModalEditVehicleRate from "../../../components/Modals/Vehicle/VehicleRate/ModalEditVehicleRate.vue";
 
 const apiBase = import.meta.env.VITE_API_URL;
 

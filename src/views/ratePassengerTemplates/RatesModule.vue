@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { Search } from "lucide-vue-next";
-import ModalCreateAddOn from "../../components/ModalCreateAddOn.vue";
+import ModalCreateAddOn from "../../components/Modals/AddOn/ModalCreateAddOn.vue";
 import AccommodationRateComponent from "./component/AccommodationRatesComponent.vue";
 import VehicleRatesComponent from "./component/VehicleRatesComponent.vue";
 
