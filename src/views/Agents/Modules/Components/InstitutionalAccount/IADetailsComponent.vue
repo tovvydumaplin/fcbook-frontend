@@ -209,7 +209,6 @@ onMounted(fetchInstitutionalAccounts);
   <transition name="modal-fade">
     <ModalCreateIA
       v-if="isCreateModalOpen"
-      :ia="selectedInstitutionalAccount"
       @close="isCreateModalOpen = false"
       @save="handleCreateSaved"
     />

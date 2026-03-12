@@ -216,7 +216,6 @@ onMounted(fetchMerchants);
   <transition name="modal-fade">
     <ModalCreateMerchant
       v-if="isCreateModalOpen"
-      :merchant="selectedMerchant"
       @close="isCreateModalOpen = false"
       @save="handleCreateSaved"
     />

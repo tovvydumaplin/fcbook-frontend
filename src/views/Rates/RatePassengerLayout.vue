@@ -16,12 +16,10 @@ const tabs = [
     <div class="mb-6">
       <nav class="text-sm text-gray-500 mb-2">
         <span>Dashboard</span> <span class="mx-2">></span>
-        <span class="text-gray-900">Rates/Passenger Types</span>
+        <span class="text-gray-900">Rates</span>
       </nav>
       <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-semibold text-gray-900">
-          Rates/Passenger Types
-        </h1>
+        <h1 class="text-2xl font-semibold text-gray-900">Rates</h1>
       </div>
     </div>
     <!-- TABS -->

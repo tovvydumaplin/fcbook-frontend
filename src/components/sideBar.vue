@@ -1,3 +1,93 @@
+<script setup>
+import { ref } from "vue";
+import {
+  Settings,
+  User,
+  Ship,
+  MapPinned,
+  CarFront,
+  Split,
+  CalendarDays,
+  Coins,
+  UserStar,
+  Armchair,
+  Cctv,
+  Banknote,
+} from "lucide-vue-next";
+
+// Import icons
+import portsIcon from "../assets/sidebar-icons/ports.png";
+import vesselsIcon from "../assets/sidebar-icons/vessels.png";
+import routesIcon from "../assets/sidebar-icons/routes.png";
+import schedulesIcon from "../assets/sidebar-icons/schedules.png";
+import seatAllocationIcon from "../assets/sidebar-icons/seat-allocation.png";
+import ratesIcon from "../assets/sidebar-icons/rates.png";
+import discountsIcon from "../assets/sidebar-icons/discounts.png";
+import vehiclesIcon from "../assets/sidebar-icons/vehicles.png";
+import tellerBookingIcon from "../assets/sidebar-icons/teller-booking.png";
+
+// Collapsible states
+const isModulesOpen = ref(true);
+const isBookingModulesOpen = ref(true);
+const isLogsReportsOpen = ref(true);
+const isSystemOpen = ref(true);
+
+const toggleModules = () => (isModulesOpen.value = !isModulesOpen.value);
+const toggleBookingModules = () =>
+  (isBookingModulesOpen.value = !isBookingModulesOpen.value);
+const toggleLogsReports = () =>
+  (isLogsReportsOpen.value = !isLogsReportsOpen.value);
+const toggleSystem = () => (isSystemOpen.value = !isSystemOpen.value);
+
+// Sidebar items
+const moduleItems = [
+  { name: "Ports", route: "/ports", icon: MapPinned },
+  { name: "Vessels", route: "/vessels", icon: Ship },
+  { name: "Routes", route: "/routes", icon: Split },
+  { name: "Schedule", route: "/schedule", icon: CalendarDays },
+  {
+    name: "Accommodation",
+    route: "/passenger-accommodation",
+    icon: Armchair,
+  },
+  {
+    name: "Agents",
+    route: "/agents",
+    icon: UserStar,
+  },
+  {
+    name: "Rates",
+    route: "/rates",
+    icon: Banknote,
+  },
+  {
+    name: "Promos",
+    route: "/promos",
+    icon: Coins,
+  },
+  {
+    name: "Vehicles",
+    route: "/vehicles",
+    icon: CarFront,
+  },
+  {
+    name: "Passenger Monitoring",
+    route: "/passenger-monitoring",
+    icon: Cctv,
+  },
+];
+
+const bookingItems = [
+  { name: "Teller Booking", route: "/teller-booking", icon: tellerBookingIcon },
+];
+
+const logsItems = [];
+const systemItems = [
+  { name: "Settings", route: "/settings", icon: Settings },
+  { name: "Profile", route: "/profile", icon: User },
+];
+</script>
+
 <template>
   <div
     class="w-80 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col overflow-y-auto"
@@ -62,11 +152,7 @@
             active-class="bg-blue-50 text-blue-600"
             exact-active-class="bg-blue-50 text-blue-600"
           >
-            <img
-              :src="item.icon"
-              :alt="item.name"
-              class="w-5 h-5 flex-shrink-0"
-            />
+            <component :is="item.icon" class="w-5 h-5" />
             <span class="font-medium">{{ item.name }}</span>
           </router-link>
         </div>
@@ -201,75 +287,3 @@
     </nav>
   </div>
 </template>
-
-<script setup>
-import { ref } from "vue";
-import { Settings, User } from "lucide-vue-next";
-
-// Import icons
-import portsIcon from "../assets/sidebar-icons/ports.png";
-import vesselsIcon from "../assets/sidebar-icons/vessels.png";
-import routesIcon from "../assets/sidebar-icons/routes.png";
-import schedulesIcon from "../assets/sidebar-icons/schedules.png";
-import seatAllocationIcon from "../assets/sidebar-icons/seat-allocation.png";
-import ratesIcon from "../assets/sidebar-icons/rates.png";
-import discountsIcon from "../assets/sidebar-icons/discounts.png";
-import vehiclesIcon from "../assets/sidebar-icons/vehicles.png";
-import tellerBookingIcon from "../assets/sidebar-icons/teller-booking.png";
-
-// Collapsible states
-const isModulesOpen = ref(true);
-const isBookingModulesOpen = ref(true);
-const isLogsReportsOpen = ref(true);
-const isSystemOpen = ref(true);
-
-const toggleModules = () => (isModulesOpen.value = !isModulesOpen.value);
-const toggleBookingModules = () =>
-  (isBookingModulesOpen.value = !isBookingModulesOpen.value);
-const toggleLogsReports = () =>
-  (isLogsReportsOpen.value = !isLogsReportsOpen.value);
-const toggleSystem = () => (isSystemOpen.value = !isSystemOpen.value);
-
-// Sidebar items
-const moduleItems = [
-  { name: "Ports", route: "/ports", icon: portsIcon },
-  { name: "Vessels", route: "/vessels", icon: vesselsIcon },
-  { name: "Routes", route: "/routes", icon: routesIcon },
-  { name: "Schedule", route: "/schedule", icon: schedulesIcon },
-  {
-    name: "Accommodation",
-    route: "/passenger-accommodation",
-    icon: seatAllocationIcon,
-  },
-  {
-    name: "Agents",
-    route: "/agents",
-    icon: tellerBookingIcon,
-  },
-  {
-    name: "Rates",
-    route: "/rates",
-    icon: ratesIcon,
-  },
-  {
-    name: "Vehicles",
-    route: "/vehicles",
-    icon: vehiclesIcon,
-  },
-  {
-    name: "Passenger Monitoring",
-    route: "/passenger-monitoring",
-    icon: vehiclesIcon,
-  },
-];
-
-const bookingItems = [
-  { name: "Teller Booking", route: "/teller-booking", icon: tellerBookingIcon },
-];
-
-const logsItems = [];
-const systemItems = [
-  { name: "Settings", route: "/settings", icon: Settings },
-  { name: "Profile", route: "/profile", icon: User },
-];
-</script>
