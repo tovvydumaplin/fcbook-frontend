@@ -6,11 +6,12 @@ import tellerBooking from "../views/tellerBooking.vue";
 import ScheduleModule from "../views/ScheduleModule.vue";
 import RoutesModule from "../views/RoutesModule.vue";
 import VesselsModule from "../views/VesselsModule.vue";
-import RatesModule from "../views/Rates/RatePassengerLayout.vue";
+import RatesPassengerLayout from "../views/Rates/RatePassengerLayout.vue";
 import PassengerMonitoringModule from "../views/PassengerMonitoringModule.vue";
 import PassengerAccommodation from "../views/PassengerAccommodation.vue";
 import VehiclesModule from "../views/VehiclesModule.vue";
 import AgentsModule from "../views/Agents/AgentsLayout.vue";
+import PromosDiscountsLayout from "../views/Promos/PromosDiscountsLayout.vue";
 
 const routes = [
   { path: "/", component: Login },
@@ -20,11 +21,12 @@ const routes = [
   { path: "/schedule", component: ScheduleModule },
   { path: "/routes", component: RoutesModule },
   { path: "/vessels", component: VesselsModule },
-  { path: "/rates", component: RatesModule },
+  { path: "/rates", component: RatesPassengerLayout },
   { path: "/passenger-monitoring", component: PassengerMonitoringModule },
   { path: "/passenger-accommodation", component: PassengerAccommodation },
   { path: "/vehicles", component: VehiclesModule },
   { path: "/agents", component: AgentsModule },
+  { path: "/promos", component: PromosDiscountsLayout },
 ];
 
 const router = createRouter({
