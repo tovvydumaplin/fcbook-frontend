@@ -12,21 +12,21 @@ const effectiveDate = ref("");
 const endDate = ref("");
 const percentageValue = ref("");
 const fixedValue = ref("");
-const isPercentageDisabled = computed(() => promoType.value === "fixed");
-const isFixedDisabled = computed(() => promoType.value === "percentage");
-const promoType = ref(null);
+const isPercentageDisabled = computed(() => valueType.value === 1);
+const isFixedDisabled = computed(() => valueType.value === 0);
+const valueType = ref(null);
 
 const setValue = (type, newValue) => {
   if (newValue === "" || newValue === null) {
-    promoType.value = null;
+    valueType.value = null;
     percentageValue.value = "";
     fixedValue.value = "";
     return;
   }
 
-  promoType.value = type;
+  valueType.value = type;
 
-  if (type === "percentage") {
+  if (type === 0) {
     percentageValue.value = newValue;
     fixedValue.value = "";
   } else {
@@ -57,10 +57,10 @@ const createPromo = async () => {
       promo_name: promoName.value,
       promo_code: promoCode.value,
       promo_value:
-        promoType.value === "percentage"
+        valueType.value === 0
           ? Number(percentageValue.value)
           : Number(fixedValue.value),
-      promo_type: promoType.value,
+      value_type: valueType.value,
       effective_date: effectiveDate.value,
       end_date: endDate.value,
     };
@@ -176,7 +176,7 @@ const createPromo = async () => {
               <div class="relative w-full">
                 <input
                   v-model="percentageValue"
-                  @input="(e) => setValue('percentage', e.target.value)"
+                  @input="(e) => setValue(0, e.target.value)"
                   :disabled="isPercentageDisabled"
                   type="number"
                   placeholder="00.00"
@@ -195,7 +195,7 @@ const createPromo = async () => {
               <div class="relative w-full">
                 <input
                   v-model="fixedValue"
-                  @input="(e) => setValue('fixed', e.target.value)"
+                  @input="(e) => setValue(1, e.target.value)"
                   :disabled="isFixedDisabled"
                   type="number"
                   required

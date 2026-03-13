@@ -15,6 +15,13 @@ const selectedPromo = ref([]);
 const search = ref("");
 const errorMsg = ref("");
 
+const status = {
+  0: { label: "Pending", class: "text-yellow-600 bg-yellow-100" },
+  1: { label: "Active", class: "text-green-600 bg-green-100" },
+  2: { label: "Inactive", class: "text-gray-600 bg-gray-100" },
+  3: { label: "Cancelled", class: "text-red-600 bg-red-100" },
+};
+
 const openEditPromo = (promo) => {
   selectedPromo.value = promo;
   console.log(selectedPromo.value);
@@ -62,7 +69,7 @@ const fetchPromos = async () => {
       promoName: promo.promo_name,
       promoCode: promo.promo_code,
       promoValue: promo.promo_value,
-      promoType: promo.promo_type,
+      valueType: promo.value_type,
       status: promo.status,
       effectiveDate: promo.effective_date
         ? new Date(promo.effective_date).toLocaleDateString()
@@ -236,13 +243,20 @@ onMounted(fetchPromos);
               </td>
               <td class="px-6 py-4 text-sm">
                 {{
-                  promo.promoType === "percentage"
+                  promo.valueType === 0
                     ? promo.promoValue + " %"
                     : "₱ " + promo.promoValue
                 }}
               </td>
               <td class="px-6 py-4 text-sm">
-                {{ promo.status }}
+                <span
+                  :class="[
+                    'px-2 py-1 rounded text-sm font-medium',
+                    status[promo.status].class,
+                  ]"
+                >
+                  {{ status[promo.status].label }}
+                </span>
               </td>
               <td class="px-6 py-4 text-sm">
                 {{ promo.effectiveDate }}

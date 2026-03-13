@@ -15,6 +15,13 @@ const discounts = ref([]);
 const search = ref("");
 const errorMsg = ref("");
 
+const status = {
+  0: { label: "Pending", class: "text-yellow-600 bg-yellow-100" },
+  1: { label: "Active", class: "text-green-600 bg-green-100" },
+  2: { label: "Inactive", class: "text-gray-600 bg-gray-100" },
+  3: { label: "Cancelled", class: "text-red-600 bg-red-100" },
+};
+
 const openEditDiscount = (discount) => {
   selectedDiscount.value = discount;
   isEditModalOpen.value = true;
@@ -51,7 +58,7 @@ const fetchDiscounts = async () => {
       discountName: discount.discount_name,
       discountCode: discount.discount_code,
       discountValue: discount.discount_value,
-      discountType: discount.discount_type,
+      valueType: discount.value_type,
       status: discount.status,
       effectiveDate: discount.effective_date
         ? new Date(discount.effective_date).toLocaleDateString()
@@ -233,15 +240,21 @@ onMounted(fetchDiscounts);
               </td>
               <td class="px-6 py-4 text-sm">
                 {{
-                  discount.discountType === "percentage"
+                  discount.valueType === 0
                     ? discount.discountValue + " %"
                     : "₱ " + discount.discountValue
                 }}
               </td>
               <td class="px-6 py-4 text-sm">
-                {{ discount.status }}
+                <span
+                  :class="[
+                    'px-2 py-1 rounded text-sm font-medium',
+                    status[discount.status].class,
+                  ]"
+                >
+                  {{ status[discount.status].label }}
+                </span>
               </td>
-
               <td class="px-6 py-4 text-sm">
                 {{ discount.effectiveDate }}
               </td>
