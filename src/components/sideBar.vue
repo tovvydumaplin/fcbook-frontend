@@ -13,18 +13,9 @@ import {
   Armchair,
   Cctv,
   Banknote,
+  BadgePercent,
+  Ticket,
 } from "lucide-vue-next";
-
-// Import icons
-import portsIcon from "../assets/sidebar-icons/ports.png";
-import vesselsIcon from "../assets/sidebar-icons/vessels.png";
-import routesIcon from "../assets/sidebar-icons/routes.png";
-import schedulesIcon from "../assets/sidebar-icons/schedules.png";
-import seatAllocationIcon from "../assets/sidebar-icons/seat-allocation.png";
-import ratesIcon from "../assets/sidebar-icons/rates.png";
-import discountsIcon from "../assets/sidebar-icons/discounts.png";
-import vehiclesIcon from "../assets/sidebar-icons/vehicles.png";
-import tellerBookingIcon from "../assets/sidebar-icons/teller-booking.png";
 
 // Collapsible states
 const isModulesOpen = ref(true);
@@ -63,7 +54,7 @@ const moduleItems = [
   {
     name: "Promos",
     route: "/promos",
-    icon: Coins,
+    icon: BadgePercent,
   },
   {
     name: "Vehicles",
@@ -78,7 +69,7 @@ const moduleItems = [
 ];
 
 const bookingItems = [
-  { name: "Teller Booking", route: "/teller-booking", icon: tellerBookingIcon },
+  { name: "Teller Booking", route: "/teller-booking", icon: Ticket },
 ];
 
 const logsItems = [];
@@ -193,11 +184,7 @@ const systemItems = [
             active-class="bg-blue-50 text-blue-600"
             exact-active-class="bg-blue-50 text-blue-600"
           >
-            <img
-              :src="item.icon"
-              :alt="item.name"
-              class="w-5 h-5 flex-shrink-0"
-            />
+            <component :is="item.icon" class="w-5 h-5" />
             <span class="font-medium">{{ item.name }}</span>
           </router-link>
         </div>

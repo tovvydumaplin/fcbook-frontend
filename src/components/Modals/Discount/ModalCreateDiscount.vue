@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed } from "vue";
+import Swal from "sweetalert2";
 
 const emit = defineEmits(["save", "close"]);
 const apiBase = import.meta.env.VITE_API_URL;
@@ -34,9 +35,22 @@ const setValue = (type, newValue) => {
   }
 };
 
-const saveDiscount = async () => {
-  isLoading.value = true;
+const createDiscount = async () => {
   errorMsg.value = "";
+
+  const confirm = await Swal.fire({
+    title: "Are you sure?",
+    text: "Do you want to create this discount?",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: "Confirm",
+    cancelButtonText: "Cancel",
+    reverseButtons: true,
+  });
+
+  if (!confirm.isConfirmed) return;
+
+  isLoading.value = true;
 
   try {
     const payload = {
@@ -62,14 +76,19 @@ const saveDiscount = async () => {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to save discount");
+      if (data.errors) {
+        errorMsg.value = Object.values(data.errors)[0][0];
+      } else {
+        errorMsg.value = data.message || "Failed to create discount.";
+      }
+      return;
     }
 
     emit("save");
     emit("close");
   } catch (error) {
     console.error(error);
-    errorMsg.value = "Something went wrong while saving.";
+    errorMsg.value = "Something went wrong while creating.";
   } finally {
     isLoading.value = false;
   }
@@ -121,7 +140,7 @@ const saveDiscount = async () => {
           </svg>
         </button>
       </div>
-      <form @submit.prevent="saveDiscount" class="p-6 space-y-6">
+      <form @submit.prevent="createDiscount" class="p-6 space-y-6">
         <!-- FORM  -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">

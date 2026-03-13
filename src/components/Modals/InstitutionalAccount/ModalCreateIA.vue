@@ -3,7 +3,6 @@ import { ref } from "vue";
 import Swal from "sweetalert2";
 
 const emit = defineEmits(["close", "save"]);
-
 const apiBase = import.meta.env.VITE_API_URL;
 const isLoading = ref(false);
 const errorMsg = ref("");
@@ -20,6 +19,7 @@ const paymentType = ref("");
 
 const saveIA = async () => {
   errorMsg.value = "";
+
   const confirm = await Swal.fire({
     title: "Are you sure?",
     text: "Do you want to save this institutional account?",

@@ -1,16 +1,19 @@
 <script setup>
-import { Edit, Plus, Search } from "lucide-vue-next";
+import { Edit, Plus, Search, Trash2 } from "lucide-vue-next";
 import { ref, onMounted } from "vue";
+import Swal from "sweetalert2";
 import ModalCreatePromo from "../../../components/Modals/Promo/ModalCreatePromo.vue";
 import ModalEditPromo from "../../../components/Modals/Promo/ModalEditPromo.vue";
 
 const apiBase = import.meta.env.VITE_API_URL;
+const isLoading = ref(false);
 const isTableLoading = ref(false);
 const isEditModalOpen = ref(false);
 const isCreateModalOpen = ref(false);
 const promos = ref([]);
-const search = ref("");
 const selectedPromo = ref([]);
+const search = ref("");
+const errorMsg = ref("");
 
 const openEditPromo = (promo) => {
   selectedPromo.value = promo;
@@ -20,11 +23,21 @@ const openEditPromo = (promo) => {
 
 const createdPromo = async () => {
   isCreateModalOpen.value = false;
+
+  await Swal.fire({
+    icon: "success",
+    title: "Created!",
+    text: `New Promo has been created.`,
+    timer: 2000,
+    showConfirmButton: false,
+  });
+
   await fetchPromos();
 };
 
 const editedPromo = async () => {
   isEditModalOpen.value = false;
+
   await fetchPromos();
 };
 
@@ -45,7 +58,7 @@ const fetchPromos = async () => {
     const data = await res.json();
 
     promos.value = data.data.promos.map((promo) => ({
-      promo_id: promo.promo_id,
+      promoId: promo.promo_id,
       promoName: promo.promo_name,
       promoCode: promo.promo_code,
       promoValue: promo.promo_value,
@@ -64,6 +77,53 @@ const fetchPromos = async () => {
     console.error("Fetch error:", err);
   } finally {
     isTableLoading.value = false;
+  }
+};
+
+const deletePromo = async (promo) => {
+  errorMsg.value = "";
+
+  const confirm = await Swal.fire({
+    title: "Are you sure?",
+    text: "Do you want to delete this promo?",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Confirm",
+    cancelButtonText: "Cancel",
+    reverseButtons: true,
+  });
+
+  if (!confirm.isConfirmed) return;
+
+  isLoading.value = true;
+
+  try {
+    const response = await fetch(`${apiBase}/promos/${promo.promoId}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to delete promo");
+    }
+  } catch (err) {
+    console.error(err);
+    errorMsg.value = "Failed to delete promo.";
+  } finally {
+    isLoading.value = false;
+    await Swal.fire({
+      icon: "success",
+      title: "Success!",
+      text: `Promo has been deleted.`,
+      timer: 2000,
+      showConfirmButton: false,
+    });
+
+    await fetchPromos();
   }
 };
 
@@ -100,91 +160,122 @@ onMounted(fetchPromos);
       </div>
     </div>
     <div class="p-4">
-      <table class="min-w-full table-fixed divide-y divide-gray-200">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="w-16 px-6 py-3 text-left text-xs text-gray-500">#</th>
-            <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
-              Promo Name
-            </th>
-            <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
-              Promo Code
-            </th>
-            <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
-              Promo Value
-            </th>
-            <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
-              Effective Date
-            </th>
-            <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
-              End Date
-            </th>
-            <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">
-              Updated
-            </th>
-            <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">User</th>
-            <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">
-              Action
-            </th>
-          </tr>
-        </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-          <!-- Loading -->
-          <tr v-if="isTableLoading">
-            <td colspan="6" class="text-center py-6 text-gray-500">
-              Loading promos...
-            </td>
-          </tr>
-          <!-- Data -->
-          <tr
-            v-else-if="promos.length > 0"
-            v-for="(promo, index) in promos"
-            :key="promo.promo_id"
-            class="hover:bg-gray-50"
-          >
-            <td class="px-6 py-4 text-sm">
-              {{ index + 1 }}
-            </td>
-            <td class="px-6 py-4 text-sm">
-              {{ promo.promoName }}
-            </td>
-            <td class="px-6 py-4 text-sm">
-              {{ promo.promoCode }}
-            </td>
-            <td clss="px-6 py-4 text-sm">
-              {{
-                promo.promoType === "percentage"
-                  ? promo.promoValue + " %"
-                  : "₱ " + promo.promoValue
-              }}
-            </td>
-            <td class="px-6 py-4 text-sm">
-              {{ promo.effectiveDate }}
-            </td>
-            <td class="px-6 py-4 text-sm">
-              {{ promo.endDate }}
-            </td>
-            <td class="px-6 py-4 text-sm">
-              {{ promo.updatedAt }}
-            </td>
-            <td class="px-6 py-4 text-sm">-</td>
-            <td class="px-6 py-4 text-sm flex items-start gap-1">
-              <button
-                @click="openEditPromo(promo)"
-                class="font-medium text-blue-600 hover:text-blue-900 flex items-center"
-              >
-                <Edit class="w-4 h-4 mr-1" />
-              </button>
-            </td>
-          </tr>
-          <!-- Empty -->
-          <tr v-else>
-            <td colspan="6" class="text-center py-6 text-gray-500">
-              No promos found.
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <!-- Loading -->
+      <div
+        v-if="isTableLoading"
+        class="flex justify-center items-center py-8 min-h-[40vh]"
+      >
+        <div
+          class="flex items-center gap-3 bg-white border border-blue-600 shadow-lg px-5 py-3 rounded-lg"
+        >
+          <span
+            class="inline-block w-6 h-6 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"
+          ></span>
+          <span class="font-semibold text-blue-700 text-base">
+            Loading Promos...
+          </span>
+        </div>
+      </div>
+      <!-- TABLE  -->
+      <div v-else-if="promos.length > 0">
+        <table class="min-w-full table-fixed divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="w-16 px-6 py-3 text-left text-xs text-gray-500">#</th>
+              <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
+                Promo Name
+              </th>
+              <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
+                Code
+              </th>
+              <th class="w-32 px-6 py-3 text-left text-xs text-gray-500">
+                Value
+              </th>
+              <th class="w-32 px-6 py-3 text-left text-xs text-gray-500">
+                Status
+              </th>
+
+              <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
+                Effective Date
+              </th>
+              <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
+                End Date
+              </th>
+              <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">
+                Updated
+              </th>
+              <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">
+                User
+              </th>
+              <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">
+                Action
+              </th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <!-- Loading -->
+            <tr v-if="isTableLoading">
+              <td colspan="6" class="text-center py-6 text-gray-500">
+                Loading promos...
+              </td>
+            </tr>
+            <!-- Data -->
+            <tr
+              v-for="(promo, index) in promos"
+              :key="promo.promoId"
+              class="hover:bg-gray-50"
+            >
+              <td class="px-6 py-4 text-sm">
+                {{ index + 1 }}
+              </td>
+              <td class="px-6 py-4 text-sm">
+                {{ promo.promoName }}
+              </td>
+              <td class="px-6 py-4 text-sm">
+                {{ promo.promoCode }}
+              </td>
+              <td class="px-6 py-4 text-sm">
+                {{
+                  promo.promoType === "percentage"
+                    ? promo.promoValue + " %"
+                    : "₱ " + promo.promoValue
+                }}
+              </td>
+              <td class="px-6 py-4 text-sm">
+                {{ promo.status }}
+              </td>
+              <td class="px-6 py-4 text-sm">
+                {{ promo.effectiveDate }}
+              </td>
+              <td class="px-6 py-4 text-sm">
+                {{ promo.endDate }}
+              </td>
+              <td class="px-6 py-4 text-sm">
+                {{ promo.updatedAt }}
+              </td>
+              <td class="px-6 py-4 text-sm">-</td>
+              <td class="px-6 py-4 text-sm flex items-start gap-1">
+                <button
+                  @click="openEditPromo(promo)"
+                  class="font-medium text-blue-600 hover:text-blue-900 flex items-center"
+                >
+                  <Edit class="w-4 h-4 mr-1" />
+                </button>
+                <button
+                  @click="deletePromo(promo)"
+                  class="text-red-600 hover:text-red-900"
+                >
+                  <Trash2 class="w-4 h-4" />
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- Empty State -->
+      <div v-else class="text-center py-10 text-gray-500 font-medium">
+        No Promos Found
+      </div>
     </div>
   </div>
   <transition name="modal-fade">

@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import Swal from "sweetalert2";
 
 const emit = defineEmits(["save", "close"]);
 const apiBase = import.meta.env.VITE_API_URL;
@@ -49,8 +50,21 @@ const formatDate = (dateString) => {
 };
 
 const saveDiscount = async () => {
-  isLoading.value = true;
   errorMsg.value = "";
+
+  const confirm = await Swal.fire({
+    title: "Are you sure?",
+    text: "Do you want to edit this discount?",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: "Confirm",
+    cancelButtonText: "Cancel",
+    reverseButtons: true,
+  });
+
+  if (!confirm.isConfirmed) return;
+
+  isLoading.value = true;
 
   try {
     const payload = {
@@ -66,7 +80,7 @@ const saveDiscount = async () => {
     };
 
     const response = await fetch(
-      `${apiBase}/discounts/${props.discount.discount_id}`,
+      `${apiBase}/discounts/${props.discount.discountId}`,
       {
         method: "PUT",
         headers: {
@@ -79,7 +93,12 @@ const saveDiscount = async () => {
     );
 
     if (!response.ok) {
-      throw new Error("Failed to save discount");
+      if (data.errors) {
+        errorMsg.value = Object.values(data.errors)[0][0];
+      } else {
+        errorMsg.value = data.message || "Failed to edit discount.";
+      }
+      return;
     }
 
     emit("save");

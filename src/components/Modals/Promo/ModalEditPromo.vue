@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import Swal from "sweetalert2";
 
 const emit = defineEmits(["save", "close"]);
 const apiBase = import.meta.env.VITE_API_URL;
@@ -49,8 +50,21 @@ const formatDate = (dateString) => {
 };
 
 const savePromo = async () => {
-  isLoading.value = true;
   errorMsg.value = "";
+
+  const confirm = await Swal.fire({
+    title: "Are you sure?",
+    text: "Do you want to edit this promo?",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: "Confirm",
+    cancelButtonText: "Cancel",
+    reverseButtons: true,
+  });
+
+  if (!confirm.isConfirmed) return;
+
+  isLoading.value = true;
 
   try {
     const payload = {
@@ -65,7 +79,7 @@ const savePromo = async () => {
       end_date: endDate.value,
     };
 
-    const response = await fetch(`${apiBase}/promos/${props.promo.promo_id}`, {
+    const response = await fetch(`${apiBase}/promos/${props.promo.promoId}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -76,7 +90,12 @@ const savePromo = async () => {
     });
 
     if (!response.ok) {
-      throw new Error("Failed to save promo");
+      if (data.errors) {
+        errorMsg.value = Object.values(data.errors)[0][0];
+      } else {
+        errorMsg.value = data.message || "Failed to edit promo.";
+      }
+      return;
     }
 
     emit("save");
