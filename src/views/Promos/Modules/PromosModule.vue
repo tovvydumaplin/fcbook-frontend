@@ -192,29 +192,28 @@ onMounted(fetchPromos);
               <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
                 Promo Name
               </th>
-              <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
+              <th class="w-42 px-6 py-3 text-left text-xs text-gray-500">
                 Code
               </th>
               <th class="w-32 px-6 py-3 text-left text-xs text-gray-500">
                 Value
               </th>
-              <th class="w-32 px-6 py-3 text-left text-xs text-gray-500">
-                Status
-              </th>
-
-              <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
+              <th class="w-42 px-6 py-3 text-left text-xs text-gray-500">
                 Effective Date
               </th>
-              <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
+              <th class="w-42 px-6 py-3 text-left text-xs text-gray-500">
                 End Date
               </th>
               <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">
                 Updated
               </th>
-              <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">
+              <th class="w-32 px-6 py-3 text-left text-xs text-gray-500">
                 User
               </th>
-              <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">
+              <th class="w-42 px-6 py-3 text-left text-xs text-gray-500">
+                Status
+              </th>
+              <th class="w-32 px-6 py-3 text-left text-xs text-gray-500">
                 Action
               </th>
             </tr>
@@ -249,16 +248,6 @@ onMounted(fetchPromos);
                 }}
               </td>
               <td class="px-6 py-4 text-sm">
-                <span
-                  :class="[
-                    'px-2 py-1 rounded text-sm font-medium',
-                    status[promo.status].class,
-                  ]"
-                >
-                  {{ status[promo.status].label }}
-                </span>
-              </td>
-              <td class="px-6 py-4 text-sm">
                 {{ promo.effectiveDate }}
               </td>
               <td class="px-6 py-4 text-sm">
@@ -268,6 +257,16 @@ onMounted(fetchPromos);
                 {{ promo.updatedAt }}
               </td>
               <td class="px-6 py-4 text-sm">-</td>
+              <td class="px-6 py-4 text-sm">
+                <span
+                  :class="[
+                    'px-2 py-1 rounded text-sm font-medium',
+                    status[promo.status].class,
+                  ]"
+                >
+                  {{ status[promo.status].label }}
+                </span>
+              </td>
               <td class="px-6 py-4 text-sm flex items-start gap-1">
                 <button
                   @click="openEditPromo(promo)"
