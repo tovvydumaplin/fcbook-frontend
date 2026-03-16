@@ -3,7 +3,6 @@ import { ref } from "vue";
 import Swal from "sweetalert2";
 
 const emit = defineEmits(["close", "save"]);
-
 const apiBase = import.meta.env.VITE_API_URL;
 const isLoading = ref(false);
 const errorMsg = ref("");
@@ -20,6 +19,7 @@ const paymentType = ref("");
 
 const saveIA = async () => {
   errorMsg.value = "";
+
   const confirm = await Swal.fire({
     title: "Are you sure?",
     text: "Do you want to save this institutional account?",
@@ -241,7 +241,6 @@ const saveIA = async () => {
                   v-model="effectiveDate"
                   type="date"
                   required
-                  placeholder="Input Name"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -253,7 +252,6 @@ const saveIA = async () => {
                   v-model="eocDate"
                   type="date"
                   required
-                  placeholder="Input Name"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>

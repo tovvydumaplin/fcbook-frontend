@@ -1,4 +1,59 @@
-<!-- filepath: d:\Fastcat Book 2\fcbook-frontend\src\components\TellerHeader.vue -->
+<script setup>
+import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
+
+const tabs = ["WLK-0317089-1", "WLK-0317089-1"];
+const activeTab = ref(tabs[0]);
+const dropdownOpen = ref(false);
+const userName = ref("User"); // You can get this from localStorage if needed
+const router = useRouter();
+
+onMounted(() => {
+  const user = JSON.parse(localStorage.getItem("user"));
+  if (user) {
+    userName.value = user.name ? user.name : user.email;
+  }
+});
+
+const logout = async () => {
+  const token = localStorage.getItem("token");
+  try {
+    await fetch("http://127.0.0.1:8000/api/logout", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+    });
+  } catch (err) {
+    console.error("Logout API error:", err);
+  }
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  router.push({ path: "/", query: { loggedOut: "1" } });
+};
+</script>
+
+<style scoped>
+header {
+  min-height: 40px;
+}
+
+.teller-dropdown-enter-active,
+.teller-dropdown-leave-active {
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+  transform-origin: top right;
+}
+
+.teller-dropdown-enter-from,
+.teller-dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+}
+</style>
+
 <template>
   <header class="bg-blue-800 text-white flex items-center px-6 py-2">
     <!-- Tabs -->
@@ -62,57 +117,3 @@
     </div>
   </header>
 </template>
-
-<script setup>
-import { ref, onMounted } from "vue";
-import { useRouter } from "vue-router";
-
-const tabs = ["WLK-0317089-1", "WLK-0317089-1"];
-const activeTab = ref(tabs[0]);
-const dropdownOpen = ref(false);
-const userName = ref("User"); // You can get this from localStorage if needed
-const router = useRouter();
-
-onMounted(() => {
-  const user = JSON.parse(localStorage.getItem("user"));
-  if (user) {
-    userName.value = user.name ? user.name : user.email;
-  }
-});
-
-const logout = async () => {
-  const token = localStorage.getItem("token");
-  try {
-    await fetch("http://127.0.0.1:8000/api/logout", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-    });
-  } catch (err) {
-    console.error("Logout API error:", err);
-  }
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
-  router.push({ path: "/", query: { loggedOut: "1" } });
-};
-</script>
-
-<style scoped>
-header {
-  min-height: 40px;
-}
-
-.teller-dropdown-enter-active,
-.teller-dropdown-leave-active {
-  transition: opacity 160ms ease, transform 160ms ease;
-  transform-origin: top right;
-}
-
-.teller-dropdown-enter-from,
-.teller-dropdown-leave-to {
-  opacity: 0;
-  transform: translateY(-6px) scale(0.98);
-}
-</style>

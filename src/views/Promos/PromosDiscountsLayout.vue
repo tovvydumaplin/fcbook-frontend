@@ -1,12 +1,12 @@
 <script setup>
 import { ref } from "vue";
-import RatesModule from "./Modules/RatesModule.vue";
-import PassengerTypesModule from "./Modules/PassengerTypesModule.vue";
+import PromosModule from "./Modules/PromosModule.vue";
+import DiscountsModule from "./Modules/DiscountsModule.vue";
 
-const activeTab = ref("rate");
+const activeTab = ref("promos");
 const tabs = [
-  { id: "rate", name: "Rates" },
-  { id: "discount", name: "Passenger Type" },
+  { id: "promos", name: "Promos" },
+  { id: "discounts", name: "Discounts" },
 ];
 </script>
 
@@ -16,10 +16,10 @@ const tabs = [
     <div class="mb-6">
       <nav class="text-sm text-gray-500 mb-2">
         <span>Dashboard</span> <span class="mx-2">></span>
-        <span class="text-gray-900">Rates</span>
+        <span class="text-gray-900">Promos</span>
       </nav>
       <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-semibold text-gray-900">Rates</h1>
+        <h1 class="text-2xl font-semibold text-gray-900">Promos</h1>
       </div>
     </div>
     <!-- TABS -->
@@ -44,8 +44,8 @@ const tabs = [
     </div>
     <!-- TAB CONTENT -->
     <div class="mt-6">
-      <RatesModule v-if="activeTab === 'rate'" />
-      <PassengerTypesModule v-else-if="activeTab === 'discount'" />
+      <PromosModule v-if="activeTab === 'promos'" />
+      <DiscountsModule v-else-if="activeTab === 'discounts'" />
     </div>
   </div>
 </template>
