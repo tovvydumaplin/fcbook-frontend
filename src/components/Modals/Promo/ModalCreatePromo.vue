@@ -81,8 +81,6 @@ const createPromo = async () => {
       }),
     };
 
-    console.log(payload);
-
     const response = await fetch(`${apiBase}/promos`, {
       method: "POST",
       headers: {
