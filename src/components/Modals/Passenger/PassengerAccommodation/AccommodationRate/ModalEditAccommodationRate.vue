@@ -1,14 +1,14 @@
 <script setup>
 import { reactive, watch } from "vue";
 
-const emit = defineEmits(["close", "save"]);
-const form = reactive({
-  baseRate: props.accommodationRate?.baseRate ?? 0,
-});
-
 const props = defineProps({
   accommodationRate: Object,
   route: Object,
+});
+
+const emit = defineEmits(["close", "save"]);
+const form = reactive({
+  baseRate: props.accommodationRate?.baseRate ?? 0,
 });
 
 const handleSubmit = async () => {

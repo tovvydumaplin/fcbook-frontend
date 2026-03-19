@@ -9,7 +9,7 @@ const selectedAccommodationRate = ref(null);
 const accommodations = ref([]);
 const isRateLoading = ref(false);
 const isRateModalOpen = ref(false);
-const emit = defineEmits(["edit", "saved"]);
+const emit = defineEmits(["edit", "save"]);
 const props = defineProps({
   selectedRoute: Object,
   isRateLoading: Boolean,
@@ -20,8 +20,9 @@ const openRateModal = (acc) => {
   isRateModalOpen.value = true;
 };
 
-const handleAccRateSaved = async () => {
-  console.log("saved");
+const editedAccRate = async () => {
+  isRateModalOpen.value = false;
+  await fetchRouteAccRates(props.selectedRoute.id);
 };
 
 const fetchRouteAccRates = async (routeId) => {
@@ -164,7 +165,7 @@ watch(
       :accommodationRate="selectedAccommodationRate"
       :route="selectedRoute"
       @close="isRateModalOpen = false"
-      @saved="handleAccRateSaved"
+      @save="editedAccRate"
     />
   </transition>
 </template>

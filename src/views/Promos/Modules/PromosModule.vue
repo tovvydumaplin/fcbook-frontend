@@ -24,7 +24,6 @@ const status = {
 
 const openEditPromo = (promo) => {
   selectedPromo.value = promo;
-  console.log(selectedPromo.value);
   isEditModalOpen.value = true;
 };
 
