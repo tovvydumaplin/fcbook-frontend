@@ -74,8 +74,8 @@ const createDiscount = async () => {
       value_type: valueType.value,
       effective_date: effectiveDate.value,
       end_date: endDate.value,
-      round_trip: isRoundtrip.value ? 1 : 0,
-      condition: noConditions.value ? 0 : 1,
+      is_roundtrip: isRoundtrip.value,
+      with_condition: !noConditions.value,
       ...(!noConditions.value && {
         discount_conditions: conditions.value,
       }),

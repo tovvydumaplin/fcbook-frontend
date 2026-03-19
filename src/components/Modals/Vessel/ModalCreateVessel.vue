@@ -134,28 +134,6 @@ const saveVessel = async () => {
           ></textarea>
         </div>
 
-        <!-- UI kept (visual only, no backend usage) -->
-        <div class="w-full">
-          <table>
-            <thead>
-              <tr>
-                <th class="w-full text-left py-2 text-sm text-gray-600">
-                  Seat Class
-                </th>
-                <th class="text-left px-2 text-sm text-gray-600">Aircon</th>
-                <th class="text-left px-2 text-sm text-gray-600">Wifi</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td colspan="3" class="py-4 text-center text-gray-500">
-                  Seatmap will be configured after vessel creation.
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
         <!-- Footer -->
         <div
           class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200"
