@@ -10,7 +10,7 @@ const prefix = ref("");
 const vesselInfo = reactive({
   name: "",
   details: "",
-  status: "Available",
+  status: 1,
 });
 
 const saveVessel = async () => {
@@ -23,7 +23,7 @@ const saveVessel = async () => {
   const payload = {
     vessel_name: fullName,
     description: vesselInfo.details,
-    status: "Available",
+    status: 1,
     capacity: 0,
   };
 
