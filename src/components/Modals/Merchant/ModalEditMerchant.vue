@@ -17,6 +17,11 @@ const effectiveDate = ref("");
 const eocDate = ref("");
 const paymentType = ref("");
 
+// Logo
+const logoFile = ref(null);
+const logoPreview = ref(null);
+const logoInputRef = ref(null);
+
 const props = defineProps({
   merchant: {
     type: Object,
@@ -32,6 +37,35 @@ const formatDate = (dateString) => {
   if (isNaN(date)) return "";
 
   return date.toISOString().split("T")[0];
+};
+
+const onLogoChange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (!file.type.startsWith("image/")) {
+    Swal.fire({
+      icon: "error",
+      title: "Invalid file",
+      text: "Please select an image file.",
+    });
+    return;
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    Swal.fire({
+      icon: "error",
+      title: "File too large",
+      text: "Image must be under 2MB.",
+    });
+    return;
+  }
+  logoFile.value = file;
+  logoPreview.value = URL.createObjectURL(file);
+};
+
+const removeLogo = () => {
+  logoFile.value = null;
+  logoPreview.value = null;
+  if (logoInputRef.value) logoInputRef.value.value = "";
 };
 
 const updateMerchant = async () => {
@@ -52,29 +86,29 @@ const updateMerchant = async () => {
   isLoading.value = true;
 
   try {
-    const payload = {
-      merchant_name: merchantName.value,
-      address: address.value,
-      email: email.value,
-      contact_person: contactPerson.value,
-      contact_number: contactNumber.value,
-      area: area.value,
-      payment_mode: paymentMode.value,
-      effective_date: effectiveDate.value,
-      eoc_date: eocDate.value,
-      payment_type: paymentType.value,
-    };
+    const formData = new FormData();
+    formData.append("_method", "PUT");
+    formData.append("merchant_name", merchantName.value);
+    formData.append("address", address.value);
+    formData.append("email", email.value);
+    formData.append("contact_person", contactPerson.value);
+    formData.append("contact_number", contactNumber.value);
+    formData.append("area", area.value);
+    formData.append("payment_mode", paymentMode.value);
+    formData.append("effective_date", effectiveDate.value);
+    formData.append("eoc_date", eocDate.value);
+    formData.append("payment_type", paymentType.value);
+    if (logoFile.value) formData.append("logo", logoFile.value);
 
     const response = await fetch(
       `${apiBase}/merchants/${props.merchant.merchantId}`,
       {
-        method: "PUT",
+        method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Accept: "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-        body: JSON.stringify(payload),
+        body: formData,
       },
     );
 
@@ -108,6 +142,10 @@ watch(
     paymentType.value = newMerchant.paymentType || "";
     effectiveDate.value = formatDate(newMerchant.effectiveDate);
     eocDate.value = formatDate(newMerchant.eocDate);
+    logoFile.value = null;
+    logoPreview.value = newMerchant.image
+      ? `${apiBase}/storage/${newMerchant.image}`
+      : null;
   },
   { immediate: true },
 );
@@ -159,6 +197,79 @@ watch(
         </button>
       </div>
       <form @submit.prevent="updateMerchant" class="flex flex-col p-6 gap-6">
+        <!-- LOGO UPLOAD -->
+        <div
+          class="flex items-center gap-5 p-4 bg-gray-50 border border-gray-200 rounded-lg"
+        >
+          <div class="relative flex-shrink-0">
+            <div
+              class="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 bg-white flex items-center justify-center overflow-hidden"
+              :class="{ 'border-blue-400 border-solid': logoPreview }"
+            >
+              <img
+                v-if="logoPreview"
+                :src="logoPreview"
+                alt="Logo preview"
+                class="w-full h-full object-contain"
+              />
+              <svg
+                v-else
+                class="w-8 h-8 text-gray-300"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+            </div>
+            <!-- Remove button -->
+            <button
+              v-if="logoPreview"
+              type="button"
+              @click="removeLogo"
+              class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow transition-colors"
+              title="Remove logo"
+            >
+              <svg
+                class="w-3 h-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="3"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <p class="text-sm font-medium text-gray-700">Account Logo</p>
+            <p class="text-xs text-gray-400">PNG, JPG, or WEBP — max 2MB</p>
+            <input
+              ref="logoInputRef"
+              type="file"
+              accept="image/*"
+              class="hidden"
+              @change="onLogoChange"
+            />
+            <button
+              type="button"
+              @click="logoInputRef.click()"
+              class="mt-1 w-fit px-3 py-1.5 text-xs font-medium text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+            >
+              {{ logoPreview ? "Change Logo" : "Upload Logo" }}
+            </button>
+          </div>
+        </div>
+        <!-- FORM LAYOUT -->
         <div class="grid grid-cols-2 gap-6">
           <!-- LEFT COLUMN -->
           <div class="flex flex-col gap-6">
@@ -315,8 +426,8 @@ watch(
           </button>
           <button
             type="submit"
-            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
             :disabled="isLoading"
+            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
           >
             <span v-if="isLoading" class="flex items-center gap-2">
               <span

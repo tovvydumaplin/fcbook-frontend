@@ -17,6 +17,11 @@ const effectiveDate = ref("");
 const eocDate = ref("");
 const paymentType = ref("");
 
+// Logo
+const logoFile = ref(null);
+const logoPreview = ref(null);
+const logoInputRef = ref(null);
+
 const props = defineProps({
   ia: {
     type: Object,
@@ -26,12 +31,39 @@ const props = defineProps({
 
 const formatDate = (dateString) => {
   if (!dateString) return "";
-
   const date = new Date(dateString);
-
   if (isNaN(date)) return "";
-
   return date.toISOString().split("T")[0];
+};
+
+const onLogoChange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (!file.type.startsWith("image/")) {
+    Swal.fire({
+      icon: "error",
+      title: "Invalid file",
+      text: "Please select an image file.",
+    });
+    return;
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    Swal.fire({
+      icon: "error",
+      title: "File too large",
+      text: "Image must be under 2MB.",
+    });
+    return;
+  }
+  logoFile.value = file;
+  logoPreview.value = URL.createObjectURL(file);
+};
+
+const removeLogo = () => {
+  logoFile.value = null;
+  // If there was an existing server image, clear it too
+  logoPreview.value = null;
+  if (logoInputRef.value) logoInputRef.value.value = "";
 };
 
 const updateIA = async () => {
@@ -52,29 +84,29 @@ const updateIA = async () => {
   isLoading.value = true;
 
   try {
-    const payload = {
-      ia_name: iaName.value,
-      address: address.value,
-      email: email.value,
-      contact_person: contactPerson.value,
-      contact_number: contactNumber.value,
-      area: area.value,
-      payment_mode: paymentMode.value,
-      effective_date: effectiveDate.value,
-      eoc_date: eocDate.value,
-      payment_type: paymentType.value,
-    };
+    const formData = new FormData();
+    formData.append("_method", "PUT");
+    formData.append("ia_name", iaName.value);
+    formData.append("address", address.value);
+    formData.append("email", email.value);
+    formData.append("contact_person", contactPerson.value);
+    formData.append("contact_number", contactNumber.value);
+    formData.append("area", area.value);
+    formData.append("payment_mode", paymentMode.value);
+    formData.append("effective_date", effectiveDate.value);
+    formData.append("eoc_date", eocDate.value);
+    formData.append("payment_type", paymentType.value);
+    if (logoFile.value) formData.append("logo", logoFile.value);
 
     const response = await fetch(
       `${apiBase}/institutional-accounts/${props.ia.iaId}`,
       {
-        method: "PUT",
+        method: "POST",
         headers: {
-          "Content-Type": "application/json",
           Accept: "application/json",
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
-        body: JSON.stringify(payload),
+        body: formData,
       },
     );
 
@@ -99,7 +131,6 @@ watch(
   () => props.ia,
   (newIA) => {
     if (!newIA) return;
-
     iaName.value = newIA.iaName || "";
     address.value = newIA.address || "";
     email.value = newIA.email || "";
@@ -110,6 +141,10 @@ watch(
     paymentType.value = newIA.paymentType || "";
     effectiveDate.value = formatDate(newIA.effectiveDate);
     eocDate.value = formatDate(newIA.eocDate);
+    logoFile.value = null;
+    logoPreview.value = newIA.image
+      ? `${apiBase}/storage/${newIA.image}`
+      : null;
   },
   { immediate: true },
 );
@@ -138,11 +173,9 @@ watch(
       <div
         class="flex items-center justify-between p-6 border-b border-gray-200"
       >
-        <div>
-          <h2 class="text-lg font-semibold text-gray-900">
-            Edit Institutional Account
-          </h2>
-        </div>
+        <h2 class="text-lg font-semibold text-gray-900">
+          Edit Institutional Account
+        </h2>
         <button
           @click="$emit('close')"
           class="text-gray-400 hover:text-gray-600 transition-colors"
@@ -162,14 +195,86 @@ watch(
           </svg>
         </button>
       </div>
+
       <form @submit.prevent="updateIA" class="flex flex-col p-6 gap-6">
+        <!-- LOGO UPLOAD -->
+        <div
+          class="flex items-center gap-5 p-4 bg-gray-50 border border-gray-200 rounded-lg"
+        >
+          <div class="relative flex-shrink-0">
+            <div
+              class="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 bg-white flex items-center justify-center overflow-hidden"
+              :class="{ 'border-blue-400 border-solid': logoPreview }"
+            >
+              <img
+                v-if="logoPreview"
+                :src="logoPreview"
+                alt="Logo preview"
+                class="w-full h-full object-contain"
+              />
+              <svg
+                v-else
+                class="w-8 h-8 text-gray-300"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+            </div>
+            <!-- Remove button -->
+            <button
+              v-if="logoPreview"
+              type="button"
+              @click="removeLogo"
+              class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow transition-colors"
+              title="Remove logo"
+            >
+              <svg
+                class="w-3 h-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="3"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <p class="text-sm font-medium text-gray-700">Account Logo</p>
+            <p class="text-xs text-gray-400">PNG, JPG, or WEBP — max 2MB</p>
+            <input
+              ref="logoInputRef"
+              type="file"
+              accept="image/*"
+              class="hidden"
+              @change="onLogoChange"
+            />
+            <button
+              type="button"
+              @click="logoInputRef.click()"
+              class="mt-1 w-fit px-3 py-1.5 text-xs font-medium text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+            >
+              {{ logoPreview ? "Change Logo" : "Upload Logo" }}
+            </button>
+          </div>
+        </div>
         <div class="grid grid-cols-2 gap-6">
-          <!-- LEFT COLUMN -->
           <div class="flex flex-col gap-6">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Account Name
-              </label>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Account Name</label
+              >
               <input
                 v-model="iaName"
                 type="text"
@@ -179,9 +284,9 @@ watch(
               />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Contact Person
-              </label>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Contact Person</label
+              >
               <input
                 v-model="contactPerson"
                 type="text"
@@ -191,12 +296,11 @@ watch(
               />
             </div>
           </div>
-          <!-- RIGHT COLUMN -->
           <div class="flex flex-col gap-6">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Email
-              </label>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Email</label
+              >
               <input
                 v-model="email"
                 type="email"
@@ -206,9 +310,9 @@ watch(
               />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Contact Number
-              </label>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Contact Number</label
+              >
               <input
                 v-model="contactNumber"
                 type="tel"
@@ -222,9 +326,9 @@ watch(
           </div>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Address
-          </label>
+          <label class="block text-sm font-medium text-gray-700 mb-2"
+            >Address</label
+          >
           <textarea
             v-model="address"
             rows="3"
@@ -234,12 +338,11 @@ watch(
           ></textarea>
         </div>
         <div class="grid grid-cols-2 gap-6">
-          <!-- LEFT COLUMN -->
           <div class="flex flex-col gap-6">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Area
-              </label>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Area</label
+              >
               <input
                 v-model="area"
                 type="text"
@@ -249,9 +352,9 @@ watch(
               />
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Payment Mode
-              </label>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Payment Mode</label
+              >
               <select
                 v-model="paymentMode"
                 class="border border-gray-300 rounded-md px-3 py-2 w-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -263,38 +366,35 @@ watch(
               </select>
             </div>
           </div>
-          <!-- RIGHT COLUMN -->
           <div class="flex flex-col gap-6">
             <div class="flex gap-6">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  Effective Date
-                </label>
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >Effective Date</label
+                >
                 <input
                   v-model="effectiveDate"
                   type="date"
                   required
-                  placeholder="Input Name"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
-                  End of Contract
-                </label>
+                <label class="block text-sm font-medium text-gray-700 mb-2"
+                  >End of Contract</label
+                >
                 <input
                   v-model="eocDate"
                   type="date"
                   required
-                  placeholder="Input Name"
                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
-                Payment Type
-              </label>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Payment Type</label
+              >
               <select
                 v-model="paymentType"
                 class="border border-gray-300 rounded-md px-3 py-2 w-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -306,6 +406,7 @@ watch(
             </div>
           </div>
         </div>
+
         <!-- Modal Footer -->
         <div
           class="flex items-center justify-end gap-3 pt-6 border-t border-gray-200"
@@ -319,16 +420,16 @@ watch(
           </button>
           <button
             type="submit"
-            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
             :disabled="isLoading"
+            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
           >
             <span v-if="isLoading" class="flex items-center gap-2">
               <span
-                class="inline-block w-5 h-5 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"
+                class="inline-block w-5 h-5 rounded-full border-4 border-white border-t-transparent animate-spin"
               ></span>
               Saving IA
             </span>
-            <span v-else> Save </span>
+            <span v-else>Save</span>
           </button>
         </div>
         <div v-if="errorMsg" class="text-red-500 text-sm mt-2 text-center">

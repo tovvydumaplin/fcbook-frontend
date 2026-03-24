@@ -64,6 +64,7 @@ const fetchInstitutionalAccounts = async () => {
       (ia) => ({
         iaId: ia.ia_id ?? "-",
         iaName: ia.ia_name ?? "-",
+        image: ia.image ?? null, // add this
         address: ia.address ?? "-",
         email: ia.email ?? "-",
         contactPerson: ia.contact_person ?? "-",

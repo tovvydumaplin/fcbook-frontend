@@ -65,6 +65,7 @@ const fetchMerchants = async () => {
     merchants.value = data.data.merchants.map((merchant) => ({
       merchantId: merchant.merchant_id ?? "-",
       merchantName: merchant.merchant_name ?? "-",
+      image: merchant.image ?? null,
       address: merchant.address ?? "-",
       email: merchant.email ?? "-",
       contactPerson: merchant.contact_person ?? "-",
@@ -82,6 +83,8 @@ const fetchMerchants = async () => {
         ? new Date(merchant.updated_at).toLocaleDateString()
         : "-",
     }));
+
+    console.log(merchants.value);
   } catch (err) {
     console.error("Fetch error:", err);
     Swal.fire("Error", "Failed to fetch merchants.", "error");
