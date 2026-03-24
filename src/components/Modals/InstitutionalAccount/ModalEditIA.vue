@@ -16,8 +16,6 @@ const paymentMode = ref("");
 const effectiveDate = ref("");
 const eocDate = ref("");
 const paymentType = ref("");
-
-// Logo
 const logoFile = ref(null);
 const logoPreview = ref(null);
 const logoInputRef = ref(null);
@@ -61,7 +59,6 @@ const onLogoChange = (e) => {
 
 const removeLogo = () => {
   logoFile.value = null;
-  // If there was an existing server image, clear it too
   logoPreview.value = null;
   if (logoInputRef.value) logoInputRef.value.value = "";
 };

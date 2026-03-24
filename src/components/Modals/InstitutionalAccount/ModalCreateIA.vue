@@ -16,8 +16,6 @@ const paymentMode = ref("");
 const effectiveDate = ref("");
 const eocDate = ref("");
 const paymentType = ref("");
-
-// Logo
 const logoFile = ref(null);
 const logoPreview = ref(null);
 const logoInputRef = ref(null);
@@ -87,7 +85,6 @@ const saveIA = async () => {
       headers: {
         Accept: "application/json",
         Authorization: `Bearer ${localStorage.getItem("token")}`,
-        // Note: Do NOT set Content-Type manually when using FormData
       },
       body: formData,
     });
@@ -212,7 +209,6 @@ const saveIA = async () => {
               </svg>
             </button>
           </div>
-
           <!-- Text + Button -->
           <div class="flex flex-col gap-1.5">
             <p class="text-sm font-medium text-gray-700">Account Logo</p>

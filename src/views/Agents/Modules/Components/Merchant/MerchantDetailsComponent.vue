@@ -83,8 +83,6 @@ const fetchMerchants = async () => {
         ? new Date(merchant.updated_at).toLocaleDateString()
         : "-",
     }));
-
-    console.log(merchants.value);
   } catch (err) {
     console.error("Fetch error:", err);
     Swal.fire("Error", "Failed to fetch merchants.", "error");
