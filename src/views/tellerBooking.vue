@@ -145,7 +145,9 @@ const getDiscountAmount = (fare) => {
 
   // Apply passenger type discount if selected
   if (selectedPassengerTypeDetails.value?.discount) {
-    const passengerTypePercent = parseFloat(selectedPassengerTypeDetails.value.discount);
+    const passengerTypePercent = parseFloat(
+      selectedPassengerTypeDetails.value.discount,
+    );
     totalDiscount += fare * passengerTypePercent;
   }
 
@@ -156,7 +158,7 @@ const getDiscountAmount = (fare) => {
   }
 
   if (selectedDiscount.value === "100%") return fare;
-  
+
   return totalDiscount;
 };
 
@@ -1277,7 +1279,11 @@ const editPassengerFromModal = (passenger) => {
                   Selected Vehicle
                 </p>
                 <p class="text-sm font-bold text-blue-900">
-                  {{ selectedVehicleDetails.vehicle_class || selectedVehicleDetails.type || "Vehicle" }}
+                  {{
+                    selectedVehicleDetails.vehicle_class ||
+                    selectedVehicleDetails.type ||
+                    "Vehicle"
+                  }}
                 </p>
               </div>
               <button
@@ -1312,11 +1318,16 @@ const editPassengerFromModal = (passenger) => {
 
           <!-- Selected Passenger Type Display -->
           <div
-            v-if="selectedType === 'Regular Passenger' && selectedPassengerTypeDetails"
+            v-if="
+              selectedType === 'Regular Passenger' &&
+              selectedPassengerTypeDetails
+            "
             class="p-4 bg-blue-50 rounded-lg border border-blue-200"
           >
             <div class="flex items-center gap-3">
-              <div class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
+              <div
+                class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center"
+              >
                 <svg
                   class="w-6 h-6 text-blue-600"
                   fill="none"
@@ -1332,7 +1343,9 @@ const editPassengerFromModal = (passenger) => {
                 </svg>
               </div>
               <div class="flex-1">
-                <p class="text-xs text-gray-600 font-medium">Selected Passenger Type</p>
+                <p class="text-xs text-gray-600 font-medium">
+                  Selected Passenger Type
+                </p>
                 <p class="text-sm font-bold text-blue-900 capitalize">
                   {{ selectedPassengerTypeDetails.type }}
                 </p>
@@ -1341,7 +1354,11 @@ const editPassengerFromModal = (passenger) => {
                     v-if="parseFloat(selectedPassengerTypeDetails.discount) > 0"
                     class="text-xs text-green-600 font-medium"
                   >
-                    {{ (parseFloat(selectedPassengerTypeDetails.discount) * 100).toFixed(0) }}% Discount
+                    {{
+                      (
+                        parseFloat(selectedPassengerTypeDetails.discount) * 100
+                      ).toFixed(0)
+                    }}% Discount
                   </span>
                   <span
                     v-if="selectedPassengerTypeDetails.waived"
@@ -1603,10 +1620,17 @@ const editPassengerFromModal = (passenger) => {
             <div class="text-xs text-gray-500 mt-1">
               <p>*req. valid/soft ID for new entry</p>
               <p
-                v-if="selectedPassengerTypeDetails?.discount && parseFloat(selectedPassengerTypeDetails.discount) > 0"
+                v-if="
+                  selectedPassengerTypeDetails?.discount &&
+                  parseFloat(selectedPassengerTypeDetails.discount) > 0
+                "
                 class="text-green-600 font-medium mt-0.5"
               >
-                ✓ Passenger Type Discount ({{ (parseFloat(selectedPassengerTypeDetails.discount) * 100).toFixed(0) }}%) will be automatically applied
+                ✓ Passenger Type Discount ({{
+                  (
+                    parseFloat(selectedPassengerTypeDetails.discount) * 100
+                  ).toFixed(0)
+                }}%) will be automatically applied
               </p>
               <p
                 v-if="selectedPassengerTypeDetails?.waived"

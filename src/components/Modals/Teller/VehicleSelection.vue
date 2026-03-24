@@ -21,33 +21,32 @@ const activeTab = ref(1); // Active vehicle type tab
 
 // Get unique vehicle types from data
 const vehicleTypes = computed(() => {
-  const types = [...new Set(vehicles.value.map(v => v.vehicle_type))].sort((a, b) => a - b);
+  const types = [...new Set(vehicles.value.map((v) => v.vehicle_type))].sort(
+    (a, b) => a - b,
+  );
   return types;
 });
 
 // Get vehicles for active tab
 const vehiclesForActiveType = computed(() => {
-  return vehicles.value.filter(v => v.vehicle_type === activeTab.value);
+  return vehicles.value.filter((v) => v.vehicle_type === activeTab.value);
 });
 
 // Filter vehicles by search for active type
 const filteredVehicles = computed(() => {
   if (!searchQuery.value) return vehiclesForActiveType.value;
-  
+
   const query = searchQuery.value.toLowerCase();
   return vehiclesForActiveType.value.filter((v) =>
-    v.vehicle_class.toLowerCase().includes(query)
+    v.vehicle_class.toLowerCase().includes(query),
   );
 });
-
 
 // Filter brands by search on step 2
 const filteredBrands = computed(() => {
   if (!searchQuery.value) return commonBrands;
   const query = searchQuery.value.toLowerCase();
-  return commonBrands.filter((brand) =>
-    brand.toLowerCase().includes(query)
-  );
+  return commonBrands.filter((brand) => brand.toLowerCase().includes(query));
 });
 
 // Check if bicycle (no plate needed)
@@ -95,7 +94,7 @@ const selectVehicle = (vehicle) => {
 // Confirm & Save
 const confirmAndSave = () => {
   if (!selectedVehicle.value) return;
-  
+
   const data = {
     vehicle_id: selectedVehicle.value.vehicle_id,
     vehicle_class: selectedVehicle.value.vehicle_class,
@@ -126,7 +125,7 @@ watch(
         activeTab.value = vehicleTypes.value[0];
       }
     }
-  }
+  },
 );
 
 // Watch for tab changes and reset search
@@ -150,7 +149,10 @@ watch(activeTab, () => {
             <h2 class="text-lg font-semibold text-gray-900">
               Select Vehicle Class
             </h2>
-            <p v-if="selectedVehicle" class="text-sm text-blue-600 mt-1 font-medium">
+            <p
+              v-if="selectedVehicle"
+              class="text-sm text-blue-600 mt-1 font-medium"
+            >
               Selected: {{ selectedVehicle.vehicle_class }}
             </p>
           </div>
@@ -182,12 +184,17 @@ watch(activeTab, () => {
           <!-- Content -->
           <div class="flex-1 overflow-y-auto">
             <!-- Loading State -->
-            <div v-if="isLoading" class="flex justify-center items-center py-12">
+            <div
+              v-if="isLoading"
+              class="flex justify-center items-center py-12"
+            >
               <div class="flex items-center gap-3">
                 <div
                   class="w-6 h-6 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"
                 ></div>
-                <span class="text-gray-600 font-medium">Loading vehicles...</span>
+                <span class="text-gray-600 font-medium"
+                  >Loading vehicles...</span
+                >
               </div>
             </div>
 
@@ -375,4 +382,3 @@ watch(activeTab, () => {
   }
 }
 </style>
-

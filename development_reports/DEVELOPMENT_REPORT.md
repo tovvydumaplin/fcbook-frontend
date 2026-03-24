@@ -667,6 +667,7 @@ Added a passenger type selection modal that opens when "Regular Passenger" is se
 **Implementation:**
 
 **Modal Component (`PassengerTypeModal.vue`):**
+
 - List layout displaying passenger types with details
 - Search functionality to filter types by name
 - Shows discount percentages and fee waiver status
@@ -846,6 +847,7 @@ const response = await fetch(`${apiBase}/vehicles`, {
 **Vehicle Type Categorization:**
 
 Vehicles are automatically grouped by their `vehicle_type` value from the API:
+
 - Type 1: Two-wheeled vehicles (Bicycle, Bicycle with side car, etc.)
 - Type 2: Light & medium vehicles (Van, Pickup, Forward, etc.)
 - Type 3+: Additional vehicle categories as defined in the system

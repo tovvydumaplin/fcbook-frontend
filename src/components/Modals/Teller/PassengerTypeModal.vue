@@ -23,16 +23,16 @@ const filteredTypes = computed(() => {
   if (!searchQuery.value) return passengerTypes.value;
   const query = searchQuery.value.toLowerCase();
   return passengerTypes.value.filter((type) =>
-    type.type.toLowerCase().includes(query)
+    type.type.toLowerCase().includes(query),
   );
 });
 
 // Filter only active types (excluding Institutional Account)
 const activeTypes = computed(() => {
   return filteredTypes.value.filter(
-    (type) => 
-      type.status === "active" && 
-      type.type.toLowerCase() !== "institutional account"
+    (type) =>
+      type.status === "active" &&
+      type.type.toLowerCase() !== "institutional account",
   );
 });
 
@@ -54,7 +54,7 @@ const fetchPassengerTypes = async () => {
     if (response.ok) {
       const result = await response.json();
       console.log("Passenger Types Response:", result);
-      
+
       if (result.success && result.data?.types) {
         passengerTypes.value = result.data.types;
       }
@@ -91,11 +91,14 @@ const closeModal = () => {
 };
 
 // Watch for modal open and fetch data
-watch(() => props.isOpen, (isOpen) => {
-  if (isOpen && passengerTypes.value.length === 0) {
-    fetchPassengerTypes();
-  }
-});
+watch(
+  () => props.isOpen,
+  (isOpen) => {
+    if (isOpen && passengerTypes.value.length === 0) {
+      fetchPassengerTypes();
+    }
+  },
+);
 </script>
 
 <template>
@@ -156,7 +159,11 @@ watch(() => props.isOpen, (isOpen) => {
           >
             <p class="text-lg font-medium">No passenger types found</p>
             <p class="text-sm mt-1">
-              {{ searchQuery ? "Try a different search term" : "No types available" }}
+              {{
+                searchQuery
+                  ? "Try a different search term"
+                  : "No types available"
+              }}
             </p>
           </div>
 
@@ -227,7 +234,10 @@ watch(() => props.isOpen, (isOpen) => {
                   >
                     Fee Waived
                   </span>
-                  <span v-if="!parseFloat(type.discount) && !type.waived" class="text-xs text-gray-500">
+                  <span
+                    v-if="!parseFloat(type.discount) && !type.waived"
+                    class="text-xs text-gray-500"
+                  >
                     No discount
                   </span>
                 </div>
