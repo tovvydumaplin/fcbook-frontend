@@ -16,8 +16,6 @@ const paymentMode = ref("");
 const effectiveDate = ref("");
 const eocDate = ref("");
 const paymentType = ref("");
-
-// Logo
 const logoFile = ref(null);
 const logoPreview = ref(null);
 const logoInputRef = ref(null);
