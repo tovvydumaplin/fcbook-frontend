@@ -140,21 +140,6 @@ const filteredPassengers = computed(() => {
             class="border-0 rounded px-2 py-1 text-sm"
           />
         </div>
-        <button class="ml-2 text-gray-500 hover:text-blue-600">
-          <svg
-            class="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 6a1 1 0 011-1h16a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V10z"
-            />
-          </svg>
-        </button>
       </div>
 
       <div class="flex gap-8">
