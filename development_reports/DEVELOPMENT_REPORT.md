@@ -659,6 +659,241 @@ Added a visual preview display for selected vehicles in the Driver category, sim
 - Hover states on "Change" button
 - Compact layout matching IA display
 
+#### 11. Passenger Type Selection Modal
+
+**Feature Overview:**
+Added a passenger type selection modal that opens when "Regular Passenger" is selected. The modal fetches and displays available passenger types from the API, showing their discounts and benefits.
+
+**Implementation:**
+
+**Modal Component (`PassengerTypeModal.vue`):**
+- List layout displaying passenger types with details
+- Search functionality to filter types by name
+- Shows discount percentages and fee waiver status
+- Loading states during API fetch
+- Visual selection indicators
+- Filters out "Institutional Account" type (handled separately)
+
+**API Integration:**
+
+```javascript
+// Fetch passenger types
+const response = await fetch(`${apiBase}/passenger-types`, {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  }
+});
+
+// Response structure
+{
+  success: true,
+  status: 200,
+  message: "Passenger types retrieved successfully.",
+  data: {
+    types: [
+      {
+        p_id: 1,
+        type: "regular passenger",
+        discount: "0.00",
+        waived: false,
+        status: "active"
+      },
+      {
+        p_id: 3,
+        type: "Student",
+        discount: "0.10",
+        waived: false,
+        status: "active"
+      }
+    ]
+  }
+}
+```
+
+**User Flow:**
+
+1. **Trigger:** Teller selects "Regular Passenger" from passenger type options
+2. **Modal Opens:** Displays list of available passenger types
+3. **Search:** Teller can search by type name to filter results
+4. **Selection:** Click on a type card to select it (shows blue border and checkmark)
+5. **Discount Display:** Shows discount percentage and fee waiver status for each type
+6. **Confirmation:** Click "Confirm Selection" button to apply
+7. **Display:** Selected type shows in a blue info box with discount details and "Change" button
+8. **Booking:** Selected type information and discount applied to passenger entry
+
+**Visual Design:**
+
+```vue
+<!-- Selected Passenger Type Display -->
+<div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+  <div class="flex items-center gap-3">
+    <div class="w-12 h-12 rounded-lg bg-blue-100">
+      <svg class="w-6 h-6 text-blue-600"><!-- User icon --></svg>
+    </div>
+    <div class="flex-1">
+      <p class="text-xs text-gray-600 font-medium">Selected Passenger Type</p>
+      <p class="text-sm font-bold text-blue-900">{{ type.type }}</p>
+      <span class="text-xs text-green-600 font-medium">
+        {{ discount }}% Discount
+      </span>
+    </div>
+    <button class="text-blue-600 hover:text-blue-800">Change</button>
+  </div>
+</div>
+```
+
+**Type Card Features:**
+
+- **User Icon:** Person icon representing passenger
+- **Type Name:** Capitalized display of passenger type
+- **Discount Badge:** Green text showing percentage (e.g., "10% Discount")
+- **Fee Waived Badge:** Orange text when applicable
+- **Status Filter:** Only shows active types
+- **Selection Indicator:** Blue border, background, and checkmark
+
+**Discount Application:**
+
+- Passenger type discount stored in `selectedPassengerTypeDetails`
+- Discount percentage parsed from type.discount field (e.g., "0.10" = 10%)
+- Applied during fare calculation
+- Displayed in passenger entry summary
+- Can be combined with other discounts based on business rules
+
+**Features:**
+
+- **Responsive List:** Full-width stacked cards for easy selection
+- **Search Filter:** Real-time filtering by type name
+- **Loading State:** Spinner and message during API fetch
+- **Empty State:** Clear message when no types found
+- **Selection Indicator:** Blue border, background, and checkmark icon
+- **Discount Visibility:** Shows discount percentage prominently
+- **Fee Waiver Indicator:** Orange badge when fees are waived
+- **Change Option:** Can reopen modal to change selection
+
+**Benefits:**
+
+- Clear display of available passenger types and their benefits
+- Visual discount information helps tellers provide accurate pricing
+- Search capability for quick type location
+- Maintains selection through multi-step booking process
+- Consistent UI with IA and Vehicle selection modals
+- Automatic discount application based on passenger type
+
+**Integration Points:**
+
+- Triggered by `watch(selectedType)` when value is "Regular Passenger"
+- Modal state managed by `isPassengerTypeModalOpen` ref
+- Selection handler: `handlePassengerTypeSelect(type)`
+- Discount applied in fare calculation
+- Reset in `bookEntry()` and `resetForm()` functions
+
+**Data Storage:**
+
+- Selected type stored in `selectedPassengerTypeDetails` ref
+- Included in passenger entry as `passengerTypeDetails` property
+- Contains: p_id, type, discount, waived, status
+- Cleared on form reset and after successful booking
+- Persists through accommodation and seat selection
+
+#### 12. Vehicle Selection Modal Redesign
+
+**Feature Overview:**
+Redesigned the vehicle selection modal to match the modern design pattern of the institutional account and passenger type modals. Now fetches vehicle data from the API instead of using static data, with automatic categorization by vehicle type in a clean tabbed interface.
+
+**Implementation:**
+
+**API Integration:**
+
+```javascript
+// Fetch vehicles from API
+const response = await fetch(`${apiBase}/vehicles`, {
+  method: 'GET',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+  }
+});
+
+// Response structure
+{
+  status: 200,
+  success: true,
+  message: "Vehicles retrieved successfully",
+  data: {
+    vehicles: [
+      {
+        vehicle_id: 1,
+        vehicle_type: 1,
+        vehicle_class: "Bicycle",
+        created_at: "2026-03-02T15:35:10.000000Z",
+        updated_at: "2026-03-02T15:35:10.000000Z",
+        deleted_at: null
+      }
+    ]
+  }
+}
+```
+
+**Simple One-Step Selection:**
+
+1. **Tabbed Interface:** Displays vehicle types (Type 1, Type 2, Type 3, etc.) as tabs
+2. **Vehicle Grid:** Shows vehicle classes under each tab
+3. **Search Functionality:** Filter vehicle classes within the active tab
+4. **Select & Confirm:** Click vehicle → Click "Confirm Selection" button
+
+**Vehicle Type Categorization:**
+
+Vehicles are automatically grouped by their `vehicle_type` value from the API:
+- Type 1: Two-wheeled vehicles (Bicycle, Bicycle with side car, etc.)
+- Type 2: Light & medium vehicles (Van, Pickup, Forward, etc.)
+- Type 3+: Additional vehicle categories as defined in the system
+
+The modal displays tabs for each vehicle type present in the API response, making it easy to browse by category.
+
+**Visual Design:**
+
+- Clean header with selected vehicle indicator
+- Tabbed interface for vehicle types (Type 1, Type 2, Type 3, etc.)
+- Vehicle classes displayed in grid under active tab with icons
+- Selected vehicle highlighted with blue border and checkmark
+- Search bar with real-time filtering within active type
+- Card-based selection with hover effects
+- Loading spinner during API fetch
+- Empty state for no results
+- Cancel and Confirm buttons in footer
+- Blue theme matching other modals
+
+**Features:**
+
+- **API-Driven Data:** Fetches real vehicle classes from backend
+- **Tabbed Categorization:** Displays tabs for each vehicle type with automatic grouping
+- **Single-Step Selection:** Simple click-and-confirm workflow
+- **Search Capability:** Filter vehicle classes within the active type tab
+- **Visual Feedback:** Selected vehicle shows blue border, background, and checkmark
+- **Consistent UI:** Matches design pattern of IA and passenger type modals
+
+**Benefits:**
+
+- Centralized vehicle data management via API
+- Cleaner, more intuitive single-step selection process
+- Better organization with automatic categorization by type
+- Consistent user experience across all selection modals
+- Reduced maintenance with dynamic data loading
+- Faster workflow without unnecessary details
+
+**Data Structure:**
+
+```javascript
+// Saved vehicle data
+{
+  vehicle_id: 1,
+  vehicle_class: "Bicycle",
+  vehicle_type: 1
+}
+```
+
 ---
 
 ## Schedule Management Module

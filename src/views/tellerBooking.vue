@@ -4,6 +4,7 @@ import ModalPaymentSelection from "../components/Modals/Teller/ModalPaymentSelec
 import VehicleSelection from "../components/Modals/Teller/VehicleSelection.vue";
 import ViewTellerPassenger from "../components/Modals/Teller/ViewTellerPassenger.vue";
 import IaModal from "../components/Modals/Teller/IaModal.vue";
+import PassengerTypeModal from "../components/Modals/Teller/PassengerTypeModal.vue";
 import TellerHeader from "../components/TellerHeader.vue";
 import { onMounted } from "vue";
 import {
@@ -19,12 +20,16 @@ const bookingActive = ref(false);
 const isPaymentModalOpen = ref(false);
 const isVehicleModalOpen = ref(false);
 const isIaModalOpen = ref(false);
+const isPassengerTypeModalOpen = ref(false);
 
 // Store selected vehicle details from modal
 const selectedVehicleDetails = ref(null);
 
 // Store selected institutional account
 const selectedInstitutionalAccount = ref(null);
+
+// Store selected passenger type
+const selectedPassengerTypeDetails = ref(null);
 
 const handleVehicleSave = (vehicle) => {
   selectedVehicleDetails.value = vehicle;
@@ -125,18 +130,34 @@ const getCurrentRate = () => {
 };
 
 const getCurrentAdminFee = () => {
+  // Check if admin fee is waived for this passenger type
+  if (selectedPassengerTypeDetails.value?.waived) {
+    return 0;
+  }
+
   const route = `${originPort.value} - ${destinationPort.value}`;
   const found = adminFees.find((r) => r.route === route);
   return found ? found.fee : 0;
 };
 
 const getDiscountAmount = (fare) => {
+  let totalDiscount = 0;
+
+  // Apply passenger type discount if selected
+  if (selectedPassengerTypeDetails.value?.discount) {
+    const passengerTypePercent = parseFloat(selectedPassengerTypeDetails.value.discount);
+    totalDiscount += fare * passengerTypePercent;
+  }
+
+  // Apply manual discount from dropdown
   if (selectedDiscount.value.endsWith("%")) {
     const percent = parseFloat(selectedDiscount.value) / 100;
-    return fare * percent;
+    totalDiscount += fare * percent;
   }
+
   if (selectedDiscount.value === "100%") return fare;
-  return 0;
+  
+  return totalDiscount;
 };
 
 const ports = [
@@ -505,6 +526,7 @@ const bookEntry = () => {
     discountAmount: discountAmount.toFixed(2),
     vehicle: selectedVehicleDetails.value,
     institutionalAccount: selectedInstitutionalAccount.value,
+    passengerTypeDetails: selectedPassengerTypeDetails.value,
   };
 
   // Handle seat blocking
@@ -557,6 +579,7 @@ const bookEntry = () => {
   selectedType.value = "Regular Passenger";
   selectedVehicleDetails.value = null;
   selectedInstitutionalAccount.value = null;
+  selectedPassengerTypeDetails.value = null;
   selectedDate.value = "";
   selectedSeat.value = null;
 };
@@ -571,6 +594,7 @@ const resetForm = () => {
   passengers.value = [];
   selectedVehicleDetails.value = null;
   selectedInstitutionalAccount.value = null;
+  selectedPassengerTypeDetails.value = null;
   selectedDate.value = "";
   showSuccess.value = true;
   setTimeout(() => (showSuccess.value = false), 2000);
@@ -585,6 +609,8 @@ watch(selectedCategory, (newVal) => {
 watch(selectedType, (newVal) => {
   if (newVal === "Institutional Account") {
     isIaModalOpen.value = true;
+  } else if (newVal === "Regular Passenger") {
+    isPassengerTypeModalOpen.value = true;
   }
 });
 
@@ -592,6 +618,15 @@ const handleIaSelect = (ia) => {
   selectedInstitutionalAccount.value = ia;
   console.log("Selected IA:", ia);
   // You can add additional logic here, such as applying discounts
+};
+
+const handlePassengerTypeSelect = (type) => {
+  selectedPassengerTypeDetails.value = type;
+  console.log("Selected Passenger Type:", type);
+  // Apply discount if available
+  if (type.discount) {
+    // Discount will be applied in fare calculation
+  }
 };
 
 const handlePaymentSelected = (method) => {
@@ -792,6 +827,13 @@ const editPassengerFromModal = (passenger) => {
     :isOpen="isIaModalOpen"
     @close="isIaModalOpen = false"
     @select="handleIaSelect"
+  />
+
+  <!-- Passenger Type Modal -->
+  <PassengerTypeModal
+    :isOpen="isPassengerTypeModalOpen"
+    @close="isPassengerTypeModalOpen = false"
+    @select="handlePassengerTypeSelect"
   />
 
   <main>
@@ -1235,25 +1277,7 @@ const editPassengerFromModal = (passenger) => {
                   Selected Vehicle
                 </p>
                 <p class="text-sm font-bold text-blue-900">
-                  {{
-                    selectedVehicleDetails.type
-                      ? selectedVehicleDetails.type
-                          .replace(/([A-Z])/g, " $1")
-                          .trim()
-                      : "Vehicle"
-                  }}
-                  <span
-                    v-if="selectedVehicleDetails.brand"
-                    class="text-gray-600 font-normal"
-                  >
-                    - {{ selectedVehicleDetails.brand }}
-                  </span>
-                </p>
-                <p
-                  v-if="selectedVehicleDetails.plate"
-                  class="text-xs text-gray-600 mt-0.5"
-                >
-                  Plate: {{ selectedVehicleDetails.plate }}
+                  {{ selectedVehicleDetails.vehicle_class || selectedVehicleDetails.type || "Vehicle" }}
                 </p>
               </div>
               <button
@@ -1282,6 +1306,56 @@ const editPassengerFromModal = (passenger) => {
                 ]"
               >
                 {{ type }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Selected Passenger Type Display -->
+          <div
+            v-if="selectedType === 'Regular Passenger' && selectedPassengerTypeDetails"
+            class="p-4 bg-blue-50 rounded-lg border border-blue-200"
+          >
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                <svg
+                  class="w-6 h-6 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                  />
+                </svg>
+              </div>
+              <div class="flex-1">
+                <p class="text-xs text-gray-600 font-medium">Selected Passenger Type</p>
+                <p class="text-sm font-bold text-blue-900 capitalize">
+                  {{ selectedPassengerTypeDetails.type }}
+                </p>
+                <div class="flex items-center gap-2 mt-0.5">
+                  <span
+                    v-if="parseFloat(selectedPassengerTypeDetails.discount) > 0"
+                    class="text-xs text-green-600 font-medium"
+                  >
+                    {{ (parseFloat(selectedPassengerTypeDetails.discount) * 100).toFixed(0) }}% Discount
+                  </span>
+                  <span
+                    v-if="selectedPassengerTypeDetails.waived"
+                    class="text-xs text-orange-600 font-medium"
+                  >
+                    Fee Waived
+                  </span>
+                </div>
+              </div>
+              <button
+                @click="isPassengerTypeModalOpen = true"
+                class="text-blue-600 hover:text-blue-800 text-xs font-medium"
+              >
+                Change
               </button>
             </div>
           </div>
@@ -1526,9 +1600,21 @@ const editPassengerFromModal = (passenger) => {
                 {{ discount.label }}
               </button>
             </div>
-            <p class="text-xs text-gray-500 mt-1">
-              *req. valid/soft ID for new entry
-            </p>
+            <div class="text-xs text-gray-500 mt-1">
+              <p>*req. valid/soft ID for new entry</p>
+              <p
+                v-if="selectedPassengerTypeDetails?.discount && parseFloat(selectedPassengerTypeDetails.discount) > 0"
+                class="text-green-600 font-medium mt-0.5"
+              >
+                ✓ Passenger Type Discount ({{ (parseFloat(selectedPassengerTypeDetails.discount) * 100).toFixed(0) }}%) will be automatically applied
+              </p>
+              <p
+                v-if="selectedPassengerTypeDetails?.waived"
+                class="text-orange-600 font-medium mt-0.5"
+              >
+                ✓ Admin Fee Waived for this passenger type
+              </p>
+            </div>
           </div>
           <button
             v-if="selectedDiscount"
