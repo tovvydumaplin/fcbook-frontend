@@ -30,7 +30,7 @@ const filteredPorts = computed(() => {
 
   if (activeTab.value === "active")
     filtered = filtered.filter(
-      (p) => p.status === "Online" || p.status === "Available",
+      (p) => p.status === "Online" || p.status === "Active",
     );
   else if (activeTab.value === "closed")
     filtered = filtered.filter((p) => p.status === "Offline");
@@ -48,7 +48,7 @@ const filteredPorts = computed(() => {
 });
 
 const getStatusClass = (status) => {
-  if (status === "Available" || status === "Online")
+  if (status === "Active" || status === "Online")
     return "bg-green-100 text-green-800";
   return "bg-gray-100 text-gray-800";
 };
@@ -125,7 +125,7 @@ const fetchPorts = async () => {
         corridor: port.corridor,
         facilities: port.facilities,
         updatedBy: port.last_update_by,
-        status: port.is_active === 1 ? "Available" : "Offline",
+        status: port.is_active === 1 ? "Active" : "Offline",
         createdAt: port.created_at
           ? port.created_at.slice(0, 16).replace("T", " ")
           : "",
