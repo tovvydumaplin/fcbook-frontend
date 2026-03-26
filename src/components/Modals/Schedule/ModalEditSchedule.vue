@@ -1,37 +1,13 @@
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
-
-const props = defineProps({
-  routes: { type: Array, default: () => [] },
-});
+import { ref, watch } from "vue";
 
 const emit = defineEmits(["close", "save"]);
 const apiBase = import.meta.env.VITE_API_URL;
+const isLoading = ref(false);
 
-const routes = ref(props.routes || []);
-watch(
-  () => props.routes,
-  (v) => (routes.value = v || []),
-);
-
-const selectedRouteId = ref("");
-const selectedRoute = computed(() =>
-  routes.value.find((r) => r.route_id == selectedRouteId.value),
-);
-
-const portASchedules = ref([{ departure: "", arrival: "" }]);
-const portBSchedules = ref([{ departure: "", arrival: "" }]);
-
-// Reset rows when route changes
-watch(selectedRoute, () => {
-  portASchedules.value = [{ departure: "", arrival: "" }];
-  portBSchedules.value = [{ departure: "", arrival: "" }];
+const props = defineProps({
+  selectedRoute: { type: Object, required: true },
 });
-
-const addRow = (port) => {
-  if (port === "a") portASchedules.value.push({ departure: "", arrival: "" });
-  else portBSchedules.value.push({ departure: "", arrival: "" });
-};
 
 const apiFetch = async (path, options = {}) => {
   const response = await fetch(`${apiBase}${path}`, {
@@ -45,59 +21,90 @@ const apiFetch = async (path, options = {}) => {
   return response;
 };
 
-const fetchRoutes = async () => {
-  if (routes.value?.length) return;
-  try {
-    const response = await apiFetch("/routes/with-schedules");
-    const data = await response.json();
-    if (response.ok && data.success && data.data?.routes) {
-      routes.value = data.data.routes.map((route) => ({
-        route_id: route.route_id,
-        portA: route.portA,
-        portB: route.portB,
-      }));
-    } else {
-      routes.value = [];
-    }
-  } catch {
-    routes.value = [];
-  }
+const buildRows = (schedules) => [
+  ...(schedules || []).map((s) => ({
+    sched_id: s.sched_id,
+    departure: s.departure_time || "",
+    arrival: s.arrival_time || "",
+    existing: true,
+  })),
+  { departure: "", arrival: "", existing: false },
+];
+
+const portASchedules = ref(buildRows(props.selectedRoute.portA?.schedules));
+const portBSchedules = ref(buildRows(props.selectedRoute.portB?.schedules));
+
+// Rebuild rows if the route prop changes
+watch(
+  () => props.selectedRoute,
+  (route) => {
+    portASchedules.value = buildRows(route.portA?.schedules);
+    portBSchedules.value = buildRows(route.portB?.schedules);
+  },
+);
+
+const addRow = (port) => {
+  if (port === "a")
+    portASchedules.value.push({ departure: "", arrival: "", existing: false });
+  else
+    portBSchedules.value.push({ departure: "", arrival: "", existing: false });
 };
 
-onMounted(fetchRoutes);
-
 const saveSchedule = async () => {
-  if (!selectedRoute.value) {
-    alert("Select a route before saving");
-    return;
-  }
+  isLoading.value = true;
+  try {
+    for (const row of portASchedules.value) {
+      if (row.existing || !row.departure) continue;
+      if (row.sched_id) {
+        await apiFetch(`/schedules/${row.sched_id}`, {
+          method: "PUT",
+          body: JSON.stringify({
+            departure_time: row.departure,
+            arrival_time: row.arrival || null,
+          }),
+        });
+      } else {
+        await apiFetch("/schedules", {
+          method: "POST",
+          body: JSON.stringify({
+            departure_time: row.departure,
+            arrival_time: row.arrival || null,
+            port_id: props.selectedRoute.portA.port_id,
+          }),
+        });
+      }
+    }
 
-  for (const row of portASchedules.value) {
-    if (!row.departure) continue;
-    await apiFetch("/schedules", {
-      method: "POST",
-      body: JSON.stringify({
-        departure_time: row.departure,
-        arrival_time: row.arrival || null,
-        port_id: selectedRoute.value.portA.port_id,
-      }),
-    });
-  }
+    for (const row of portBSchedules.value) {
+      if (row.existing || !row.departure) continue;
+      if (row.sched_id) {
+        await apiFetch(`/schedules/${row.sched_id}`, {
+          method: "PUT",
+          body: JSON.stringify({
+            departure_time: row.departure,
+            arrival_time: row.arrival || null,
+          }),
+        });
+      } else {
+        await apiFetch("/schedules", {
+          method: "POST",
+          body: JSON.stringify({
+            departure_time: row.departure,
+            arrival_time: row.arrival || null,
+            port_id: props.selectedRoute.portB.port_id,
+          }),
+        });
+      }
+    }
 
-  for (const row of portBSchedules.value) {
-    if (!row.departure) continue;
-    await apiFetch("/schedules", {
-      method: "POST",
-      body: JSON.stringify({
-        departure_time: row.departure,
-        arrival_time: row.arrival || null,
-        port_id: selectedRoute.value.portB.port_id,
-      }),
-    });
+    emit("save");
+    emit("close");
+  } catch (err) {
+    console.error("Error saving schedule:", err);
+    alert("Failed to save changes");
+  } finally {
+    isLoading.value = false;
   }
-
-  emit("save");
-  emit("close");
 };
 </script>
 
@@ -128,30 +135,14 @@ const saveSchedule = async () => {
         </svg>
       </button>
 
-      <h2 class="text-xl font-semibold text-gray-900 mb-1">Create Schedule</h2>
+      <h2 class="text-xl font-semibold text-gray-900 mb-1">Edit Schedule</h2>
       <p class="text-sm text-gray-500 mb-6">
-        Provide basic information about the schedule
+        {{ selectedRoute.portA?.port_name }} -
+        {{ selectedRoute.portB?.port_name }}
       </p>
 
-      <!-- Route Select -->
-      <div class="flex items-center gap-2 mb-6">
-        <select
-          v-model="selectedRouteId"
-          class="border border-gray-300 rounded-md px-3 py-2 w-full max-w-xs"
-        >
-          <option value="" disabled>Select Route</option>
-          <option
-            v-for="route in routes"
-            :key="route.route_id"
-            :value="route.route_id"
-          >
-            {{ route.portA?.port_name }} - {{ route.portB?.port_name }}
-          </option>
-        </select>
-      </div>
-
       <!-- Schedule Tables -->
-      <div v-if="selectedRoute" class="grid grid-cols-2 gap-6 mb-6">
+      <div class="grid grid-cols-2 gap-6 mb-6">
         <!-- Port A -->
         <div>
           <div
@@ -162,10 +153,10 @@ const saveSchedule = async () => {
           <table class="min-w-full bg-white rounded-b-lg">
             <thead>
               <tr>
-                <th class="px-4 py-2 text-xs text-gray-500 text-left">
+                <th class="px-4 py-2 text-lg text-gray-500 text-center">
                   Departure
                 </th>
-                <th class="px-4 py-2 text-xs text-gray-500 text-left">
+                <th class="px-4 py-2 text-lg text-gray-500 text-center">
                   Arrival
                 </th>
               </tr>
@@ -210,10 +201,10 @@ const saveSchedule = async () => {
           <table class="min-w-full bg-white rounded-b-lg">
             <thead>
               <tr>
-                <th class="px-4 py-2 text-xs text-gray-500 text-left">
+                <th class="px-4 py-2 text-lg text-gray-500 text-center">
                   Departure
                 </th>
-                <th class="px-4 py-2 text-xs text-gray-500 text-left">
+                <th class="px-4 py-2 text-lg text-gray-500 text-center">
                   Arrival
                 </th>
               </tr>
@@ -261,9 +252,14 @@ const saveSchedule = async () => {
         <button
           type="button"
           @click="saveSchedule"
-          class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700"
+          :disabled="isLoading"
+          class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
-          Save Schedule
+          <span
+            v-if="isLoading"
+            class="inline-block w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin"
+          ></span>
+          {{ isLoading ? "Saving..." : "Save Changes" }}
         </button>
       </div>
     </div>
