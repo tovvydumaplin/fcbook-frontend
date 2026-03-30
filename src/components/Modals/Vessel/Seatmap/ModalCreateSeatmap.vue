@@ -3,7 +3,6 @@ import {
   Accessibility,
   AirVent,
   Footprints,
-  LayoutGrid,
   LayoutGridIcon,
   Map,
   OctagonX,
@@ -15,7 +14,8 @@ import {
 } from "lucide-vue-next";
 import { ref, computed, onMounted, onUnmounted } from "vue";
 
-const props = defineProps({ seatmap: Object });
+const props = defineProps({ seatmap: Object, vesselId: [Number, String] });
+
 const emit = defineEmits(["save", "close"]);
 const apiBase = import.meta.env.VITE_API_URL;
 const currentSelectedClass = ref(null);
@@ -380,7 +380,7 @@ const fetchAccommodations = async () => {
   }
 };
 
-const saveSeatmap = () => {
+const saveSeatmap = async () => {
   if (!addedClasses.value.length)
     return alert("Add at least one class before saving!");
 
@@ -402,7 +402,32 @@ const saveSeatmap = () => {
     facilityLabels: c.facilityLabels ?? [],
   }));
 
-  emit("save", payload);
+  isLoading.value = true;
+  errorMsg.value = "";
+  try {
+    const res = await fetch(`${apiBase}/vessels/${props.vesselId}/layout`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      errorMsg.value = data.message || "Failed to save seatmap.";
+      return;
+    }
+
+    emit("save");
+  } catch (err) {
+    console.error("Failed saving seatmap:", err);
+    errorMsg.value = "Failed to save seatmap. Please try again.";
+  } finally {
+    isLoading.value = false;
+  }
 };
 
 onMounted(() => {
@@ -656,7 +681,6 @@ onUnmounted(() => window.removeEventListener("mouseup", handleGlobalMouseUp));
                 >
                   <SquarePen class="w-4 h-4" />Rename Seat
                 </button>
-
                 <button
                   type="button"
                   @click="toggleMode('block')"
@@ -672,7 +696,6 @@ onUnmounted(() => window.removeEventListener("mouseup", handleGlobalMouseUp));
                 >
                   <OctagonX class="w-4 h-4" /> Block/Unblock
                 </button>
-
                 <button
                   type="button"
                   @click="toggleMode('path')"
@@ -688,7 +711,6 @@ onUnmounted(() => window.removeEventListener("mouseup", handleGlobalMouseUp));
                 >
                   <Footprints class="w-4 h-4" /> Walk Path
                 </button>
-
                 <button
                   type="button"
                   @click="toggleMode('facility')"
@@ -719,7 +741,6 @@ onUnmounted(() => window.removeEventListener("mouseup", handleGlobalMouseUp));
                 >
                   <Accessibility class="w-4 h-4" />PWD
                 </button>
-
                 <button
                   type="button"
                   @click="resetSeats"
@@ -807,7 +828,6 @@ onUnmounted(() => window.removeEventListener("mouseup", handleGlobalMouseUp));
                         >✕</span
                       >
                     </div>
-
                     <!-- Floating Facility Labels -->
                     <div
                       v-for="(f, i) in currentSelectedClass.facilityLabels ||

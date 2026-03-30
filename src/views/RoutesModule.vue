@@ -27,9 +27,9 @@ const closedRoutes = computed(
 const filteredRoutes = computed(() => {
   let filtered = routes.value;
   if (activeTab.value === "active")
-    filtered = filtered.filter((r) => r.status === "Active");
+    filtered = filtered.filter((r) => r.is_active === 1);
   else if (activeTab.value === "closed")
-    filtered = filtered.filter((r) => r.status !== "Active");
+    filtered = filtered.filter((r) => r.is_active !== 1);
 
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase();
@@ -43,8 +43,8 @@ const filteredRoutes = computed(() => {
   return filtered;
 });
 
-const getStatusClass = (status) => {
-  if (status === "Active") return "bg-green-100 text-green-800";
+const getStatusClass = (is_active) => {
+  if (is_active === 1) return "text-green-600 bg-green-100";
   return "bg-gray-100 text-gray-800";
 };
 
@@ -66,7 +66,7 @@ const fetchRoutes = async () => {
         port_b_id: route.port_b_id,
         port_a_name: route.port_a?.port_name || "",
         port_b_name: route.port_b?.port_name || "",
-        status: route.status || "Active",
+        is_active: Number(route.is_active),
         updated_by: route.port_a?.last_update_by || "Unknown",
         updated_at: route.updated_at ? route.updated_at.slice(0, 10) : "",
       }));
@@ -89,7 +89,7 @@ const handleSave = () => {
   fetchRoutes();
 };
 
-const handleAction = (route) => {
+const openView = (route) => {
   console.log("View route:", route);
 };
 </script>
@@ -265,10 +265,10 @@ const handleAction = (route) => {
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <span
-                    :class="getStatusClass(route.status)"
-                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
+                    :class="getStatusClass(route.is_active)"
+                    class="px-2 py-1 rounded text-sm font-medium"
                   >
-                    {{ route.status }}
+                    {{ route.is_active === 1 ? "Active" : "Inactive" }}
                   </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -279,7 +279,7 @@ const handleAction = (route) => {
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                   <button
-                    @click="handleAction(route)"
+                    @click="openView(route)"
                     class="font-medium text-blue-600 hover:text-blue-900 flex items-center"
                   >
                     <Eye class="w-4 h-4 mr-1" />

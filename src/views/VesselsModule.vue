@@ -15,7 +15,6 @@ const apiBase = import.meta.env.VITE_API_URL;
 const activeTab = ref("all");
 const searchQuery = ref("");
 const isTableLoading = ref(false);
-const isLoading = ref(false);
 const vessels = ref([]);
 const isSeatmapLoading = ref(false);
 const isCreateModalOpen = ref(false);
@@ -158,37 +157,9 @@ const openSeatmapModal = async (vessel) => {
   }
 };
 
-const handleSeatmapSave = async (payload) => {
-  if (!seatmapVessel.value) return;
-  isSeatmapLoading.value = true; // add this
-  try {
-    const res = await fetch(
-      `${apiBase}/vessels/${seatmapVessel.value.vesselId}/layout`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify(payload),
-      },
-    );
-
-    if (!res.ok) {
-      const data = await res.json();
-      alert(data.message || "Failed to save seatmap.");
-      return;
-    }
-
-    isSeatmapModalOpen.value = false;
-    fetchVessels();
-  } catch (err) {
-    console.error("Failed saving seatmap:", err);
-    alert("Failed to save seatmap. Please try again.");
-  } finally {
-    isSeatmapLoading.value = false; // add this
-  }
+const handleSeatmapSave = () => {
+  isSeatmapModalOpen.value = false;
+  fetchVessels();
 };
 
 onMounted(() => {
@@ -471,8 +442,6 @@ onMounted(() => {
         </div>
       </div>
     </div>
-
-    <!-- Modals -->
     <transition name="modal-fade">
       <ModalCreateVessel
         v-if="isCreateModalOpen"
@@ -480,11 +449,11 @@ onMounted(() => {
         @save="fetchVessels"
       />
     </transition>
-
     <transition name="modal-fade">
       <ModalCreateSeatmap
         v-if="isSeatmapModalOpen"
         :seatmap="seatmapData"
+        :vessel-id="seatmapVessel?.vesselId"
         @save="handleSeatmapSave"
         @close="isSeatmapModalOpen = false"
       />
