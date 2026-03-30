@@ -18,7 +18,7 @@ const routes = [
   { path: "/dashboard", component: Dashboard },
   { path: "/ports", component: PortModule },
   { path: "/teller-booking", component: tellerBooking },
-  { path: "/schedule", component: ScheduleModule },
+  { path: "/schedules", component: ScheduleModule },
   { path: "/routes", component: RoutesModule },
   { path: "/vessels", component: VesselsModule },
   { path: "/rates", component: RatesPassengerLayout },

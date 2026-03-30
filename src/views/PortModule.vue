@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { Plus, BarChart3, AlertCircle, Search } from "lucide-vue-next";
+import { Plus, BarChart3, AlertCircle, Search, Eye } from "lucide-vue-next";
 import ModalCreatePort from "../components/Modals/Port/ModalCreatePort.vue";
 import ModalViewPort from "../components/Modals/Port/ModalViewPort.vue";
 
@@ -259,7 +259,7 @@ const handleSave = () => {
         <!-- Data Table -->
         <div class="relative">
           <div class="overflow-x-auto">
-            <div class="max-h-[245px] overflow-y-auto">
+            <div class="max-h-[400px] overflow-y-auto">
               <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                   <tr>
@@ -373,6 +373,7 @@ const handleSave = () => {
                         @click="handleAction(port)"
                         class="font-medium text-blue-600 hover:text-blue-900"
                       >
+                        <Eye class="w-4 h-4 mr-1" />
                         View
                       </button>
                     </td>
