@@ -19,6 +19,13 @@ const isCreateIADiscountModalOpen = ref(false);
 const isEditIADiscountModalOpen = ref(false);
 const selectedIADiscount = ref({});
 
+const status = {
+  0: { label: "Pending", class: "text-yellow-600 bg-yellow-100" },
+  1: { label: "Active", class: "text-green-600 bg-green-100" },
+  2: { label: "Inactive", class: "text-gray-600 bg-gray-100" },
+  3: { label: "Cancelled", class: "text-red-600 bg-red-100" },
+};
+
 const props = defineProps({
   ia: {
     type: Object,
@@ -159,7 +166,7 @@ const fetchIADiscounts = async () => {
       discountType: iad.discount_type,
       iadRoutePortA: iad.route.port_a.port_name,
       iadRoutePortB: iad.route.port_b.port_name,
-      status: iad.status,
+      status: Number(iad.status),
       effectiveDate: iad.effective_date
         ? new Date(iad.effective_date).toLocaleDateString()
         : "-",
@@ -363,7 +370,7 @@ onMounted(async () => {
                     Discount Value
                   </th>
                   <th
-                    class="w-20 px-6 py-4 text-left border-t border-b border-gray-300"
+                    class="w-25 px-6 py-4 text-left border-t border-b border-gray-300"
                   >
                     Status
                   </th>
@@ -403,7 +410,16 @@ onMounted(async () => {
                         : "₱ " + iad.discountValue
                     }}
                   </td>
-                  <td class="px-6 py-4 text-sm">{{ iad.status }}</td>
+                  <td class="px-6 py-4 text-sm">
+                    <span
+                      :class="[
+                        'px-2 py-1 rounded text-sm font-medium',
+                        status[iad.status].class,
+                      ]"
+                    >
+                      {{ status[iad.status].label }}
+                    </span>
+                  </td>
                   <td class="px-6 py-4 text-sm">{{ iad.effectiveDate }}</td>
                   <td class="px-6 py-4 text-sm">{{ iad.updatedAt }}</td>
 

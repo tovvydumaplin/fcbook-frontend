@@ -35,7 +35,7 @@ const moduleItems = [
   { name: "Ports", route: "/ports", icon: MapPinned },
   { name: "Vessels", route: "/vessels", icon: Ship },
   { name: "Routes", route: "/routes", icon: Split },
-  { name: "Schedule", route: "/schedule", icon: CalendarDays },
+  { name: "Schedules", route: "/schedules", icon: CalendarDays },
   {
     name: "Accommodation",
     route: "/passenger-accommodation",

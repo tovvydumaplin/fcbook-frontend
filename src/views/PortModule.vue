@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { Plus, BarChart3, AlertCircle, Search } from "lucide-vue-next";
+import { Plus, BarChart3, AlertCircle, Search, Eye } from "lucide-vue-next";
 import ModalCreatePort from "../components/Modals/Port/ModalCreatePort.vue";
 import ModalViewPort from "../components/Modals/Port/ModalViewPort.vue";
 
@@ -30,7 +30,7 @@ const filteredPorts = computed(() => {
 
   if (activeTab.value === "active")
     filtered = filtered.filter(
-      (p) => p.status === "Online" || p.status === "Available",
+      (p) => p.status === "Online" || p.status === "Active",
     );
   else if (activeTab.value === "closed")
     filtered = filtered.filter((p) => p.status === "Offline");
@@ -48,7 +48,7 @@ const filteredPorts = computed(() => {
 });
 
 const getStatusClass = (status) => {
-  if (status === "Available" || status === "Online")
+  if (status === "Active" || status === "Online")
     return "bg-green-100 text-green-800";
   return "bg-gray-100 text-gray-800";
 };
@@ -125,7 +125,7 @@ const fetchPorts = async () => {
         corridor: port.corridor,
         facilities: port.facilities,
         updatedBy: port.last_update_by,
-        status: port.is_active === 1 ? "Available" : "Offline",
+        status: port.is_active === 1 ? "Active" : "Offline",
         createdAt: port.created_at
           ? port.created_at.slice(0, 16).replace("T", " ")
           : "",
@@ -259,7 +259,7 @@ const handleSave = () => {
         <!-- Data Table -->
         <div class="relative">
           <div class="overflow-x-auto">
-            <div class="max-h-[245px] overflow-y-auto">
+            <div class="max-h-[400px] overflow-y-auto">
               <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                   <tr>
@@ -373,6 +373,7 @@ const handleSave = () => {
                         @click="handleAction(port)"
                         class="font-medium text-blue-600 hover:text-blue-900"
                       >
+                        <Eye class="w-4 h-4 mr-1" />
                         View
                       </button>
                     </td>

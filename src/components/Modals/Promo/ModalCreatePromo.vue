@@ -74,11 +74,8 @@ const createPromo = async () => {
       value_type: valueType.value,
       effective_date: effectiveDate.value,
       end_date: endDate.value,
-
-      // ✅ send real booleans
       is_roundtrip: isRoundtrip.value,
       with_condition: !noConditions.value,
-
       ...(!noConditions.value && {
         promo_conditions: conditions.value,
       }),

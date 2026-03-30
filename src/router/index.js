@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import Dashboard from "../views/home.vue";
 import Login from "../views/Login.vue";
-import Port from "../views/Port.vue";
+import PortModule from "../views/PortModule.vue";
 import tellerBooking from "../views/tellerBooking.vue";
 import ScheduleModule from "../views/ScheduleModule.vue";
 import RoutesModule from "../views/RoutesModule.vue";
@@ -16,9 +16,9 @@ import PromosDiscountsLayout from "../views/Promos/PromosDiscountsLayout.vue";
 const routes = [
   { path: "/", component: Login },
   { path: "/dashboard", component: Dashboard },
-  { path: "/ports", component: Port },
+  { path: "/ports", component: PortModule },
   { path: "/teller-booking", component: tellerBooking },
-  { path: "/schedule", component: ScheduleModule },
+  { path: "/schedules", component: ScheduleModule },
   { path: "/routes", component: RoutesModule },
   { path: "/vessels", component: VesselsModule },
   { path: "/rates", component: RatesPassengerLayout },

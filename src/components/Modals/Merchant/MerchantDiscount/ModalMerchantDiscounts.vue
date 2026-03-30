@@ -19,6 +19,13 @@ const isCreateMerchantDiscountModalOpen = ref(false);
 const isEditMerchantDiscountModalOpen = ref(false);
 const selectedMerchantDiscount = ref({});
 
+const status = {
+  0: { label: "Pending", class: "text-yellow-600 bg-yellow-100" },
+  1: { label: "Active", class: "text-green-600 bg-green-100" },
+  2: { label: "Inactive", class: "text-gray-600 bg-gray-100" },
+  3: { label: "Cancelled", class: "text-red-600 bg-red-100" },
+};
+
 const props = defineProps({
   merchant: {
     type: Object,
@@ -411,7 +418,14 @@ onMounted(async () => {
                     }}
                   </td>
                   <td class="px-6 py-4 text-sm">
-                    {{ merchantDiscount.status }}
+                    <span
+                      :class="[
+                        'px-2 py-1 rounded text-sm font-medium',
+                        status[merchantDiscount.status].class,
+                      ]"
+                    >
+                      {{ status[merchantDiscount.status].label }}
+                    </span>
                   </td>
                   <td class="px-6 py-4 text-sm">
                     {{ merchantDiscount.effectiveDate }}
