@@ -2,6 +2,8 @@
 import { ref, watch, computed } from "vue";
 
 const emit = defineEmits(["close", "save"]);
+
+const apiBase = import.meta.env.VITE_API_URL;
 const isSaving = ref(false);
 const portASchedules = ref([]);
 const portBSchedules = ref([]);
@@ -46,7 +48,6 @@ const checkboxesToVisibility = (online, teller, merchant) => {
   return 0;
 };
 
-// Handle when "All" checkbox is clicked
 const handleAllCheckbox = (schedule) => {
   if (schedule.all) {
     schedule.online = true;
@@ -61,7 +62,6 @@ const handleAllCheckbox = (schedule) => {
   }
 };
 
-// Update "All" checkbox and visibility based on individual options
 const updateAllCheckbox = (schedule) => {
   schedule.visibility = checkboxesToVisibility(
     schedule.online,
@@ -74,23 +74,35 @@ const updateAllCheckbox = (schedule) => {
 
 const handleSave = async () => {
   isSaving.value = true;
-
   try {
-    const scheduleOptions = {
-      route_id: props.selectedRoute.route_id,
-      portA: portASchedules.value.map((sched) => ({
+    const all = [
+      ...portASchedules.value.map((sched) => ({
         sched_id: sched.sched_id,
         visibility: sched.visibility,
       })),
-      portB: portBSchedules.value.map((sched) => ({
+      ...portBSchedules.value.map((sched) => ({
         sched_id: sched.sched_id,
         visibility: sched.visibility,
       })),
-    };
+    ];
 
-    emit("save", scheduleOptions);
+    await Promise.all(
+      all.map((sched) =>
+        fetch(`${apiBase}/schedules/${sched.sched_id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({ visibility: sched.visibility }),
+        }),
+      ),
+    );
 
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    emit("save");
+  } catch (err) {
+    console.error("Error saving schedule options:", err);
+    alert("Failed to save schedule options");
   } finally {
     isSaving.value = false;
   }
