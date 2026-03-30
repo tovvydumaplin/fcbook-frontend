@@ -9,6 +9,13 @@ const passengerTypes = ref([]);
 const isModalOpen = ref(false);
 const editData = ref(null);
 
+const status = {
+  0: { label: "Pending", class: "text-yellow-600 bg-yellow-100" },
+  1: { label: "Active", class: "text-green-600 bg-green-100" },
+  2: { label: "Inactive", class: "text-gray-600 bg-gray-100" },
+  3: { label: "Cancelled", class: "text-red-600 bg-red-100" },
+};
+
 const fetchPassengerTypes = async () => {
   const token = localStorage.getItem("token");
   try {
@@ -84,7 +91,16 @@ onMounted(fetchPassengerTypes);
             <td class="px-6 py-4 text-sm">{{ p.type }}</td>
             <td class="px-6 py-4 text-sm">{{ Number(p.discount) * 100 }}%</td>
             <td class="px-6 py-4 text-sm">{{ p.waived ? "✅" : "❌" }}</td>
-            <td class="px-6 py-4 text-sm">{{ p.status }}</td>
+            <td class="px-6 py-4 text-sm">
+              <span
+                :class="[
+                  'px-2 py-1 rounded text-sm font-medium',
+                  status[p.status].class,
+                ]"
+              >
+                {{ status[p.status].label }}
+              </span>
+            </td>
             <td class="px-6 py-4 text-sm">
               <button
                 @click="edit(p)"

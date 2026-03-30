@@ -15,6 +15,13 @@ const props = defineProps({
   isRateLoading: Boolean,
 });
 
+const status = {
+  0: { label: "Pending", class: "text-yellow-600 bg-yellow-100" },
+  1: { label: "Active", class: "text-green-600 bg-green-100" },
+  2: { label: "Inactive", class: "text-gray-600 bg-gray-100" },
+  3: { label: "Cancelled", class: "text-red-600 bg-red-100" },
+};
+
 const openRateModal = (acc) => {
   selectedAccommodationRate.value = acc;
   isRateModalOpen.value = true;
@@ -143,9 +150,15 @@ watch(
             <span v-else>{{ acc.updatedAt }}</span>
           </td>
           <td class="px-6 py-4 text-sm text-gray-500">—</td>
-          <td class="px-6 py-4 text-sm text-gray-500">
-            <span v-if="acc.status === null">—</span>
-            <span v-else>{{ acc.status }}</span>
+          <td class="px-6 py-4 text-sm">
+            <span
+              :class="[
+                'px-2 py-1 rounded text-sm font-medium',
+                status[acc.status].class,
+              ]"
+            >
+              {{ status[acc.status].label }}
+            </span>
           </td>
           <td class="px-6 py-4 text-sm">
             <button
