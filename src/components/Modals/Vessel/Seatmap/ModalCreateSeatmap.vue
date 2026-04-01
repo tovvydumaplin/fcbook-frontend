@@ -4,55 +4,96 @@ import {
   AirVent,
   Footprints,
   LayoutGridIcon,
-  Map,
   OctagonX,
   RotateCcw,
   SquarePen,
   Store,
-  Trash2,
   Wifi,
 } from "lucide-vue-next";
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 
-const props = defineProps({ seatmap: Object, vesselId: [Number, String] });
+const props = defineProps({
+  vesselId: { type: [Number, String], required: true },
+  accommodations: { type: Array, default: () => [] },
+  seatmap: { type: Array, default: () => [] },
+});
 
 const emit = defineEmits(["save", "close"]);
 const apiBase = import.meta.env.VITE_API_URL;
 const currentSelectedClass = ref(null);
 const addedClasses = ref([]);
-const isOpen = ref(false);
-const selectedClassIndex = ref(null);
 const isLoading = ref(false);
 const errorMsg = ref("");
 const tempRows = ref(null);
 const tempColumns = ref(null);
 const isDragging = ref(false);
 const activeMode = ref(null);
-const accomodations = ref([]);
-const isSeatmapLoading = ref(false);
 const dragStart = ref(null);
 const dragMode = ref(null);
 const lastHoveredSeat = ref(null);
-const seatSize = 40;
-const availableClasses = computed(() =>
-  accomodations.value.filter(
-    (a) => !addedClasses.value.some((c) => c.name === a.name),
-  ),
-);
+const seatSize = 44;
 
-if (props.seatmap?.length) {
-  addedClasses.value = props.seatmap.map((cls) => ({
-    name: cls.name || cls.accommodation_name,
-    aircon: cls.aircon ?? true,
-    wifi: cls.wifi ?? false,
-    rows: cls.rows || null,
-    columns: cls.columns || null,
-    seats: cls.seats || [],
-    facilityLabels: cls.facilityLabels || [],
-  }));
+const recomputeFacilityLabels = (seats) => {
+  const facilityMap = {};
+  seats.forEach((s) => {
+    if (s.facility) {
+      if (!facilityMap[s.facility])
+        facilityMap[s.facility] = { rows: [], cols: [] };
+      facilityMap[s.facility].rows.push(s.row);
+      facilityMap[s.facility].cols.push(s.col);
+    }
+  });
+  return Object.entries(facilityMap).map(([name, { rows, cols }]) => {
+    const r1 = Math.min(...rows),
+      r2 = Math.max(...rows);
+    const c1 = Math.min(...cols),
+      c2 = Math.max(...cols);
+    return {
+      name,
+      top: r1 * seatSize,
+      left: c1 * seatSize,
+      width: (c2 - c1 + 1) * seatSize,
+      height: (r2 - r1 + 1) * seatSize,
+    };
+  });
+};
 
-  currentSelectedClass.value = addedClasses.value[0];
-}
+const initClasses = () => {
+  if (props.seatmap?.length) {
+    addedClasses.value = props.seatmap.map((cls) => {
+      const seats = (cls.seats || []).map((s) => ({ ...s }));
+      return {
+        name: cls.name || cls.accommodation_name,
+        aircon: cls.aircon ?? true,
+        wifi: cls.wifi ?? false,
+        rows: cls.rows || null,
+        columns: cls.columns || null,
+        seats,
+        facilityLabels: recomputeFacilityLabels(seats),
+      };
+    });
+  } else if (props.accommodations?.length) {
+    addedClasses.value = props.accommodations.map((a) => ({
+      name: a.name || a.accommodationName,
+      aircon: a.aircon ?? true,
+      wifi: a.wifi ?? false,
+      rows: null,
+      columns: null,
+      seats: [],
+      facilityLabels: [],
+    }));
+  }
+
+  if (addedClasses.value.length) {
+    currentSelectedClass.value = addedClasses.value[0];
+  }
+};
+
+const selectClass = (item) => {
+  currentSelectedClass.value = item;
+  tempRows.value = item.rows || null;
+  tempColumns.value = item.columns || null;
+};
 
 const removeFacilityBySeat = (seat) => {
   const cls = currentSelectedClass.value;
@@ -67,49 +108,6 @@ const removeFacilityBySeat = (seat) => {
   );
   activeMode.value = null;
 };
-
-const selectClass = (item) => {
-  currentSelectedClass.value = item;
-  tempRows.value = item.rows || null;
-  tempColumns.value = item.columns || null;
-};
-
-const openAddClass = () => {
-  isOpen.value = true;
-};
-
-const addClass = () => {
-  if (!selectedClassIndex.value) {
-    alert("Please select accommodation first");
-    return;
-  }
-
-  const selected = accomodations.value.find(
-    (a) => a.id === selectedClassIndex.value,
-  );
-
-  if (!selected) {
-    alert("Invalid accommodation selected");
-    return;
-  }
-
-  addedClasses.value.push({
-    id: selected.id,
-    name: selected.name,
-    aircon: selected.aircon,
-    wifi: selected.wifi,
-    rows: null,
-    columns: null,
-    seats: [],
-    facilityLabels: [],
-  });
-
-  selectedClassIndex.value = null;
-  isOpen.value = false;
-};
-
-const cancelAction = () => (isOpen.value = false);
-const saveChanges = () => addClass();
 
 const generateSeats = () => {
   const cls = currentSelectedClass.value;
@@ -139,20 +137,14 @@ const toggleMode = (mode) => {
   activeMode.value = activeMode.value === mode ? null : mode;
 };
 
-// ===== START DRAG =====
 const startDrag = (seat, event) => {
   if (event.button !== 0) return;
   event.preventDefault();
-
   dragStart.value = seat;
   isDragging.value = false;
   lastHoveredSeat.value = seat;
-
-  // Determine current drag mode
   if (!activeMode.value) return;
   dragMode.value = activeMode.value;
-
-  // Initialize seat state for drag
   switch (dragMode.value) {
     case "rename":
       seat.renaming = true;
@@ -186,18 +178,15 @@ const startDrag = (seat, event) => {
   }
 };
 
-// ===== DRAG SEATS =====
 const dragSeats = (seat) => {
   if (!dragStart.value || !dragMode.value) return;
   isDragging.value = true;
   lastHoveredSeat.value = seat;
-
   const start = dragStart.value;
   const r1 = Math.min(start.row, seat.row);
   const r2 = Math.max(start.row, seat.row);
   const c1 = Math.min(start.col, seat.col);
   const c2 = Math.max(start.col, seat.col);
-
   currentSelectedClass.value.seats.forEach((s) => {
     if (s.row >= r1 && s.row <= r2 && s.col >= c1 && s.col <= c2) {
       if (dragMode.value === "rename") s.renaming = true;
@@ -218,13 +207,12 @@ const dragSeats = (seat) => {
   });
 };
 
-// ===== END DRAG =====
 const handleGlobalMouseUp = () => {
   if (dragStart.value) endDrag();
 };
+
 const endDrag = () => {
   if (!dragStart.value) return;
-  // Handle rename drag
   if (dragMode.value === "rename" && isDragging.value) {
     const baseName = prompt("Enter starting seat number:", "001A");
     if (!baseName) {
@@ -234,18 +222,15 @@ const endDrag = () => {
       if (!match) return alert("Format should be like 001A");
       let [_, startNum, letter] = match;
       startNum = parseInt(startNum, 10);
-
       const seatsToRename = currentSelectedClass.value.seats
         .filter((s) => s.renaming)
         .sort((a, b) => a.row - b.row || a.col - b.col);
-
       seatsToRename.forEach((s, idx) => {
         s.seat_no = String(startNum + idx).padStart(3, "0") + letter;
         s.renaming = false;
       });
     }
   }
-  // Handle facility drag
   if (dragMode.value === "facility" && isDragging.value) {
     const seatsToLabel = currentSelectedClass.value.seats.filter(
       (s) => s.facility === "…",
@@ -280,10 +265,8 @@ const endDrag = () => {
   lastHoveredSeat.value = null;
 };
 
-// ===== SEAT CLICK  =====
 const onSeatClick = (seat) => {
   if (dragStart.value && isDragging.value) return;
-
   if (activeMode.value === "facility") {
     if (seat.facility) removeFacilityBySeat(seat);
     else {
@@ -297,7 +280,6 @@ const onSeatClick = (seat) => {
     }
     return;
   }
-
   if (activeMode.value === "pwd") {
     seat.pwd = !seat.pwd;
     seat.blocked = false;
@@ -305,7 +287,6 @@ const onSeatClick = (seat) => {
     seat.facility = null;
     return;
   }
-
   if (activeMode.value === "rename") {
     const n = prompt("Rename seat:", seat.seat_no);
     if (n?.trim()) {
@@ -315,14 +296,12 @@ const onSeatClick = (seat) => {
     currentSelectedClass.value.seats.forEach((s) => (s.renaming = false));
     return;
   }
-
   if (activeMode.value === "block") {
     seat.blocked = !seat.blocked;
     seat.path = false;
     seat.pwd = false;
     return;
   }
-
   if (activeMode.value === "path") {
     seat.path = !seat.path;
     seat.blocked = false;
@@ -331,7 +310,6 @@ const onSeatClick = (seat) => {
   }
 };
 
-// ===== RESET =====
 const resetSeats = () => {
   if (!currentSelectedClass.value) return;
   currentSelectedClass.value.seats.forEach((s) => {
@@ -344,52 +322,13 @@ const resetSeats = () => {
   currentSelectedClass.value.facilityLabels = [];
 };
 
-const removeClass = (index) => {
-  if (addedClasses.value[index] === currentSelectedClass.value)
-    currentSelectedClass.value = null;
-  addedClasses.value.splice(index, 1);
-};
-const fetchAccommodations = async () => {
-  isSeatmapLoading.value = true;
-  try {
-    const res = await fetch(`${apiBase}/passenger-accommodations`, {
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-    });
-
-    const data = await res.json();
-
-    if (res.ok && data.data) {
-      accomodations.value = data.data.map((a) => ({
-        id: a.accommodation_id,
-        name: a.accommodation_name,
-        aircon: a.aircon ?? true,
-        wifi: a.wifi ?? false,
-      }));
-    } else {
-      accomodations.value = [];
-    }
-  } catch (err) {
-    console.error("Failed to fetch accommodations", err);
-    accomodations.value = [];
-  } finally {
-    isSeatmapLoading.value = false;
-  }
-};
-
 const saveSeatmap = async () => {
   if (!addedClasses.value.length)
-    return alert("Add at least one class before saving!");
-
-  const classWithNoSeats = addedClasses.value.find(
-    (c) => !c.seats || !c.seats.length,
-  );
+    return alert("No accommodations available. Set them up first.");
+  const classWithNoSeats = addedClasses.value.find((c) => !c.seats?.length);
   if (classWithNoSeats)
     return alert(
-      `Class "${classWithNoSeats.name}" has no seats. Please add seats before saving.`,
+      `"${classWithNoSeats.name}" has no seats. Please generate a layout first.`,
     );
 
   const payload = addedClasses.value.map((c) => ({
@@ -414,13 +353,11 @@ const saveSeatmap = async () => {
       },
       body: JSON.stringify(payload),
     });
-
     if (!res.ok) {
       const data = await res.json();
       errorMsg.value = data.message || "Failed to save seatmap.";
       return;
     }
-
     emit("save");
   } catch (err) {
     console.error("Failed saving seatmap:", err);
@@ -432,16 +369,10 @@ const saveSeatmap = async () => {
 
 onMounted(() => {
   window.addEventListener("mouseup", handleGlobalMouseUp);
-  fetchAccommodations();
+  initClasses();
 });
 onUnmounted(() => window.removeEventListener("mouseup", handleGlobalMouseUp));
 </script>
-
-<style scoped>
-.facility-label {
-  z-index: 10;
-}
-</style>
 
 <template>
   <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -449,6 +380,7 @@ onUnmounted(() => window.removeEventListener("mouseup", handleGlobalMouseUp));
       class="bg-white rounded-lg shadow-xl w-full max-w-[1750px] mx-4"
       @click.stop
     >
+      <!-- Header -->
       <div
         class="flex items-center justify-between p-6 border-b border-gray-200"
       >
@@ -473,398 +405,342 @@ onUnmounted(() => window.removeEventListener("mouseup", handleGlobalMouseUp));
         </button>
       </div>
 
-      <!-- BODY -->
+      <!-- Body -->
       <form @submit.prevent="saveSeatmap">
-        <div v-if="isSeatmapLoading" class="p-6">Loading seatmap...</div>
-
-        <div v-else>
-          <div class="grid grid-cols-[0.5fr_0.75fr_1.25fr]">
-            <!-- LEFT COLUMN -->
-            <div class="seatmap_tools h-[600px] overflow-y-auto p-6">
-              <!-- CLASS LIST -->
-              <div class="mb-4">
-                <p class="text-sm font-medium text-gray-700 mb-3">
-                  List of Accommodations
-                </p>
-                <div class="mb-2 space-y-2">
-                  <div
-                    v-for="(item, i) in addedClasses"
-                    :key="i"
-                    :class="[
-                      'flex flex-col p-2 rounded border transition-colors',
-                      currentSelectedClass?.name === item.name
-                        ? 'bg-blue-50 border-blue-300'
-                        : 'border-gray-200 hover:bg-gray-50',
-                    ]"
-                  >
-                    <!-- Top row: select button + name + delete -->
-                    <div class="flex items-center justify-between gap-1">
-                      <span class="text-sm font-medium flex-1 truncate">{{
-                        item.name
-                      }}</span>
-
-                      <span
-                        class="text-xs font-medium text-red-500 cursor-pointer hover:text-red-700 px-1"
-                        @click.stop="removeClass(i)"
-                      >
-                        <Trash2 class="w-4 h-4" />
-                      </span>
-                      <button
-                        type="button"
-                        @click="selectClass(item)"
-                        :class="[
-                          'p-1 rounded transition-colors',
-                          currentSelectedClass?.name === item.name
-                            ? 'text-blue-600'
-                            : 'text-gray-400 hover:text-blue-500',
-                        ]"
-                        title="Select to edit seatmap"
-                      >
-                        <Map class="w-4 h-4 mr-1" />
-                      </button>
-                    </div>
-                    <!-- Bottom row: aircon + wifi toggles -->
-                    <div class="flex items-center gap-4 mt-2 pl-7">
-                      <!-- Aircon toggle -->
-                      <label
-                        class="flex items-center gap-1.5 cursor-pointer select-none"
-                      >
-                        <AirVent class="w-3.5 h-3.5" />
-
-                        <span class="text-xs text-gray-600">AC</span>
-                        <button
-                          type="button"
-                          @click.stop="item.aircon = !item.aircon"
-                          :class="[
-                            'relative inline-flex items-center w-8 h-4 rounded-full transition-colors duration-200 flex-shrink-0',
-                            item.aircon ? 'bg-blue-500' : 'bg-gray-300',
-                          ]"
-                        >
-                          <span
-                            :class="[
-                              'absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform duration-200',
-                              item.aircon ? 'translate-x-4' : 'translate-x-0',
-                            ]"
-                          />
-                        </button>
-                      </label>
-
-                      <!-- Wifi toggle -->
-                      <label
-                        class="flex items-center gap-1.5 cursor-pointer select-none"
-                      >
-                        <Wifi class="w-3.5 h-3.5" />
-                        <span class="text-xs text-gray-600">WiFi</span>
-                        <button
-                          type="button"
-                          @click.stop="item.wifi = !item.wifi"
-                          :class="[
-                            'relative inline-flex items-center w-8 h-4 rounded-full transition-colors duration-200 flex-shrink-0',
-                            item.wifi ? 'bg-blue-500' : 'bg-gray-300',
-                          ]"
-                        >
-                          <span
-                            :class="[
-                              'absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform duration-200',
-                              item.wifi ? 'translate-x-4' : 'translate-x-0',
-                            ]"
-                          />
-                        </button>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-                <div class="w-full mt-4">
-                  <select
-                    v-if="isOpen"
-                    v-model="selectedClassIndex"
-                    class="mb-4 w-full px-3 py-2 border rounded-md"
-                  >
-                    <option value="" disabled>Select accommodation</option>
-                    <option
-                      v-for="seat in availableClasses"
-                      :key="seat.id"
-                      :value="seat.id"
-                    >
-                      {{ seat.name }}
-                    </option>
-                  </select>
-
-                  <button
-                    v-if="!isOpen"
-                    @click="openAddClass"
-                    type="button"
-                    class="w-full px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
-                  >
-                    + Add Class
-                  </button>
-
-                  <div v-if="isOpen" class="grid grid-cols-2 gap-4 w-full">
-                    <button
-                      @click="cancelAction"
-                      type="button"
-                      class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      @click="saveChanges"
-                      type="button"
-                      :disabled="!selectedClassIndex"
-                      class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-400"
-                    >
-                      Save
-                    </button>
-                  </div>
-                </div>
-              </div>
+        <div class="grid grid-cols-[0.5fr_0.75fr_1.25fr]">
+          <!-- LEFT: Accommodation selector -->
+          <div class="h-[600px] overflow-y-auto p-6 border-r border-gray-200">
+            <p class="text-sm font-medium text-gray-700 mb-3">Accommodations</p>
+            <div
+              v-if="addedClasses.length === 0"
+              class="text-sm text-gray-400 text-center py-8"
+            >
+              No accommodations found.
             </div>
-
-            <!-- MIDDLE COLUMN -->
-            <div class="p-6 border-r border-l border-gray-300">
-              <!-- GENERATE SEATS -->
-              <div v-if="currentSelectedClass">
-                <div class="flex items-center justify-center mb-4">
-                  <label class="font-bold text-xl">{{
-                    currentSelectedClass.name
-                  }}</label>
-                </div>
-                <div class="gap-4 flex flex-col mb-4">
-                  <div class="flex gap-6 w-full">
-                    <div>
-                      <label class="text-sm mb-2 text-gray-700"
-                        >Row Seats</label
-                      >
-                      <input
-                        type="number"
-                        v-model.number="tempRows"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label class="text-sm mb-2 text-gray-700"
-                        >Column Seats</label
-                      >
-                      <input
-                        type="number"
-                        v-model.number="tempColumns"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    @click="generateSeats"
-                    :class="
-                      !currentSelectedClass
-                        ? 'opacity-50 cursor-not-allowed'
-                        : 'px-4 py-2 w-full flex items-center justify-center gap-2 text-sm font-medium text-gray-700 border rounded-md hover:bg-gray-200 transition-colors '
-                    "
-                  >
-                    <LayoutGridIcon class="w-4 h-4" />Generate Layout
-                  </button>
-                </div>
-              </div>
-              <div class="grid grid-cols-2 gap-4">
-                <button
-                  type="button"
-                  @click="toggleMode('rename')"
-                  :disabled="!currentSelectedClass"
-                  :class="[
-                    'px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium text-gray-700 border rounded-md  transition-colors ',
-                    !currentSelectedClass
-                      ? 'opacity-40 cursor-not-allowed'
-                      : activeMode === 'rename'
-                        ? 'bg-blue-400'
-                        : 'bg-blue-200 hover:bg-blue-400 hover:text-gray-800  border-blue-400',
-                  ]"
-                >
-                  <SquarePen class="w-4 h-4" />Rename Seat
-                </button>
-                <button
-                  type="button"
-                  @click="toggleMode('block')"
-                  :disabled="!currentSelectedClass"
-                  :class="[
-                    'px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium text-gray-700 border rounded-md  transition-colors ',
-                    !currentSelectedClass
-                      ? 'opacity-40 cursor-not-allowed'
-                      : activeMode === 'block'
-                        ? 'bg-red-400'
-                        : 'bg-red-200 hover:bg-red-400 hover:text-gray-800  border-red-400',
-                  ]"
-                >
-                  <OctagonX class="w-4 h-4" /> Block/Unblock
-                </button>
-                <button
-                  type="button"
-                  @click="toggleMode('path')"
-                  :disabled="!currentSelectedClass"
-                  :class="[
-                    'px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium text-gray-700 border rounded-md  transition-colors ',
-                    !currentSelectedClass
-                      ? 'opacity-40 cursor-not-allowed'
-                      : activeMode === 'path'
-                        ? 'bg-yellow-400'
-                        : 'bg-yellow-200 hover:bg-yellow-400 hover:text-gray-800  border-yellow-400',
-                  ]"
-                >
-                  <Footprints class="w-4 h-4" /> Walk Path
-                </button>
-                <button
-                  type="button"
-                  @click="toggleMode('facility')"
-                  :disabled="!currentSelectedClass"
-                  :class="[
-                    'px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium text-gray-700 border rounded-md  transition-colors ',
-                    !currentSelectedClass
-                      ? 'opacity-40 cursor-not-allowed'
-                      : activeMode === 'facility'
-                        ? 'bg-orange-400'
-                        : 'bg-orange-200 hover:bg-orange-400 hover:text-gray-800  border-orange-400',
-                  ]"
-                >
-                  <Store class="w-4 h-4" /> Facilities
-                </button>
-                <button
-                  type="button"
-                  @click="toggleMode('pwd')"
-                  :disabled="!currentSelectedClass"
-                  :class="[
-                    'px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium text-gray-700 border rounded-md  transition-colors ',
-                    !currentSelectedClass
-                      ? 'opacity-40 cursor-not-allowed'
-                      : activeMode === 'pwd'
-                        ? 'bg-green-400'
-                        : 'bg-green-200 hover:bg-green-400 hover:text-gray-800  border-green-400',
-                  ]"
-                >
-                  <Accessibility class="w-4 h-4" />PWD
-                </button>
-                <button
-                  type="button"
-                  @click="resetSeats"
-                  :disabled="!currentSelectedClass"
-                  :class="[
-                    'px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium text-gray-700 border rounded-md  transition-colors ',
-                    !currentSelectedClass
-                      ? 'opacity-40 cursor-not-allowed'
-                      : 'bg-gray-200 hover:bg-gray-400 hover:text-gray-800  border-gray-400',
-                  ]"
-                >
-                  <RotateCcw class="w-4 h-4" /> Reset Changes
-                </button>
-              </div>
-            </div>
-
-            <!-- RIGHT COLUMN - SEATMAP PREVIEW -->
-            <div class="p-6 bg-gray-100">
+            <div class="space-y-2">
               <div
-                class="seatmap_preview border bg-white border-gray-400 h-full p-3 rounded-lg w-full"
+                v-for="(item, i) in addedClasses"
+                :key="i"
+                :class="[
+                  'flex flex-col p-3 rounded-lg border cursor-pointer transition-colors',
+                  currentSelectedClass?.name === item.name
+                    ? 'bg-blue-50 border-blue-300'
+                    : 'border-gray-200 hover:bg-gray-50',
+                ]"
+                @click="selectClass(item)"
               >
-                <p class="text-sm text-center font-medium text-gray-700 mb-3">
-                  Seatmap Preview
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium text-gray-800 truncate">{{
+                    item.name
+                  }}</span>
+                  <div class="flex items-center gap-1.5 flex-shrink-0 ml-2">
+                    <AirVent
+                      :class="[
+                        'w-3.5 h-3.5',
+                        item.aircon ? 'text-blue-500' : 'text-gray-300',
+                      ]"
+                    />
+                    <Wifi
+                      :class="[
+                        'w-3.5 h-3.5',
+                        item.wifi ? 'text-blue-500' : 'text-gray-300',
+                      ]"
+                    />
+                  </div>
+                </div>
+                <p class="text-xs text-gray-400 mt-1 pl-0.5">
+                  {{ item.seats?.length || 0 }} seats
+                  <span v-if="item.rows && item.columns"
+                    >({{ item.rows }}×{{ item.columns }})</span
+                  >
                 </p>
-                <div
-                  class="flex items-center justify-center h-[500px] overflow-auto"
-                >
-                  <div
-                    v-if="!currentSelectedClass"
-                    class="text-center text-gray-500"
-                  >
-                    Select a class to preview
-                  </div>
-                  <div
-                    v-else-if="!currentSelectedClass.seats?.length"
-                    class="text-center text-gray-500"
-                  >
-                    No seats generated yet.
-                  </div>
+              </div>
+            </div>
+          </div>
 
-                  <div v-else class="relative w-full h-full">
-                    <!-- Seats -->
-                    <div
-                      v-for="seat in currentSelectedClass.seats"
-                      :key="seat.seat_no"
-                      :data-row="seat.row"
-                      :data-col="seat.col"
-                      class="absolute flex items-center justify-center border rounded-md text-xs font-medium cursor-pointer select-none"
-                      :style="{
-                        width: seatSize + 'px',
-                        height: seatSize + 'px',
-                        top: seat.row * seatSize + 'px',
-                        left: seat.col * seatSize + 'px',
-                      }"
-                      :class="{
-                        'bg-gray-300': seat.path,
-                        'bg-red-700 text-white': seat.blocked,
-                        'bg-gray-100':
-                          !seat.path &&
-                          !seat.blocked &&
-                          !seat.facility &&
-                          !seat.renaming,
-                        'bg-orange-400 text-white': seat.facility,
-                        'bg-green-400 text-black': seat.pwd,
-                        'ring-2 ring-blue-400 bg-blue-200': seat.renaming,
-                      }"
-                      @mousedown="startDrag(seat, $event)"
-                      @mouseover="dragSeats(seat)"
-                      @click="onSeatClick(seat)"
+          <!-- MIDDLE: Tools -->
+          <div class="p-6 border-r border-gray-300">
+            <div v-if="currentSelectedClass">
+              <div class="flex items-center justify-center mb-4">
+                <label class="font-bold text-xl">{{
+                  currentSelectedClass.name
+                }}</label>
+              </div>
+              <div class="flex flex-col gap-4 mb-4">
+                <div class="flex gap-4 w-full">
+                  <div class="flex-1">
+                    <label class="text-sm mb-1 block text-gray-700"
+                      >Row Seats</label
                     >
-                      <span
-                        v-if="!seat.blocked && !seat.path && !seat.facility"
-                      >
-                        {{ seat.seat_no }}
-                      </span>
-                      <span
-                        v-if="seat.facility"
-                        class="pointer-events-none font-bold text-white"
-                        :style="{ opacity: 0.7 }"
-                        >{{ seat.facility }}</span
-                      >
-                      <span
-                        v-if="seat.blocked"
-                        class="pointer-events-none text-white text-xl font-bold"
-                        >✕</span
-                      >
-                    </div>
-                    <!-- Floating Facility Labels -->
-                    <div
-                      v-for="(f, i) in currentSelectedClass.facilityLabels ||
-                      []"
-                      :key="i"
-                      class="facility-label absolute flex items-center justify-center text-white font-bold pointer-events-none bg-orange-500 rounded-md"
-                      :style="{
-                        top: f.top + 'px',
-                        left: f.left + 'px',
-                        width: f.width + 'px',
-                        height: f.height + 'px',
-                      }"
-                    >
-                      {{ f.name }}
-                    </div>
+                    <input
+                      type="number"
+                      v-model.number="tempRows"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
                   </div>
+                  <div class="flex-1">
+                    <label class="text-sm mb-1 block text-gray-700"
+                      >Column Seats</label
+                    >
+                    <input
+                      type="number"
+                      v-model.number="tempColumns"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  @click="generateSeats"
+                  class="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 border rounded-md hover:bg-gray-100 transition-colors"
+                >
+                  <LayoutGridIcon class="w-4 h-4" /> Generate Layout
+                </button>
+              </div>
+            </div>
+            <div v-else class="text-sm text-gray-400 text-center py-6">
+              Select an accommodation to start editing
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                @click="toggleMode('rename')"
+                :disabled="!currentSelectedClass"
+                :class="[
+                  'px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium border rounded-md transition-colors',
+                  !currentSelectedClass
+                    ? 'opacity-40 cursor-not-allowed text-gray-400'
+                    : activeMode === 'rename'
+                      ? 'bg-blue-400 text-white border-blue-500'
+                      : 'bg-blue-100 text-gray-700 border-blue-300 hover:bg-blue-300',
+                ]"
+              >
+                <SquarePen class="w-4 h-4" /> Rename Seat
+              </button>
+              <button
+                type="button"
+                @click="toggleMode('block')"
+                :disabled="!currentSelectedClass"
+                :class="[
+                  'px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium border rounded-md transition-colors',
+                  !currentSelectedClass
+                    ? 'opacity-40 cursor-not-allowed text-gray-400'
+                    : activeMode === 'block'
+                      ? 'bg-red-400 text-white border-red-500'
+                      : 'bg-red-100 text-gray-700 border-red-300 hover:bg-red-300',
+                ]"
+              >
+                <OctagonX class="w-4 h-4" /> Block/Unblock
+              </button>
+              <button
+                type="button"
+                @click="toggleMode('path')"
+                :disabled="!currentSelectedClass"
+                :class="[
+                  'px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium border rounded-md transition-colors',
+                  !currentSelectedClass
+                    ? 'opacity-40 cursor-not-allowed text-gray-400'
+                    : activeMode === 'path'
+                      ? 'bg-yellow-400 text-white border-yellow-500'
+                      : 'bg-yellow-100 text-gray-700 border-yellow-300 hover:bg-yellow-300',
+                ]"
+              >
+                <Footprints class="w-4 h-4" /> Walk Path
+              </button>
+              <button
+                type="button"
+                @click="toggleMode('facility')"
+                :disabled="!currentSelectedClass"
+                :class="[
+                  'px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium border rounded-md transition-colors',
+                  !currentSelectedClass
+                    ? 'opacity-40 cursor-not-allowed text-gray-400'
+                    : activeMode === 'facility'
+                      ? 'bg-orange-400 text-white border-orange-500'
+                      : 'bg-orange-100 text-gray-700 border-orange-300 hover:bg-orange-300',
+                ]"
+              >
+                <Store class="w-4 h-4" /> Facilities
+              </button>
+              <button
+                type="button"
+                @click="toggleMode('pwd')"
+                :disabled="!currentSelectedClass"
+                :class="[
+                  'px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium border rounded-md transition-colors',
+                  !currentSelectedClass
+                    ? 'opacity-40 cursor-not-allowed text-gray-400'
+                    : activeMode === 'pwd'
+                      ? 'bg-green-400 text-white border-green-500'
+                      : 'bg-green-100 text-gray-700 border-green-300 hover:bg-green-300',
+                ]"
+              >
+                <Accessibility class="w-4 h-4" /> PWD
+              </button>
+              <button
+                type="button"
+                @click="resetSeats"
+                :disabled="!currentSelectedClass"
+                :class="[
+                  'px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium border rounded-md transition-colors',
+                  !currentSelectedClass
+                    ? 'opacity-40 cursor-not-allowed text-gray-400'
+                    : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-300',
+                ]"
+              >
+                <RotateCcw class="w-4 h-4" /> Reset
+              </button>
+            </div>
+          </div>
+
+          <!-- RIGHT: Seatmap Preview — now matches ModalBlockSeats design -->
+          <div class="p-6 bg-gray-50 flex flex-col">
+            <p class="text-sm font-medium text-gray-700 mb-3 text-center">
+              Seatmap Preview
+            </p>
+
+            <!-- Legend -->
+            <div class="flex items-center gap-4 mb-4 flex-wrap">
+              <div class="flex items-center gap-1.5">
+                <span
+                  class="w-4 h-4 rounded bg-white border border-gray-300 flex-shrink-0"
+                ></span>
+                <span class="text-xs text-gray-500">Available</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-4 h-4 rounded bg-red-600 flex-shrink-0"></span>
+                <span class="text-xs text-gray-500">Blocked</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-4 h-4 rounded bg-gray-200 flex-shrink-0"></span>
+                <span class="text-xs text-gray-500">Path</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-4 h-4 rounded bg-green-400 flex-shrink-0"></span>
+                <span class="text-xs text-gray-500">PWD</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span
+                  class="w-4 h-4 rounded bg-orange-400 flex-shrink-0"
+                ></span>
+                <span class="text-xs text-gray-500">Facility</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span
+                  class="w-4 h-4 rounded ring-2 ring-blue-400 bg-blue-200 flex-shrink-0"
+                ></span>
+                <span class="text-xs text-gray-500">Renaming</span>
+              </div>
+            </div>
+
+            <!-- Seat grid -->
+            <div
+              class="flex-1 min-w-0 overflow-x-auto overflow-y-auto max-w-4xl bg-white rounded-lg border border-gray-200 p-4"
+            >
+              <div
+                v-if="!currentSelectedClass"
+                class="flex items-center justify-center h-full text-sm text-gray-400"
+              >
+                Select an accommodation to preview
+              </div>
+              <div
+                v-else-if="!currentSelectedClass.seats?.length"
+                class="flex items-center justify-center h-full text-sm text-gray-400"
+              >
+                No seats generated yet. Enter rows & columns and click Generate
+                Layout.
+              </div>
+              <div
+                v-else
+                class="relative select-none min-w-full"
+                :style="{
+                  width: currentSelectedClass.columns * seatSize + 'px',
+                  height: currentSelectedClass.rows * seatSize + 'px',
+                }"
+              >
+                <div
+                  v-for="seat in currentSelectedClass.seats"
+                  :key="seat.seat_no"
+                  class="absolute flex items-center justify-center border rounded-md text-xs font-medium cursor-pointer transition-colors"
+                  :style="{
+                    width: seatSize - 4 + 'px',
+                    height: seatSize - 4 + 'px',
+                    top: seat.row * seatSize + 2 + 'px',
+                    left: seat.col * seatSize + 2 + 'px',
+                  }"
+                  :class="{
+                    'bg-red-600 border-red-700 text-white hover:bg-red-500':
+                      seat.blocked,
+                    'bg-gray-200 border-gray-300 text-gray-400 cursor-default':
+                      seat.path && !seat.blocked,
+                    'bg-orange-400 border-orange-500 text-white cursor-default':
+                      seat.facility && !seat.blocked && !seat.path,
+                    'bg-green-400 border-green-500 text-black':
+                      seat.pwd && !seat.blocked && !seat.path && !seat.facility,
+                    'ring-2 ring-blue-400 bg-blue-200 border-blue-300':
+                      seat.renaming,
+                    'bg-white border-gray-200 text-gray-700 hover:bg-red-50 hover:border-red-300':
+                      !seat.blocked &&
+                      !seat.path &&
+                      !seat.facility &&
+                      !seat.pwd &&
+                      !seat.renaming,
+                  }"
+                  @mousedown="startDrag(seat, $event)"
+                  @mouseover="dragSeats(seat)"
+                  @click="onSeatClick(seat)"
+                >
+                  <span
+                    v-if="seat.blocked"
+                    class="text-white font-bold text-sm pointer-events-none"
+                    >✕</span
+                  >
+                  <span
+                    v-else-if="!seat.path && !seat.facility"
+                    class="pointer-events-none"
+                  >
+                    {{ seat.seat_no }}
+                  </span>
+                </div>
+
+                <!-- Facility labels overlay -->
+                <div
+                  v-for="(f, i) in currentSelectedClass.facilityLabels || []"
+                  :key="i"
+                  class="absolute flex items-center justify-center text-white font-bold pointer-events-none bg-orange-500 rounded-md text-xs"
+                  :style="{
+                    top: f.top + 2 + 'px',
+                    left: f.left + 2 + 'px',
+                    width: f.width - 4 + 'px',
+                    height: f.height - 4 + 'px',
+                    zIndex: 10,
+                  }"
+                >
+                  {{ f.name }}
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- FOOTER -->
+        <!-- Footer -->
         <div
           class="flex items-center justify-end gap-3 p-6 border-t border-gray-200"
         >
+          <p v-if="errorMsg" class="text-sm text-red-500 mr-auto">
+            {{ errorMsg }}
+          </p>
           <button
             type="button"
             @click="$emit('close')"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
             :disabled="isLoading"
-            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <span v-if="isLoading" class="flex items-center gap-2">
               <span
@@ -874,9 +750,6 @@ onUnmounted(() => window.removeEventListener("mouseup", handleGlobalMouseUp));
             </span>
             <span v-else>Save Seatmap</span>
           </button>
-        </div>
-        <div v-if="errorMsg" class="text-red-500 text-sm pb-4 text-center">
-          {{ errorMsg }}
         </div>
       </form>
     </div>

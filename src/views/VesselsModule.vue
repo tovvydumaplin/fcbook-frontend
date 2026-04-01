@@ -7,9 +7,12 @@ import {
   Search,
   Eye,
   Map,
+  Armchair,
 } from "lucide-vue-next";
 import ModalCreateVessel from "../components/Modals/Vessel/ModalCreateVessel.vue";
 import ModalCreateSeatmap from "../components/Modals/Vessel/Seatmap/ModalCreateSeatmap.vue";
+import ModalVesselAccommodation from "../components/Modals/Vessel/ModalVesselAccommodation.vue";
+import ModalBlockSeats from "../components/Modals/Vessel/Seatmap/ModalBlockSeats.vue";
 
 const apiBase = import.meta.env.VITE_API_URL;
 const activeTab = ref("all");
@@ -19,8 +22,12 @@ const vessels = ref([]);
 const isSeatmapLoading = ref(false);
 const isCreateModalOpen = ref(false);
 const isSeatmapModalOpen = ref(false);
+const isAccommodationModalOpen = ref(false);
+const isBlockSeatsModalOpen = ref(false);
+const blockSeatsVessel = ref(null);
 const seatmapVessel = ref(null);
 const seatmapData = ref([]);
+const selectedVessel = ref(null);
 
 const status = {
   0: { label: "Pending", class: "text-yellow-600 bg-yellow-100" },
@@ -36,24 +43,53 @@ const tabs = [
   { id: "grounded", name: "Grounded" },
 ];
 
-// Helpers
-
 const statusMap = {
   available: 1,
   drydock: 2,
   grounded: 3,
 };
 
+const openAccommodationModal = (vessel) => {
+  selectedVessel.value = vessel;
+  isAccommodationModalOpen.value = true;
+};
+
+const handleSeatmapSave = () => {
+  isSeatmapModalOpen.value = false;
+  fetchVessels();
+};
+
+const handleAccommodationSaved = () => {
+  isAccommodationModalOpen.value = false;
+  fetchVessels();
+};
+
+const openBlockSeatsModal = (vessel) => {
+  blockSeatsVessel.value = vessel;
+  isBlockSeatsModalOpen.value = true;
+};
+
+const handleBlockSeatsSaved = () => {
+  isBlockSeatsModalOpen.value = false;
+  fetchVessels();
+};
+
+const activeVesselsCount = computed(
+  () => vessels.value.filter((v) => v.status === 1).length,
+);
+
+const drydockVesselsCount = computed(
+  () => vessels.value.filter((v) => v.status === 2).length,
+);
+
 const filteredVessels = computed(() => {
   const query = searchQuery.value.toLowerCase().trim();
-
   let list =
     activeTab.value === "all"
       ? vessels.value
       : vessels.value.filter((v) => v.status === statusMap[activeTab.value]);
 
   if (!query) return list;
-
   return list.filter(
     (v) =>
       v.vesselName?.toLowerCase().includes(query) ||
@@ -63,14 +99,6 @@ const filteredVessels = computed(() => {
       ),
   );
 });
-
-const activeVesselsCount = computed(
-  () => vessels.value.filter((v) => v.status === 1).length,
-);
-
-const drydockVesselsCount = computed(
-  () => vessels.value.filter((v) => v.status === 2).length,
-);
 
 const renderClassList = (vessel, field) => {
   if (!vessel.classes || vessel.classes.length === 0) return ["-"];
@@ -87,8 +115,6 @@ const renderClassList = (vessel, field) => {
     }
   });
 };
-
-// API
 
 const fetchVessels = async () => {
   isTableLoading.value = true;
@@ -108,8 +134,8 @@ const fetchVessels = async () => {
         status: Number(v.status),
         capacity: v.capacity,
         description: v.description,
-
         classes: (v.accommodations || []).map((a) => ({
+          accommodationId: a.accommodation?.accommodation_id || "Unknown",
           accommodationName: a.accommodation?.accommodation_name || "Unknown",
           rows: a.rows || 0,
           columns: a.columns || 0,
@@ -128,12 +154,6 @@ const fetchVessels = async () => {
     isTableLoading.value = false;
   }
 };
-
-// const openEditModal = (vessel) => {
-//   if (!vessel.classes) vessel.classes = [];
-//   modals.value.createEdit.vessel = vessel;
-//   modals.value.createEdit.open = true;
-// };
 
 const openSeatmapModal = async (vessel) => {
   try {
@@ -155,11 +175,6 @@ const openSeatmapModal = async (vessel) => {
   } finally {
     isSeatmapLoading.value = false;
   }
-};
-
-const handleSeatmapSave = () => {
-  isSeatmapModalOpen.value = false;
-  fetchVessels();
 };
 
 onMounted(() => {
@@ -199,7 +214,6 @@ onMounted(() => {
           {{ vessels.length }}
         </div>
       </div>
-
       <div class="bg-white rounded-lg p-6 shadow-sm">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-medium text-gray-600">Active Vessels</h3>
@@ -209,7 +223,6 @@ onMounted(() => {
           {{ activeVesselsCount }}
         </div>
       </div>
-
       <div class="bg-white rounded-lg p-6 shadow-sm">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-sm font-medium text-gray-600">Drydock</h3>
@@ -241,7 +254,7 @@ onMounted(() => {
         </nav>
       </div>
 
-      <!-- List of Vessels Section -->
+      <!-- List of Vessels -->
       <div class="p-6">
         <div class="flex items-center justify-between mb-6">
           <h2 class="text-lg font-medium text-gray-900">List of Vessels</h2>
@@ -258,7 +271,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Table Loading Animation -->
+        <!-- Loading -->
         <div
           v-if="isTableLoading"
           class="flex justify-center items-center py-8"
@@ -275,66 +288,55 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Data Table -->
+        <!-- Table -->
         <div v-else class="overflow-auto max-h-[400px]">
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
                 <th
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  class="w-15 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
                   #
                 </th>
                 <th
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  class="w-40 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
                   Vessel Name
                 </th>
                 <th
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  class="w-30 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
                   Class
                 </th>
                 <th
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  class="w-30 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
                   Seats
                 </th>
                 <th
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  class="w-30 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
                   Aircon
                 </th>
                 <th
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  class="w-30 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
                   WiFi
                 </th>
                 <th
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  class="w-30 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
-                  Vessel Status
+                  Status
                 </th>
                 <th
-                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  class="w-30 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
                   Action
                 </th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-              <!-- LOADING -->
-              <tr v-if="isTableLoading">
-                <td
-                  colspan="8"
-                  class="px-6 py-6 text-center text-sm text-gray-500"
-                >
-                  Loading vessels...
-                </td>
-              </tr>
-
-              <!-- EMPTY -->
-              <tr v-else-if="filteredVessels.length === 0">
+              <tr v-if="filteredVessels.length === 0">
                 <td
                   colspan="8"
                   class="px-6 py-6 text-center text-sm text-gray-500"
@@ -342,8 +344,6 @@ onMounted(() => {
                   No vessels found.
                 </td>
               </tr>
-
-              <!-- DATA -->
               <tr
                 v-else
                 v-for="vessel in filteredVessels"
@@ -356,7 +356,6 @@ onMounted(() => {
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {{ vessel.vesselName || "-" }}
                 </td>
-
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   <ul>
                     <li
@@ -367,7 +366,6 @@ onMounted(() => {
                     </li>
                   </ul>
                 </td>
-
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   <ul>
                     <li
@@ -378,7 +376,6 @@ onMounted(() => {
                     </li>
                   </ul>
                 </td>
-
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   <ul>
                     <li
@@ -389,7 +386,6 @@ onMounted(() => {
                     </li>
                   </ul>
                 </td>
-
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   <ul>
                     <li
@@ -400,7 +396,6 @@ onMounted(() => {
                     </li>
                   </ul>
                 </td>
-
                 <td class="px-6 py-4 text-sm">
                   <span
                     :class="[
@@ -411,28 +406,37 @@ onMounted(() => {
                     {{ status[vessel.status].label }}
                   </span>
                 </td>
-
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   <div class="flex gap-3 items-center">
                     <button
-                      disabled
-                      title="not working yet"
-                      class="font-medium text-gray-400 flex items-center cursor-not-allowed opacity-60"
+                      type="button"
+                      title="View / Manage Accommodations"
+                      class="font-medium text-blue-600 hover:text-blue-800 flex items-center cursor-pointer transition-colors"
+                      @click="openAccommodationModal(vessel)"
                     >
-                      <Eye class="w-4 h-4 mr-1" />
+                      <Eye class="w-4 h-4" />
                     </button>
                     <button
                       type="button"
+                      title="Create / Edit Seatmap"
                       class="font-medium flex items-center transition-colors"
                       :class="
                         isSeatmapLoading
                           ? 'text-gray-400 cursor-not-allowed'
-                          : 'text-blue-600 hover:text-blue-900 cursor-pointer'
+                          : 'text-gray-800 hover:text-blue-900 cursor-pointer'
                       "
                       :disabled="isSeatmapLoading"
                       @click="openSeatmapModal(vessel)"
                     >
-                      <Map class="w-4 h-4 mr-1" />
+                      <Map class="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Block Seats"
+                      class="font-medium cursor-pointer text-red-500 hover:text-red-700 flex items-center transition-colors"
+                      @click="openBlockSeatsModal(vessel)"
+                    >
+                      <Armchair class="w-4 h-4" />
                     </button>
                   </div>
                 </td>
@@ -442,6 +446,8 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- Modals -->
     <transition name="modal-fade">
       <ModalCreateVessel
         v-if="isCreateModalOpen"
@@ -449,13 +455,33 @@ onMounted(() => {
         @save="fetchVessels"
       />
     </transition>
+
+    <transition name="modal-fade">
+      <ModalVesselAccommodation
+        v-if="isAccommodationModalOpen && selectedVessel"
+        :vessel="selectedVessel"
+        @close="isAccommodationModalOpen = false"
+        @saved="handleAccommodationSaved"
+      />
+    </transition>
+
     <transition name="modal-fade">
       <ModalCreateSeatmap
-        v-if="isSeatmapModalOpen"
+        v-if="isSeatmapModalOpen && seatmapVessel"
         :seatmap="seatmapData"
-        :vessel-id="seatmapVessel?.vesselId"
+        :vessel-id="seatmapVessel.vesselId"
+        :accommodations="seatmapVessel.classes"
         @save="handleSeatmapSave"
         @close="isSeatmapModalOpen = false"
+      />
+    </transition>
+
+    <transition name="modal-fade">
+      <ModalBlockSeats
+        v-if="isBlockSeatsModalOpen && blockSeatsVessel"
+        :vessel="blockSeatsVessel"
+        @close="isBlockSeatsModalOpen = false"
+        @saved="handleBlockSeatsSaved"
       />
     </transition>
   </div>

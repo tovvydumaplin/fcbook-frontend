@@ -435,24 +435,30 @@ onMounted(() => {
                       <tr>
                         <th
                           class="text-sm text-center py-2 border-gray-400 bg-gray-200 rounded-tl-lg rounded-tr-lg"
-                          :colspan="3"
+                          :colspan="4"
                         >
                           {{ selectedRoute.portA?.port_name || "Port A" }}
                         </th>
                       </tr>
                       <tr>
                         <th
-                          class="w-30 px-4 py-2 text-xs text-gray-500 text-left border-l border-r border-t border-b border-gray-200"
+                          class="w-20 px-4 py-2 text-sm text-gray-600 text-center border-l border-r border-t border-b border-gray-200"
                         >
                           Departure
                         </th>
                         <th
-                          class="w-50 px-4 py-2 text-xs text-gray-500 text-center border-l border-r border-t border-b border-gray-200"
+                          class="w-20 px-4 py-2 text-sm text-gray-600 text-center border-l border-r border-t border-b border-gray-200"
+                        >
+                          Arrival
+                        </th>
+
+                        <th
+                          class="w-40 px-4 py-2 text-sm text-gray-600 text-center border-l border-r border-t border-b border-gray-200"
                         >
                           Vessel
                         </th>
                         <th
-                          class="w-30 px-4 py-2 text-xs text-gray-500 text-left border-l border-r border-t border-b border-gray-200"
+                          class="w-30 px-4 py-2 text-sm text-gray-600 text-center border-l border-r border-t border-b border-gray-200"
                         >
                           Status
                         </th>
@@ -462,11 +468,17 @@ onMounted(() => {
                       <tr
                         v-for="sched in selectedRoute.portA?.schedules || []"
                         :key="sched.sched_id"
+                        class="text-center"
                       >
                         <td
                           class="px-4 py-2 text-sm border-l border-r border-t border-b border-gray-200"
                         >
                           {{ sched.departure_time }}
+                        </td>
+                        <td
+                          class="px-4 py-2 text-sm border-l border-r border-t border-b border-gray-200"
+                        >
+                          {{ sched.arrival_time }}
                         </td>
                         <td
                           class="px-4 py-2 text-sm border-l border-r border-t border-b border-gray-200"
@@ -522,24 +534,30 @@ onMounted(() => {
                       <tr>
                         <th
                           class="text-sm text-center py-2 border-gray-400 bg-gray-200 rounded-tl-lg rounded-tr-lg"
-                          :colspan="3"
+                          :colspan="4"
                         >
                           {{ selectedRoute.portB?.port_name || "Port B" }}
                         </th>
                       </tr>
                       <tr>
                         <th
-                          class="w-30 px-4 py-2 text-xs text-gray-500 text-left border-l border-r border-t border-b border-gray-200"
+                          class="w-20 px-4 py-2 text-sm text-gray-600 text-center border-l border-r border-t border-b border-gray-200"
                         >
                           Departure
                         </th>
                         <th
-                          class="w-50 px-4 py-2 text-xs text-gray-500 text-center border-l border-r border-t border-b border-gray-200"
+                          class="w-20 px-4 py-2 text-sm text-gray-600 text-center border-l border-r border-t border-b border-gray-200"
+                        >
+                          Arrival
+                        </th>
+
+                        <th
+                          class="w-40 px-4 py-2 text-sm text-gray-600 text-center border-l border-r border-t border-b border-gray-200"
                         >
                           Vessel
                         </th>
                         <th
-                          class="w-30 px-4 py-2 text-xs text-gray-500 text-left border-l border-r border-t border-b border-gray-200"
+                          class="w-30 px-4 py-2 text-sm text-gray-600 text-center border-l border-r border-t border-b border-gray-200"
                         >
                           Status
                         </th>
@@ -549,12 +567,19 @@ onMounted(() => {
                       <tr
                         v-for="sched in selectedRoute.portB?.schedules || []"
                         :key="sched.sched_id"
+                        class="text-center"
                       >
                         <td
                           class="px-4 py-2 text-sm border-l border-r border-t border-b border-gray-200"
                         >
                           {{ sched.departure_time }}
                         </td>
+                        <td
+                          class="px-4 py-2 text-sm border-l border-r border-t border-b border-gray-200"
+                        >
+                          {{ sched.arrival_time }}
+                        </td>
+
                         <td
                           class="px-4 py-2 text-sm border-l border-r border-t border-b border-gray-200"
                         >
