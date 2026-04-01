@@ -15,6 +15,7 @@ import {
   Banknote,
   BadgePercent,
   Ticket,
+  FileChartColumn,
 } from "lucide-vue-next";
 
 // Collapsible states
@@ -72,7 +73,7 @@ const bookingItems = [
   { name: "Teller Booking", route: "/teller-booking", icon: Ticket },
 ];
 
-const logsItems = [];
+const logsItems = [{ name: "VDAR", route: "/vdar", icon: FileChartColumn }];
 const systemItems = [
   { name: "Settings", route: "/settings", icon: Settings },
   { name: "Profile", route: "/profile", icon: User },

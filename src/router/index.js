@@ -12,6 +12,7 @@ import PassengerAccommodation from "../views/PassengerAccommodation.vue";
 import VehiclesModule from "../views/VehiclesModule.vue";
 import AgentsModule from "../views/Agents/AgentsLayout.vue";
 import PromosDiscountsLayout from "../views/Promos/PromosDiscountsLayout.vue";
+import VDARModule from "../views/VDARModule.vue";
 
 const routes = [
   { path: "/", component: Login },
@@ -27,6 +28,7 @@ const routes = [
   { path: "/vehicles", component: VehiclesModule },
   { path: "/agents", component: AgentsModule },
   { path: "/promos", component: PromosDiscountsLayout },
+  { path: "/vdar", component: VDARModule },
 ];
 
 const router = createRouter({
