@@ -2,6 +2,7 @@
 import { ref, onMounted } from "vue";
 import { Eye, FileX, Plus, Search } from "lucide-vue-next";
 import ModalCreateVDAR from "../components/Modals/VDAR/ModalCreateVDAR.vue";
+import ModalCancellationReport from "../components/Modals/VDAR/ModalCancellationReport.vue";
 
 const apiBase = import.meta.env.VITE_API_URL;
 const selectedVessel = ref("");
@@ -9,6 +10,7 @@ const search = ref("");
 const vessels = ref([]);
 const isVesselsLoading = ref(false);
 const isModalCreateVDAROpen = ref(false);
+const isModalCancellationReportOpen = ref(false);
 
 const fetchVessels = async () => {
   isVesselsLoading.value = true;
@@ -85,6 +87,7 @@ onMounted(() => {
         </div>
         <div>
           <button
+            @click="isModalCancellationReportOpen = true"
             type="button"
             class="bg-white text-red-500 border border-red-300 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-100 flex items-center gap-2 cursor-pointer"
           >
@@ -163,6 +166,13 @@ onMounted(() => {
     <ModalCreateVDAR
       v-if="isModalCreateVDAROpen"
       @close="isModalCreateVDAROpen = false"
+      @save="handleCreateSaved"
+    />
+  </transition>
+  <transition name="modal-fade">
+    <ModalCancellationReport
+      v-if="isModalCancellationReportOpen"
+      @close="isModalCancellationReportOpen = false"
       @save="handleCreateSaved"
     />
   </transition>
