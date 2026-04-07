@@ -5,11 +5,23 @@ import Swal from "sweetalert2";
 const emit = defineEmits(["close", "save"]);
 const apiBase = import.meta.env.VITE_API_URL;
 const isLoading = ref(false);
+const isInitialLoading = ref(true);
 const errorMsg = ref("");
 const vessels = ref([]);
+const vesselMasters = ref([]);
 
 const selectedVesselId = ref("");
 const selectedScheduleId = ref("");
+const selectedVesselMasterId = ref("");
+const voyageNumber = ref("");
+const recordedSailingSpeed = ref("");
+const waterConsumption = ref("");
+const fuelRob = ref("");
+const reasonOfDelay = ref("");
+const actualDepartureTime = ref("");
+const actualArrivalTime = ref("");
+const ramDisengageTime = ref("");
+const undockTime = ref("");
 
 const selectedVessel = computed(
   () =>
@@ -25,35 +37,97 @@ const onVesselChange = () => {
 };
 
 const saveVDAR = async () => {
-  console.log("Saving VDAR with data");
-};
-
-const fetchVesselsWithSched = async () => {
+  isLoading.value = true;
+  errorMsg.value = "";
   try {
-    const res = await fetch(`${apiBase}/vessels/with-schedules`, {
+    const toHis = (t) => (t ? `${t}:00` : null);
+
+    const payload = {
+      vessel_id: selectedVesselId.value,
+      schedule_id: selectedScheduleId.value,
+      vessel_master_id: selectedVesselMasterId.value,
+      voyage_number: voyageNumber.value,
+      recorded_sailing_speed: parseInt(recordedSailingSpeed.value),
+      water_consumption: parseInt(waterConsumption.value),
+      fuel_rob: parseInt(fuelRob.value),
+      reason_of_delay: reasonOfDelay.value || null,
+      actual_departure_time: toHis(actualDepartureTime.value),
+      actual_arrival_time: toHis(actualArrivalTime.value),
+      ram_disengage_time: toHis(ramDisengageTime.value),
+      undock_time: undockTime.value ? parseInt(undockTime.value) : null,
+    };
+
+    const res = await fetch(`${apiBase}/vdar`, {
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
         Authorization: `Bearer ${localStorage.getItem("token")}`,
       },
+      body: JSON.stringify(payload),
     });
+
     const data = await res.json();
-    if (res.ok && data.success && data.data?.vessels) {
-      vessels.value = data.data.vessels.map((v) => ({
-        vesselId: v.id,
-        vesselName: v.vessel_name || v.name,
-        schedules: v.schedules || [],
-      }));
-    } else {
-      vessels.value = [];
+
+    if (!res.ok) {
+      errorMsg.value = data.message || "Failed to create report.";
+      return;
     }
+
+    emit("save");
+    emit("close");
   } catch (err) {
+    errorMsg.value = "An unexpected error occurred.";
+    console.error(err);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const fetchVesselsWithSched = async () => {
+  const res = await fetch(`${apiBase}/vessels/with-schedules`, {
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  });
+  const data = await res.json();
+  if (res.ok && data.success && data.data?.vessels) {
+    vessels.value = data.data.vessels.map((v) => ({
+      vesselId: v.id,
+      vesselName: v.vessel_name || v.name,
+      schedules: v.schedules || [],
+    }));
+  } else {
     vessels.value = [];
   }
 };
 
-onMounted(() => {
-  fetchVesselsWithSched();
+const fetchVesselMasters = async () => {
+  const res = await fetch(`${apiBase}/account/users/vessel-masters`, {
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  });
+  const data = await res.json();
+  if (res.ok && data.success && data.data?.vessel_masters) {
+    vesselMasters.value = data.data.vessel_masters;
+  } else {
+    vesselMasters.value = [];
+  }
+};
+
+onMounted(async () => {
+  try {
+    await Promise.all([fetchVesselsWithSched(), fetchVesselMasters()]);
+  } catch (err) {
+    console.error(err);
+  } finally {
+    isInitialLoading.value = false;
+  }
 });
 </script>
 
@@ -101,7 +175,21 @@ onMounted(() => {
         </button>
       </div>
 
-      <form @submit.prevent="saveVDAR" class="flex flex-col p-6 gap-6">
+      <!-- Initial loading spinner -->
+      <div
+        v-if="isInitialLoading"
+        class="flex items-center justify-center py-16"
+      >
+        <span
+          class="inline-block w-8 h-8 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"
+        ></span>
+      </div>
+
+      <form
+        v-else
+        @submit.prevent="saveVDAR"
+        class="flex flex-col p-6 gap-6"
+      >
         <!-- FORM FIELDS -->
         <!-- ROW 1 -->
         <div class="grid grid-cols-2 gap-6">
@@ -167,13 +255,18 @@ onMounted(() => {
             >Vessel Master</label
           >
           <select
-            v-model="paymentMode"
+            v-model="selectedVesselMasterId"
+            required
             class="border border-gray-300 rounded-md px-3 py-2 w-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="" disabled>Select Vessel Master</option>
-            <option value="Cash">John Doe</option>
-            <option value="Credit">Jane Smith</option>
-            <option value="Prepaid">Bob Johnson</option>
+            <option
+              v-for="master in vesselMasters"
+              :key="master.id"
+              :value="master.id"
+            >
+              {{ master.first_name }} {{ master.last_name }}
+            </option>
           </select>
         </div>
         <!-- ROW 3 -->
@@ -185,6 +278,7 @@ onMounted(() => {
                 >Voyage Number</label
               >
               <input
+                v-model="voyageNumber"
                 type="text"
                 required
                 placeholder="FCM10"
@@ -196,9 +290,10 @@ onMounted(() => {
                 >Water Consumption (tons)</label
               >
               <input
+                v-model="waterConsumption"
                 type="number"
                 required
-                placeholder="FCM10"
+                placeholder="150"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
@@ -210,8 +305,10 @@ onMounted(() => {
                 >Recorded Sailing Speed (Knots)</label
               >
               <input
+                v-model="recordedSailingSpeed"
                 type="number"
                 required
+                placeholder="22"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
@@ -220,9 +317,10 @@ onMounted(() => {
                 >Fuel ROB (KL)</label
               >
               <input
+                v-model="fuelRob"
                 type="number"
                 required
-                placeholder="FCM10"
+                placeholder="3200"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
@@ -233,15 +331,12 @@ onMounted(() => {
           <label class="block text-sm font-medium text-gray-700 mb-2"
             >Reason of Delay</label
           >
-          <select
-            v-model="paymentMode"
-            class="border border-gray-300 rounded-md px-3 py-2 w-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="" disabled>Select Payment Mode</option>
-            <option value="Cash">Cash</option>
-            <option value="Credit">Credit</option>
-            <option value="Prepaid">Prepaid</option>
-          </select>
+          <input
+            v-model="reasonOfDelay"
+            type="text"
+            placeholder="Optional"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
         </div>
         <!-- ROW 5 -->
         <div class="grid grid-cols-2 gap-6">
@@ -252,6 +347,7 @@ onMounted(() => {
                 >Actual Departure Time</label
               >
               <input
+                v-model="actualDepartureTime"
                 type="time"
                 required
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -262,6 +358,7 @@ onMounted(() => {
                 >Vessel Last Line/Ram Disengaged</label
               >
               <input
+                v-model="ramDisengageTime"
                 type="time"
                 required
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -275,6 +372,7 @@ onMounted(() => {
                 >Actual Arrival Time</label
               >
               <input
+                v-model="actualArrivalTime"
                 type="time"
                 required
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -285,8 +383,10 @@ onMounted(() => {
                 >Maneuver/Undock Time (in mins)</label
               >
               <input
+                v-model="undockTime"
                 type="number"
                 required
+                placeholder="2"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
