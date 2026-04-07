@@ -133,7 +133,7 @@ onMounted(() => {
           <div class="flex flex-col gap-6">
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2"
-                >Current Schedule</label
+                >Trip Schedule</label
               >
               <select
                 v-model="selectedScheduleId"
