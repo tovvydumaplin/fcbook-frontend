@@ -116,15 +116,22 @@ onMounted(() => {
 
     <!-- Vessel Dropdown -->
     <div class="mb-4 flex justify-between">
-      <div>
+      <div class="flex items-center">
+        <!-- Spinner while loading -->
+        <span v-if="isVesselsLoading" class="flex items-center gap-2 text-sm text-gray-500">
+          <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+          </svg>
+          Loading vessels...
+        </span>
+        <!-- Dropdown after loaded -->
         <select
+          v-else
           v-model="selectedVessel"
-          :disabled="isVesselsLoading"
-          class="border bg-white border-gray-300 text-gray-800 rounded-md px-3 py-2 disabled:bg-white disabled:cursor-not-allowed"
+          class="border bg-white border-gray-300 text-gray-800 rounded-md px-3 py-2"
         >
-          <option value="" disabled>
-            {{ isVesselsLoading ? " Loading vessels..." : "Select Vessel" }}
-          </option>
+          <option value="" disabled>Select Vessel</option>
           <option v-for="vessel in vessels" :key="vessel.id" :value="vessel.id">
             {{ vessel.vessel_name }}
           </option>

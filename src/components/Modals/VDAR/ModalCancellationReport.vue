@@ -5,6 +5,7 @@ import Swal from "sweetalert2";
 const emit = defineEmits(["close", "save"]);
 const apiBase = import.meta.env.VITE_API_URL;
 const isLoading = ref(false);
+const isInitialLoading = ref(true);
 const errorMsg = ref("");
 const vessels = ref([]);
 
@@ -89,8 +90,14 @@ const validateAndAdd = (files) => {
   if (attachmentInputRef.value) attachmentInputRef.value.value = "";
 };
 
-onMounted(() => {
-  fetchVesselsWithSched();
+onMounted(async () => {
+  try {
+    await fetchVesselsWithSched();
+  } catch (err) {
+    console.error(err);
+  } finally {
+    isInitialLoading.value = false;
+  }
 });
 </script>
 
@@ -140,7 +147,17 @@ onMounted(() => {
         </button>
       </div>
 
-      <form @submit.prevent="saveCancellationReport" class="flex flex-col">
+      <!-- Initial loading spinner -->
+      <div
+        v-if="isInitialLoading"
+        class="flex items-center justify-center py-16"
+      >
+        <span
+          class="inline-block w-8 h-8 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"
+        ></span>
+      </div>
+
+      <form v-else @submit.prevent="saveCancellationReport" class="flex flex-col">
         <!-- FORM FIELDS -->
         <div class="grid grid-cols-[0.75fr_1fr]">
           <!-- LEFT COLUMN  -->
