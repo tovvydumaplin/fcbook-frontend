@@ -28,6 +28,28 @@ const filteredVdars = computed(() => {
   });
 });
 
+const vdarCreated = () => {
+  if (selectedVessel.value) fetchVdars(selectedVessel.value);
+};
+
+const cancelReportCreated = () => {
+  if (selectedVessel.value) fetchVdars(selectedVessel.value);
+};
+
+const formatTime = (time) => {
+  if (!time) return "—";
+  const [h, m] = time.split(":");
+  const date = new Date();
+  date.setHours(+h, +m);
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+};
+
+const formatDate = (dateStr) => {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+};
+
 const fetchVessels = async () => {
   isVesselsLoading.value = true;
   try {
@@ -80,20 +102,6 @@ watch(selectedVessel, (id) => {
   if (id) fetchVdars(id);
 });
 
-const formatTime = (time) => {
-  if (!time) return "—";
-  const [h, m] = time.split(":");
-  const date = new Date();
-  date.setHours(+h, +m);
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-};
-
-const formatDate = (dateStr) => {
-  if (!dateStr) return "—";
-  const d = new Date(dateStr);
-  return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
-};
-
 onMounted(() => {
   fetchVessels();
 });
@@ -118,10 +126,29 @@ onMounted(() => {
     <div class="mb-4 flex justify-between">
       <div class="flex items-center">
         <!-- Spinner while loading -->
-        <span v-if="isVesselsLoading" class="flex items-center gap-2 text-sm text-gray-500">
-          <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+        <span
+          v-if="isVesselsLoading"
+          class="flex items-center gap-2 text-sm text-gray-500"
+        >
+          <svg
+            class="animate-spin h-4 w-4 text-gray-400"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            />
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+            />
           </svg>
           Loading vessels...
         </span>
@@ -277,14 +304,14 @@ onMounted(() => {
     <ModalCreateVDAR
       v-if="isModalCreateVDAROpen"
       @close="isModalCreateVDAROpen = false"
-      @save="handleCreateSaved"
+      @save="vdarCreated"
     />
   </transition>
   <transition name="modal-fade">
     <ModalCancellationReport
       v-if="isModalCancellationReportOpen"
       @close="isModalCancellationReportOpen = false"
-      @save="handleCreateSaved"
+      @save="cancelReportCreated"
     />
   </transition>
 </template>
