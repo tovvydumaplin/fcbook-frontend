@@ -8,6 +8,7 @@ const isLoading = ref(false);
 const isInitialLoading = ref(true);
 const errorMsg = ref("");
 const vessels = ref([]);
+const vesselMasters = ref([]);
 
 const attachmentInputRef = ref(null);
 const attachedFiles = ref([]);
@@ -15,6 +16,15 @@ const MAX_SIZE_MB = 10;
 
 const selectedVesselId = ref("");
 const selectedScheduleId = ref("");
+const selectedVesselMasterId = ref("");
+const cancellationCategory = ref("");
+const cancellationType = ref("");
+const numPassengersAffected = ref("");
+const numRcsAffected = ref("");
+const estRevenueLoss = ref("");
+const consultedDept = ref("");
+const reasonOfCancel = ref("");
+const recommendation = ref("");
 
 const selectedVessel = computed(
   () =>
@@ -33,38 +43,15 @@ const onFileChange = (e) => validateAndAdd([...e.target.files]);
 const onFileDrop = (e) => validateAndAdd([...e.dataTransfer.files]);
 const removeFile = (index) => attachedFiles.value.splice(index, 1);
 
-const fetchVesselsWithSched = async () => {
-  try {
-    const res = await fetch(`${apiBase}/vessels/with-schedules`, {
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-    });
-    const data = await res.json();
-    if (res.ok && data.success && data.data?.vessels) {
-      vessels.value = data.data.vessels.map((v) => ({
-        vesselId: v.id,
-        vesselName: v.vessel_name || v.name,
-        schedules: v.schedules || [],
-      }));
-    } else {
-      vessels.value = [];
-    }
-  } catch (err) {
-    vessels.value = [];
-  }
-};
-
 const validateAndAdd = (files) => {
   const allowed = [
     "image/",
     "application/pdf",
     "application/msword",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel", // .xls
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
   ];
-
   for (const file of files) {
     if (file.size > MAX_SIZE_MB * 1024 * 1024) {
       Swal.fire({
@@ -90,9 +77,86 @@ const validateAndAdd = (files) => {
   if (attachmentInputRef.value) attachmentInputRef.value.value = "";
 };
 
+const saveCancellationReport = async () => {
+  isLoading.value = true;
+  errorMsg.value = "";
+  try {
+    const formData = new FormData();
+    formData.append("vessel_id", selectedVesselId.value);
+    formData.append("schedule_id", selectedScheduleId.value);
+    formData.append("vessel_master_id", selectedVesselMasterId.value);
+    formData.append("cancellation_category", cancellationCategory.value);
+    formData.append("cancellation_type", cancellationType.value);
+    formData.append("num_passengers_affected", numPassengersAffected.value);
+    formData.append("num_rcs_affected", numRcsAffected.value);
+    formData.append("est_revenue_loss", estRevenueLoss.value);
+    formData.append("consulted_dept", consultedDept.value);
+    formData.append("reason_of_cancel", reasonOfCancel.value);
+    formData.append("recommendation", recommendation.value);
+    for (const file of attachedFiles.value) {
+      formData.append("documents[]", file);
+    }
+
+    const res = await fetch(`${apiBase}/cancellation-reports`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      body: formData,
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      errorMsg.value = data.message || "Failed to create cancellation report.";
+      return;
+    }
+
+    emit("save");
+    emit("close");
+  } catch (err) {
+    errorMsg.value = "An unexpected error occurred.";
+    console.error(err);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+const fetchVesselMasters = async () => {
+  const res = await fetch(`${apiBase}/account/users/vessel-masters`, {
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  });
+  const data = await res.json();
+  vesselMasters.value =
+    res.ok && data.success && data.data?.vessel_masters
+      ? data.data.vessel_masters
+      : [];
+};
+
+const fetchVesselsWithSched = async () => {
+  const res = await fetch(`${apiBase}/vessels/with-schedules`, {
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Authorization: `Bearer ${localStorage.getItem("token")}`,
+    },
+  });
+  const data = await res.json();
+  vessels.value =
+    res.ok && data.success && data.data?.vessels
+      ? data.data.vessels.map((v) => ({
+          vesselId: v.id,
+          vesselName: v.vessel_name || v.name,
+          schedules: v.schedules || [],
+        }))
+      : [];
+};
+
 onMounted(async () => {
   try {
-    await fetchVesselsWithSched();
+    await Promise.all([fetchVesselsWithSched(), fetchVesselMasters()]);
   } catch (err) {
     console.error(err);
   } finally {
@@ -103,7 +167,7 @@ onMounted(async () => {
 
 <template>
   <div
-    class="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50"
+    class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
     @click="$emit('close')"
   >
     <!-- Top-right Floating Saving Card -->
@@ -121,6 +185,7 @@ onMounted(async () => {
       class="modal-card bg-white rounded-lg shadow-xl w-full max-w-6xl mx-4"
       @click.stop
     >
+      <!-- Header -->
       <div
         class="flex items-center justify-between p-6 border-b border-gray-200"
       >
@@ -157,13 +222,35 @@ onMounted(async () => {
         ></span>
       </div>
 
-      <form v-else @submit.prevent="saveCancellationReport" class="flex flex-col">
-        <!-- FORM FIELDS -->
+      <form
+        v-else
+        @submit.prevent="saveCancellationReport"
+        class="flex flex-col"
+      >
         <div class="grid grid-cols-[0.75fr_1fr]">
-          <!-- LEFT COLUMN  -->
+          <!-- LEFT COLUMN -->
           <div class="flex flex-col gap-6 p-6 border-r border-gray-200">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Vessel Master</label
+              >
+              <select
+                v-model="selectedVesselMasterId"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="" disabled>Select Vessel Master</option>
+                <option
+                  v-for="master in vesselMasters"
+                  :key="master.id"
+                  :value="master.id"
+                >
+                  {{ master.first_name }} {{ master.last_name }}
+                </option>
+              </select>
+            </div>
             <div class="grid grid-cols-2 gap-6">
-              <!-- LEFT COLUMN -->
+              <!-- LEFT SUB-COLUMN -->
               <div class="flex flex-col gap-6">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2"
@@ -185,18 +272,22 @@ onMounted(async () => {
                     </option>
                   </select>
                 </div>
+
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2"
                     >Cancellation Category</label
                   >
                   <select
-                    v-model="paymentMode"
-                    class="border border-gray-300 rounded-md px-3 py-2 w-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    v-model="cancellationCategory"
+                    required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="" disabled>Select Payment Mode</option>
-                    <option value="Cash">Cash</option>
-                    <option value="Credit">Credit</option>
-                    <option value="Prepaid">Prepaid</option>
+                    <option value="" disabled>Select Category</option>
+                    <option value="Weather">Weather</option>
+                    <option value="Mechanical">Mechanical</option>
+                    <option value="Operational">Operational</option>
+                    <option value="Safety">Safety</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
                 <div>
@@ -204,13 +295,14 @@ onMounted(async () => {
                     >Number of Passengers Affected</label
                   >
                   <input
+                    v-model="numPassengersAffected"
                     type="number"
                     required
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
-              <!-- RIGHT COLUMN -->
+              <!-- RIGHT SUB-COLUMN -->
               <div class="flex flex-col gap-6">
                 <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2"
@@ -248,13 +340,15 @@ onMounted(async () => {
                     >Cancellation Type</label
                   >
                   <select
-                    v-model="paymentMode"
-                    class="border border-gray-300 rounded-md px-3 py-2 w-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    v-model="cancellationType"
+                    required
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value="" disabled>Select Payment Mode</option>
-                    <option value="Cash">Cash</option>
-                    <option value="Credit">Credit</option>
-                    <option value="Prepaid">Prepaid</option>
+                    <option value="" disabled>Select Type</option>
+                    <option value="Full Cancellation">Full Cancellation</option>
+                    <option value="Partial Cancellation">
+                      Partial Cancellation
+                    </option>
                   </select>
                 </div>
                 <div>
@@ -262,6 +356,7 @@ onMounted(async () => {
                     >Number of RCs Affected</label
                   >
                   <input
+                    v-model="numRcsAffected"
                     type="number"
                     required
                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -274,9 +369,10 @@ onMounted(async () => {
                 >Estimated Revenue Loss</label
               >
               <input
+                v-model="estRevenueLoss"
                 type="number"
                 required
-                placeholder="200,000"
+                placeholder="200000"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
@@ -285,15 +381,16 @@ onMounted(async () => {
                 >Consulted Department</label
               >
               <select
-                v-model="paymentMode"
-                class="border border-gray-300 rounded-md px-3 py-2 w-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                v-model="consultedDept"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="" disabled>Select Department</option>
-                <option value="Cash">Operations</option>
-                <option value="Credit">Sales</option>
-                <option value="Prepaid">Marketing</option>
-                <option value="Prepaid">IT</option>
-                <option value="Prepaid">Finance</option>
+                <option value="Operations">Operations</option>
+                <option value="Sales">Sales</option>
+                <option value="Marketing">Marketing</option>
+                <option value="IT">IT</option>
+                <option value="Finance">Finance</option>
               </select>
             </div>
           </div>
@@ -305,6 +402,7 @@ onMounted(async () => {
                 >Reason of Cancellation</label
               >
               <textarea
+                v-model="reasonOfCancel"
                 rows="3"
                 required
                 placeholder="Brief explanation of the reason for cancellation, and answer the (What, When, Where, Who) - Min of 3 sentences"
@@ -317,6 +415,7 @@ onMounted(async () => {
                 >Recommendation</label
               >
               <textarea
+                v-model="recommendation"
                 rows="3"
                 required
                 placeholder="Explain to ensure that the cancellation will not happen again - Min of 3 sentences"
@@ -327,7 +426,7 @@ onMounted(async () => {
             <!-- SUPPORTING DOCUMENTS -->
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-2"
-                >Supporting Documents / Evidence</label
+                >Supporting Documents / Evidence (Optional)</label
               >
               <div
                 class="w-full border-2 border-dashed border-gray-300 rounded-lg p-5 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
@@ -353,14 +452,14 @@ onMounted(async () => {
                     Drop files here or <span class="text-blue-600">browse</span>
                   </p>
                   <p class="text-xs text-gray-400 mt-0.5">
-                    PNG, JPG, PDF, DOCX — max 10MB per file
+                    PNG, JPG, PDF, DOCX, XLSX, XLS — max 10MB per file
                   </p>
                 </div>
                 <input
                   ref="attachmentInputRef"
                   type="file"
                   multiple
-                  accept="image/*,.pdf,.doc,.docx"
+                  accept="image/*,.pdf,.doc,.docx,.xlsx,.xls"
                   class="hidden"
                   @change="onFileChange"
                 />
@@ -374,14 +473,16 @@ onMounted(async () => {
                   class="flex items-center justify-between px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm"
                 >
                   <div class="flex items-center gap-2 min-w-0">
-                    <!-- Icon based on type -->
                     <span class="flex-shrink-0 text-lg">
                       {{
                         file.type.startsWith("image/")
                           ? "🖼️"
                           : file.type === "application/pdf"
                             ? "📄"
-                            : "📎"
+                            : file.type.includes("spreadsheet") ||
+                                file.type.includes("ms-excel")
+                              ? "📊"
+                              : "📎"
                       }}
                     </span>
                     <span class="truncate text-gray-700 text-xs">{{
@@ -416,10 +517,14 @@ onMounted(async () => {
             </div>
           </div>
         </div>
+
         <!-- Modal Footer -->
         <div
           class="flex items-center justify-end gap-3 p-6 border-t border-gray-200"
         >
+          <div v-if="errorMsg" class="flex-1 text-red-500 text-sm">
+            {{ errorMsg }}
+          </div>
           <button
             type="button"
             @click="$emit('close')"
@@ -429,20 +534,17 @@ onMounted(async () => {
           </button>
           <button
             type="submit"
-            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
             :disabled="isLoading"
+            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50"
           >
             <span v-if="isLoading" class="flex items-center gap-2">
               <span
-                class="inline-block w-5 h-5 rounded-full border-4 border-white border-t-transparent animate-spin"
+                class="inline-block w-4 h-4 rounded-full border-4 border-white border-t-transparent animate-spin"
               ></span>
-              Saving IA
+              Saving...
             </span>
             <span v-else>Save</span>
           </button>
-        </div>
-        <div v-if="errorMsg" class="text-red-500 text-sm mt-2 text-center">
-          {{ errorMsg }}
         </div>
       </form>
     </div>
