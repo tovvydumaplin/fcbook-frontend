@@ -17,6 +17,8 @@ const MAX_SIZE_MB = 10;
 const selectedVesselId = ref("");
 const selectedScheduleId = ref("");
 const selectedVesselMasterId = ref("");
+const portId = ref("");
+const portName = ref("");
 const cancellationCategory = ref("");
 const cancellationType = ref("");
 const numPassengersAffected = ref("");
@@ -37,6 +39,21 @@ const availableSchedules = computed(() =>
 
 const onVesselChange = () => {
   selectedScheduleId.value = "";
+  portId.value = "";
+  portName.value = "";
+};
+
+const onScheduleChange = () => {
+  const schedule = availableSchedules.value.find(
+    (s) => s.sched_id === selectedScheduleId.value,
+  );
+  if (schedule?.port) {
+    portId.value = schedule.port_id;
+    portName.value = schedule.port.port_name;
+  } else {
+    portId.value = "";
+    portName.value = "";
+  }
 };
 
 const onFileChange = (e) => validateAndAdd([...e.target.files]);
@@ -84,6 +101,7 @@ const saveCancellationReport = async () => {
     const formData = new FormData();
     formData.append("vessel_id", selectedVesselId.value);
     formData.append("schedule_id", selectedScheduleId.value);
+    formData.append("port_id", portId.value);
     formData.append("vessel_master_id", selectedVesselMasterId.value);
     formData.append("cancellation_category", cancellationCategory.value);
     formData.append("cancellation_type", cancellationType.value);
@@ -230,25 +248,6 @@ onMounted(async () => {
         <div class="grid grid-cols-[0.75fr_1fr]">
           <!-- LEFT COLUMN -->
           <div class="flex flex-col gap-6 p-6 border-r border-gray-200">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2"
-                >Vessel Master</label
-              >
-              <select
-                v-model="selectedVesselMasterId"
-                required
-                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="" disabled>Select Vessel Master</option>
-                <option
-                  v-for="master in vesselMasters"
-                  :key="master.id"
-                  :value="master.id"
-                >
-                  {{ master.first_name }} {{ master.last_name }}
-                </option>
-              </select>
-            </div>
             <div class="grid grid-cols-2 gap-6">
               <!-- LEFT SUB-COLUMN -->
               <div class="flex flex-col gap-6">
@@ -271,6 +270,20 @@ onMounted(async () => {
                       {{ vessel.vesselName }}
                     </option>
                   </select>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2"
+                    >Port</label
+                  >
+                  <input
+                    :value="portName"
+                    type="text"
+                    required
+                    readonly
+                    placeholder="Select a Schedule"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
                 </div>
 
                 <div>
@@ -310,6 +323,7 @@ onMounted(async () => {
                   >
                   <select
                     v-model="selectedScheduleId"
+                    @change="onScheduleChange"
                     required
                     :disabled="
                       !selectedVesselId || availableSchedules.length === 0
@@ -332,6 +346,25 @@ onMounted(async () => {
                     >
                       {{ schedule.departure_time }} →
                       {{ schedule.arrival_time }}
+                    </option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2"
+                    >Vessel Master</label
+                  >
+                  <select
+                    v-model="selectedVesselMasterId"
+                    required
+                    class="border border-gray-300 rounded-md px-3 py-2 w-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="" disabled>Select Vessel Master</option>
+                    <option
+                      v-for="master in vesselMasters"
+                      :key="master.id"
+                      :value="master.id"
+                    >
+                      {{ master.first_name }} {{ master.last_name }}
                     </option>
                   </select>
                 </div>

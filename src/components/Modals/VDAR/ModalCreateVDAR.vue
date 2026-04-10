@@ -13,6 +13,8 @@ const vesselMasters = ref([]);
 const selectedVesselId = ref("");
 const selectedScheduleId = ref("");
 const selectedVesselMasterId = ref("");
+const portId = ref("");
+const portName = ref("");
 const voyageNumber = ref("");
 const recordedSailingSpeed = ref("");
 const waterConsumption = ref("");
@@ -34,6 +36,21 @@ const availableSchedules = computed(() =>
 
 const onVesselChange = () => {
   selectedScheduleId.value = "";
+  portId.value = "";
+  portName.value = "";
+};
+
+const onScheduleChange = () => {
+  const schedule = availableSchedules.value.find(
+    (s) => s.sched_id === selectedScheduleId.value,
+  );
+  if (schedule?.port) {
+    portId.value = schedule.port_id;
+    portName.value = schedule.port.port_name;
+  } else {
+    portId.value = "";
+    portName.value = "";
+  }
 };
 
 const saveVDAR = async () => {
@@ -45,6 +62,7 @@ const saveVDAR = async () => {
     const payload = {
       vessel_id: selectedVesselId.value,
       schedule_id: selectedScheduleId.value,
+      port_id: portId.value,
       vessel_master_id: selectedVesselMasterId.value,
       voyage_number: voyageNumber.value,
       recorded_sailing_speed: parseInt(recordedSailingSpeed.value),
@@ -185,11 +203,7 @@ onMounted(async () => {
         ></span>
       </div>
 
-      <form
-        v-else
-        @submit.prevent="saveVDAR"
-        class="flex flex-col p-6 gap-6"
-      >
+      <form v-else @submit.prevent="saveVDAR" class="flex flex-col p-6 gap-6">
         <!-- FORM FIELDS -->
         <!-- ROW 1 -->
         <div class="grid grid-cols-2 gap-6">
@@ -225,6 +239,7 @@ onMounted(async () => {
               >
               <select
                 v-model="selectedScheduleId"
+                @change="onScheduleChange"
                 required
                 :disabled="!selectedVesselId || availableSchedules.length === 0"
                 class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
@@ -250,24 +265,46 @@ onMounted(async () => {
           </div>
         </div>
         <!-- ROW 2 -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2"
-            >Vessel Master</label
-          >
-          <select
-            v-model="selectedVesselMasterId"
-            required
-            class="border border-gray-300 rounded-md px-3 py-2 w-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="" disabled>Select Vessel Master</option>
-            <option
-              v-for="master in vesselMasters"
-              :key="master.id"
-              :value="master.id"
-            >
-              {{ master.first_name }} {{ master.last_name }}
-            </option>
-          </select>
+        <div class="grid grid-cols-2 gap-6">
+          <!-- LEFT COLUMN -->
+          <div class="flex flex-col gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Port</label
+              >
+              <input
+                :value="portName"
+                type="text"
+                required
+                readonly
+                placeholder="Select a Schedule"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN -->
+          <div class="flex flex-col gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2"
+                >Vessel Master</label
+              >
+              <select
+                v-model="selectedVesselMasterId"
+                required
+                class="border border-gray-300 rounded-md px-3 py-2 w-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="" disabled>Select Vessel Master</option>
+                <option
+                  v-for="master in vesselMasters"
+                  :key="master.id"
+                  :value="master.id"
+                >
+                  {{ master.first_name }} {{ master.last_name }}
+                </option>
+              </select>
+            </div>
+          </div>
         </div>
         <!-- ROW 3 -->
         <div class="grid grid-cols-2 gap-6">
