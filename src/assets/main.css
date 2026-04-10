@@ -7,16 +7,29 @@ button.btn-active,
   background-color: #eaf2ff4d !important;
   border-color: #155dfc !important;
   color: #155dfc !important;
-  box-shadow: 0 2px 8px 0 rgba(138, 142, 150, 0.08), 0 0 0 2px #155dfc;
+  box-shadow:
+    0 2px 8px 0 rgba(138, 142, 150, 0.08),
+    0 0 0 2px #155dfc;
   font-weight: 600;
   transition: all 0.2s;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE, Edge */
+  scrollbar-width: none; /* Firefox */
 }
 
 /* Optional: hover effect for active buttons */
 .btn-active:hover,
 button.btn-active:hover {
   background-color: #eaf2ffc7 !important;
-  box-shadow: 0 4px 16px 0 rgba(21, 93, 252, 0.12), 0 0 0 2px #155dfc;
+  box-shadow:
+    0 4px 16px 0 rgba(21, 93, 252, 0.12),
+    0 0 0 2px #155dfc;
 }
 
 /* Brand color utilities */
@@ -153,7 +166,9 @@ button.btn-active:hover {
 
 .modal-fade-enter-active .modal-card,
 .modal-fade-leave-active .modal-card {
-  transition: transform 260ms ease, opacity 260ms ease;
+  transition:
+    transform 260ms ease,
+    opacity 260ms ease;
 }
 
 .modal-fade-enter-from .modal-card,
