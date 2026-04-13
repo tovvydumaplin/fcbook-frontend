@@ -1,170 +1,77 @@
 <script setup>
-import { Edit, Plus, Search, Trash2 } from "lucide-vue-next";
-import { ref, onMounted } from "vue";
-import Swal from "sweetalert2";
-import ModalCreatePromo from "../../../components/Modals/Promo/ModalCreatePromo.vue";
-import ModalEditPromo from "../../../components/Modals/Promo/ModalEditPromo.vue";
+import { Search, Users } from "lucide-vue-next";
+import { ref, computed, onMounted } from "vue";
+import sampleData from "./walkin-data.json";
+import ModalRefundDetails from "../../../components/Modals/Refund/ModalRefundDetails.vue";
 
-const apiBase = import.meta.env.VITE_API_URL;
-const isLoading = ref(false);
 const isTableLoading = ref(false);
-const isEditModalOpen = ref(false);
-const isCreateModalOpen = ref(false);
-const promos = ref([]);
-const selectedPromo = ref([]);
+const isModalRefundDetailsOpen = ref(false);
+const bookings = ref([]);
 const search = ref("");
-const errorMsg = ref("");
 
-const status = {
-  0: { label: "Pending", class: "text-yellow-600 bg-yellow-100" },
-  1: { label: "Active", class: "text-green-600 bg-green-100" },
-  2: { label: "Inactive", class: "text-gray-600 bg-gray-100" },
-  3: { label: "Cancelled", class: "text-red-600 bg-red-100" },
+const statusConfig = {
+  paid: { label: "Paid", class: "text-green-700 bg-green-100" },
+  "no action": { label: "No Action", class: "text-gray-600 bg-gray-100" },
 };
 
-const openEditPromo = (promo) => {
-  selectedPromo.value = promo;
-  isEditModalOpen.value = true;
-};
+const filteredBookings = computed(() => {
+  const q = search.value.toLowerCase();
+  if (!q) return bookings.value;
+  return bookings.value.filter(
+    (b) =>
+      b.bookingNumber.toLowerCase().includes(q) ||
+      b.customer.toLowerCase().includes(q) ||
+      b.route.toLowerCase().includes(q) ||
+      b.vessel.toLowerCase().includes(q),
+  );
+});
 
-const createdPromo = async () => {
-  isCreateModalOpen.value = false;
+const formatDate = (val) => (val ? new Date(val).toLocaleDateString() : "—");
 
-  await Swal.fire({
-    icon: "success",
-    title: "Created!",
-    text: `New Promo has been created.`,
-    timer: 2000,
-    showConfirmButton: false,
-  });
-
-  await fetchPromos();
-};
-
-const editedPromo = async () => {
-  isEditModalOpen.value = false;
-
-  await fetchPromos();
-};
-
-const fetchPromos = async () => {
+const fetchBookings = async () => {
+  isTableLoading.value = true;
   try {
-    isTableLoading.value = true;
-
-    const res = await fetch(`${apiBase}/promos`, {
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-    });
-
-    if (!res.ok) throw new Error("Failed to fetch promos");
-
-    const data = await res.json();
-
-    promos.value = data.data.promos.map((promo) => ({
-      promoId: promo.promo_id,
-      promoName: promo.promo_name,
-      promoCode: promo.promo_code,
-      promoValue: promo.promo_value,
-      valueType: promo.value_type,
-      status: promo.status,
-      effectiveDate: promo.effective_date
-        ? new Date(promo.effective_date).toLocaleDateString()
-        : "-",
-      endDate: promo.end_date
-        ? new Date(promo.end_date).toLocaleDateString()
-        : "-",
-
-      updatedAt: new Date(promo.updated_at).toLocaleDateString(),
+    bookings.value = sampleData.walkin_bookings.map((b) => ({
+      bookingId: b.booking_id,
+      bookingNumber: b.booking_number,
+      amount: b.amount,
+      customer: b.customer,
+      route: b.route,
+      vessel: b.vessel,
+      status: b.status,
+      paymentMethod: b.payment_method,
+      datePaid: formatDate(b.date_paid),
+      dateCancelled: formatDate(b.date_cancelled),
+      bookedPassengers: b.booked_passengers,
     }));
-  } catch (err) {
-    console.error("Fetch error:", err);
   } finally {
     isTableLoading.value = false;
   }
 };
 
-const deletePromo = async (promo) => {
-  errorMsg.value = "";
-
-  const confirm = await Swal.fire({
-    title: "Are you sure?",
-    text: "Do you want to delete this promo?",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonText: "Confirm",
-    cancelButtonText: "Cancel",
-    reverseButtons: true,
-  });
-
-  if (!confirm.isConfirmed) return;
-
-  isLoading.value = true;
-
-  try {
-    const response = await fetch(`${apiBase}/promos/${promo.promoId}`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-    });
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to delete promo");
-    }
-  } catch (err) {
-    console.error(err);
-    errorMsg.value = "Failed to delete promo.";
-  } finally {
-    isLoading.value = false;
-    await Swal.fire({
-      icon: "success",
-      title: "Success!",
-      text: `Promo has been deleted.`,
-      timer: 2000,
-      showConfirmButton: false,
-    });
-
-    await fetchPromos();
-  }
-};
-
-onMounted(fetchPromos);
+onMounted(fetchBookings);
 </script>
 
 <template>
-  <!-- TABLE -->
   <div class="border border-gray-300 bg-white rounded-lg">
     <div class="px-4 py-3 border-b border-gray-200 gap-3 flex flex-col">
       <div class="flex justify-between">
         <h2 class="text-lg font-medium text-gray-900">Walk-In Refunds</h2>
-        <button
-          @click="isCreateModalOpen = true"
-          type="button"
-          class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 flex items-center gap-2 cursor-pointer"
-        >
-          <Plus class="w-4 h-4" />
-          Create
-        </button>
       </div>
       <!-- Search -->
       <div class="relative">
         <Search
-          class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4"
+          class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4"
         />
         <input
           v-model="search"
-          @input="currentPage = 1"
           type="text"
-          placeholder="Search"
+          placeholder="Search by booking number, customer, route, or vessel"
           class="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
         />
       </div>
     </div>
+
     <div class="p-4">
       <!-- Loading -->
       <div
@@ -178,131 +85,123 @@ onMounted(fetchPromos);
             class="inline-block w-6 h-6 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"
           ></span>
           <span class="font-semibold text-blue-700 text-base">
-            Loading Promos...
+            Loading Bookings...
           </span>
         </div>
       </div>
-      <!-- TABLE  -->
-      <div v-else-if="promos.length > 0">
+
+      <!-- TABLE -->
+      <div v-else-if="filteredBookings.length > 0" class="overflow-x-auto">
         <table class="min-w-full table-fixed divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
-              <th class="w-16 px-6 py-3 text-left text-xs text-gray-500">#</th>
-              <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
-                Promo Name
+              <th class="w-12 px-4 py-3 text-left text-xs text-gray-500">#</th>
+              <th class="w-44 px-4 py-3 text-left text-xs text-gray-500">
+                Booking Number
               </th>
-              <th class="w-42 px-6 py-3 text-left text-xs text-gray-500">
-                Code
+              <th class="w-32 px-4 py-3 text-left text-xs text-gray-500">
+                Amount
               </th>
-              <th class="w-32 px-6 py-3 text-left text-xs text-gray-500">
-                Value
+              <th class="w-44 px-4 py-3 text-left text-xs text-gray-500">
+                Customer
               </th>
-              <th class="w-42 px-6 py-3 text-left text-xs text-gray-500">
-                Effective Date
+              <th class="w-28 px-4 py-3 text-left text-xs text-gray-500">
+                Route
               </th>
-              <th class="w-42 px-6 py-3 text-left text-xs text-gray-500">
-                End Date
+              <th class="w-28 px-4 py-3 text-left text-xs text-gray-500">
+                Vessel
               </th>
-              <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">
-                Updated
-              </th>
-              <th class="w-32 px-6 py-3 text-left text-xs text-gray-500">
-                User
-              </th>
-              <th class="w-42 px-6 py-3 text-left text-xs text-gray-500">
+              <th class="w-32 px-4 py-3 text-left text-xs text-gray-500">
                 Status
               </th>
-              <th class="w-32 px-6 py-3 text-left text-xs text-gray-500">
+              <th class="w-36 px-4 py-3 text-left text-xs text-gray-500">
+                Payment Method
+              </th>
+              <th class="w-32 px-4 py-3 text-left text-xs text-gray-500">
+                Date Paid
+              </th>
+              <th class="w-36 px-4 py-3 text-left text-xs text-gray-500">
+                Date Cancelled
+              </th>
+              <th class="w-24 px-4 py-3 text-left text-xs text-gray-500">
                 Action
               </th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <!-- Loading -->
-            <tr v-if="isTableLoading">
-              <td colspan="6" class="text-center py-6 text-gray-500">
-                Loading promos...
-              </td>
-            </tr>
-            <!-- Data -->
             <tr
-              v-for="(promo, index) in promos"
-              :key="promo.promoId"
+              v-for="(booking, index) in filteredBookings"
+              :key="booking.bookingId"
               class="hover:bg-gray-50"
             >
-              <td class="px-6 py-4 text-sm">
+              <td class="px-4 py-4 text-sm text-gray-500">
                 {{ index + 1 }}
               </td>
-              <td class="px-6 py-4 text-sm">
-                {{ promo.promoName }}
+              <td class="px-4 py-4 text-sm font-medium text-gray-900">
+                {{ booking.bookingNumber }}
               </td>
-              <td class="px-6 py-4 text-sm">
-                {{ promo.promoCode }}
-              </td>
-              <td class="px-6 py-4 text-sm">
+              <td class="px-4 py-4 text-sm text-gray-700">
+                ₱
                 {{
-                  promo.valueType === 0
-                    ? promo.promoValue + " %"
-                    : "₱ " + promo.promoValue
+                  booking.amount.toLocaleString("en-PH", {
+                    minimumFractionDigits: 2,
+                  })
                 }}
               </td>
-              <td class="px-6 py-4 text-sm">
-                {{ promo.effectiveDate }}
+              <td class="px-4 py-4 text-sm text-gray-700">
+                {{ booking.customer }}
               </td>
-              <td class="px-6 py-4 text-sm">
-                {{ promo.endDate }}
+              <td class="px-4 py-4 text-sm font-medium text-gray-700">
+                {{ booking.route }}
               </td>
-              <td class="px-6 py-4 text-sm">
-                {{ promo.updatedAt }}
+              <td class="px-4 py-4 text-sm text-gray-700">
+                {{ booking.vessel }}
               </td>
-              <td class="px-6 py-4 text-sm">-</td>
-              <td class="px-6 py-4 text-sm">
+              <td class="px-4 py-4 text-sm">
                 <span
                   :class="[
-                    'px-2 py-1 rounded text-sm font-medium',
-                    status[promo.status].class,
+                    'px-2 py-0.5 rounded text-xs font-medium',
+                    statusConfig[booking.status]?.class ??
+                      'text-gray-600 bg-gray-100',
                   ]"
                 >
-                  {{ status[promo.status].label }}
+                  {{ statusConfig[booking.status]?.label ?? booking.status }}
                 </span>
               </td>
-              <td class="px-6 py-4 text-sm flex items-start gap-1">
+              <td class="px-4 py-4 text-sm text-gray-700">
+                {{ booking.paymentMethod }}
+              </td>
+              <td class="px-4 py-4 text-sm text-gray-600">
+                {{ booking.datePaid }}
+              </td>
+              <td class="px-4 py-4 text-sm text-gray-600">
+                {{ booking.dateCancelled }}
+              </td>
+              <td class="px-4 py-4 text-sm">
                 <button
-                  @click="openEditPromo(promo)"
-                  class="font-medium text-blue-600 hover:text-blue-900 flex items-center"
+                  @click="isModalRefundDetailsOpen = true"
+                  class="flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium"
                 >
-                  <Edit class="w-4 h-4 mr-1" />
-                </button>
-                <button
-                  @click="deletePromo(promo)"
-                  class="text-red-600 hover:text-red-900"
-                >
-                  <Trash2 class="w-4 h-4" />
+                  <Users class="w-4 h-4" />
+                  View
                 </button>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
+
       <!-- Empty State -->
       <div v-else class="text-center py-10 text-gray-500 font-medium">
-        No Promos Found
+        No Walk-In Bookings Found
       </div>
     </div>
   </div>
   <transition name="modal-fade">
-    <ModalCreatePromo
-      v-if="isCreateModalOpen"
-      @close="isCreateModalOpen = false"
-      @save="createdPromo"
-    />
-  </transition>
-  <transition name="modal-fade">
-    <ModalEditPromo
-      v-if="isEditModalOpen"
-      :promo="selectedPromo"
-      @close="isEditModalOpen = false"
-      @save="editedPromo"
+    <ModalRefundDetails
+      v-if="isModalRefundDetailsOpen"
+      @close="isModalRefundDetailsOpen = false"
+      @save="refundDetailsSaved"
     />
   </transition>
 </template>
