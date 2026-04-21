@@ -175,11 +175,13 @@ const returnTrip = ref(false);
 const originPort = ref("Batangas Port");
 const destinationPort = ref("Calapan Port");
 
-const selectedDate = ref(""); // Add date selection
+const outboundDate = ref("");
+const returnDate = ref("");
 
 const passengers = ref([]);
 
-const selectedSchedule = ref(null); // Now stores the entire schedule object
+const outboundSchedule = ref(null);
+const returnSchedule = ref(null);
 const selectedCategory = ref("");
 const selectedType = ref("");
 const selectedAccommodation = ref("");
@@ -195,7 +197,8 @@ const loadingSeatmap = ref(false);
 
 // Clear selected schedule when route changes
 watch(selectedRoute, (newRoute) => {
-  selectedSchedule.value = null;
+  outboundSchedule.value = null;
+  returnSchedule.value = null;
   if (newRoute) {
     if (returnTrip.value) {
       originPort.value =
@@ -219,7 +222,8 @@ watch(selectedRoute, (newRoute) => {
 
 // Handle return trip toggle
 watch(returnTrip, () => {
-  selectedSchedule.value = null;
+  outboundSchedule.value = null;
+  returnSchedule.value = null;
   if (selectedRoute.value) {
     if (returnTrip.value) {
       originPort.value =
@@ -243,8 +247,8 @@ watch(returnTrip, () => {
   }
 });
 
-// Update origin/destination when schedule is selected
-watch(selectedSchedule, (newSchedule) => {
+// Update origin/destination when outbound schedule is selected
+watch(outboundSchedule, (newSchedule) => {
   if (newSchedule) {
     console.log("Schedule selected:", newSchedule);
     originPort.value = newSchedule.departurePort || originPort.value;
@@ -262,23 +266,23 @@ watch(selectedAccommodation, async (newAccommodation) => {
     "Watch triggered - selectedAccommodation changed to:",
     newAccommodation,
   );
-  console.log("Current schedule:", selectedSchedule.value);
-  console.log("Vessel ID:", selectedSchedule.value?.vesselId);
+  console.log("Current schedule:", outboundSchedule.value);
+  console.log("Vessel ID:", outboundSchedule.value?.vesselId);
 
-  if (!newAccommodation || !selectedSchedule.value?.vesselId) {
+  if (!newAccommodation || !outboundSchedule.value?.vesselId) {
     vesselSeatmap.value = null;
     availableSeats.value = [];
     selectedSeat.value = null;
     if (!newAccommodation) {
       console.log("No accommodation selected");
-    } else if (!selectedSchedule.value?.vesselId) {
-      console.log("No vessel ID found in schedule:", selectedSchedule.value);
+    } else if (!outboundSchedule.value?.vesselId) {
+      console.log("No vessel ID found in schedule:", outboundSchedule.value);
     }
     return;
   }
 
   console.log(
-    `Fetching seatmap for vessel ${selectedSchedule.value.vesselId}, accommodation: ${newAccommodation}`,
+    `Fetching seatmap for vessel ${outboundSchedule.value.vesselId}, accommodation: ${newAccommodation}`,
   );
 
   loadingSeatmap.value = true;
@@ -289,7 +293,7 @@ watch(selectedAccommodation, async (newAccommodation) => {
       : `Bearer ${stored}`;
 
     const response = await fetch(
-      `${apiBase}/vessels/${selectedSchedule.value.vesselId}/layout`,
+      `${apiBase}/vessels/${outboundSchedule.value.vesselId}/layout`,
       {
         method: "GET",
         headers: {
@@ -538,9 +542,9 @@ const bookEntry = () => {
   const discountedFare = fare - discountAmount;
 
   const entry = {
-    date: selectedDate.value,
+    date: outboundDate.value,
     route: `${originPort.value} - ${destinationPort.value}`,
-    schedule: selectedSchedule.value?.time || selectedSchedule.value,
+    schedule: outboundSchedule.value?.time || outboundSchedule.value,
     category: selectedCategory.value,
     type: selectedType.value,
     accommodation: selectedAccommodation.value,
@@ -612,7 +616,8 @@ const bookEntry = () => {
   selectedVehicleDetails.value = null;
   selectedInstitutionalAccount.value = null;
   selectedPassengerTypeDetails.value = null;
-  selectedDate.value = "";
+  outboundDate.value = "";
+  returnDate.value = "";
   selectedSeat.value = null;
 };
 
@@ -627,7 +632,8 @@ const resetForm = () => {
   selectedVehicleDetails.value = null;
   selectedInstitutionalAccount.value = null;
   selectedPassengerTypeDetails.value = null;
-  selectedDate.value = "";
+  outboundDate.value = "";
+  returnDate.value = "";
   showSuccess.value = true;
   setTimeout(() => (showSuccess.value = false), 2000);
 };
@@ -727,7 +733,8 @@ const totalAmount = computed(
 );
 
 const stepInstruction = computed(() => {
-  if (!selectedSchedule.value) return "Select a Schedule to proceed";
+  if (!outboundSchedule.value) return "Select a Schedule to proceed";
+  if (returnTrip.value && !returnSchedule.value) return "Select a Return Schedule";
   if (!selectedCategory.value) return "Select a Passenger Category to proceed";
   if (!selectedType.value) return "Select a Passenger Type to proceed";
   if (!selectedAccommodation.value)
@@ -790,10 +797,10 @@ const editPassengerFromModal = (passenger) => {
     (p) => p.seat === passenger.seat && p.fullname === passenger.fullname,
   );
   if (idx !== -1) {
-    selectedDate.value = passenger.date;
+    outboundDate.value = passenger.date;
     originPort.value = passenger.route.split(" - ")[0];
     destinationPort.value = passenger.route.split(" - ")[1];
-    selectedSchedule.value = passenger.schedule;
+    outboundSchedule.value = passenger.schedule;
     selectedCategory.value = passenger.category;
     selectedType.value = passenger.type;
     selectedAccommodation.value = passenger.accommodation;
@@ -890,7 +897,8 @@ const editPassengerFromModal = (passenger) => {
                 <div class="description__box">
                   <p class="text-gray-400 text-sm">Date</p>
                   <p class="text-neutral-700 text-base font-semibold">
-                    {{ selectedDate || "Select a date" }}
+                    {{ outboundDate || "Select a date" }}
+                    <span v-if="returnTrip && returnDate" class="text-blue-600"> ⇄ {{ returnDate }}</span>
                   </p>
                 </div>
               </div>
@@ -903,7 +911,7 @@ const editPassengerFromModal = (passenger) => {
                 <div class="description__box">
                   <p class="text-gray-400 text-sm">Schedule</p>
                   <p class="text-neutral-700 text-base font-semibold">
-                    {{ selectedSchedule?.time || "00:00 AM" }}
+                    {{ outboundSchedule?.time || "00:00 AM" }}
                   </p>
                 </div>
               </div>
@@ -1119,11 +1127,22 @@ const editPassengerFromModal = (passenger) => {
           <div class="top__part flex gap-5">
             <div>
               <h3 class="text-base font-medium text-gray-700 mb-3">
-                Select Date
+                {{ returnTrip ? "Outbound Date" : "Select Date" }}
               </h3>
               <input
                 type="date"
-                v-model="selectedDate"
+                v-model="outboundDate"
+                class="text-base text-gray-900 p-3 bg-white rounded-lg border border-gray-300"
+              />
+            </div>
+            <div v-if="returnTrip">
+              <h3 class="text-base font-medium text-gray-700 mb-3">
+                Return Date
+              </h3>
+              <input
+                type="date"
+                v-model="returnDate"
+                :min="outboundDate"
                 class="text-base text-gray-900 p-3 bg-white rounded-lg border border-gray-300"
               />
             </div>
@@ -1174,14 +1193,14 @@ const editPassengerFromModal = (passenger) => {
           <div>
             <div class="flex gap-4 items-center mb-3 justify-between">
               <h3 class="text-base font-medium text-gray-700">
-                Select Schedule
+                {{ returnTrip ? "Outbound Schedule" : "Select Schedule" }}
               </h3>
 
               <!-- Only show if a schedule is selected -->
               <span
-                v-if="selectedSchedule"
+                v-if="outboundSchedule"
                 class="text-sm flex gap-2 items-center justify-center cursor-pointer font-medium text-blue-900"
-                @click="selectedSchedule = null"
+                @click="outboundSchedule = null"
               >
                 <ArrowsRightLeftIcon class="w-4 h-4" /> Change Schedule
               </span>
@@ -1202,10 +1221,10 @@ const editPassengerFromModal = (passenger) => {
                 <button
                   v-for="time in filteredSchedules.portA"
                   :key="time.id"
-                  @click="selectedSchedule = time"
+                  @click="outboundSchedule = time"
                   :class="[
                     'p-3 text-center rounded-lg text-base border-2 transition-all duration-300',
-                    selectedSchedule?.id === time.id
+                    outboundSchedule?.id === time.id
                       ? 'border-2 bg-blue-900 text-white'
                       : 'bg-white text-gray-700 border-gray-300 hover:shadow-[0_0_0_2px_#3b3b3b]',
                   ]"
@@ -1216,9 +1235,10 @@ const editPassengerFromModal = (passenger) => {
               </div>
             </div>
 
-            <!-- Port B Schedules -->
+            <!-- Port B Schedules (Return) -->
             <div v-if="filteredSchedules.portB.length > 0" class="mb-8">
               <h4 class="text-sm font-semibold text-gray-600 mb-3">
+                <span v-if="returnTrip">Return - </span>
                 {{
                   selectedRoute.portB?.port_name || selectedRoute.portB?.name
                 }}
@@ -1231,12 +1251,12 @@ const editPassengerFromModal = (passenger) => {
                 <button
                   v-for="time in filteredSchedules.portB"
                   :key="time.id"
-                  @click="selectedSchedule = time"
+                  @click="returnTrip ? (returnSchedule = time) : (outboundSchedule = time)"
                   :class="[
                     'p-3 text-center rounded-lg text-base border-2 transition-all duration-300',
-                    selectedSchedule?.id === time.id
-                      ? 'border-2 bg-blue-900 text-white'
-                      : 'bg-white text-gray-700 border-gray-300 hover:shadow-[0_0_0_2px_#3b3b3b]',
+                    returnTrip 
+                      ? (returnSchedule?.id === time.id ? 'border-2 bg-blue-900 text-white' : 'bg-white text-gray-700 border-gray-300 hover:shadow-[0_0_0_2px_#3b3b3b]')
+                      : (outboundSchedule?.id === time.id ? 'border-2 bg-blue-900 text-white' : 'bg-white text-gray-700 border-gray-300 hover:shadow-[0_0_0_2px_#3b3b3b]'),
                   ]"
                 >
                   <div class="font-medium">{{ time.time }}</div>
@@ -1260,7 +1280,7 @@ const editPassengerFromModal = (passenger) => {
             </div>
           </div>
 
-          <div v-if="selectedSchedule">
+          <div v-if="outboundSchedule">
             <h3 class="text-base font-medium text-gray-700 mb-3">
               Choose Passenger Category
             </h3>
