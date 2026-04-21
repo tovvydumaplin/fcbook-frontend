@@ -360,6 +360,36 @@ watch(selectedAccommodation, async (newAccommodation) => {
   }
 });
 
+// Compute facility labels from seats with facility property
+const computeFacilityLabels = (seats) => {
+  const facilityMap = {};
+  const seatSize = 44;
+
+  seats.forEach((s) => {
+    if (s.facility) {
+      if (!facilityMap[s.facility]) {
+        facilityMap[s.facility] = { rows: [], cols: [] };
+      }
+      facilityMap[s.facility].rows.push(s.row);
+      facilityMap[s.facility].cols.push(s.col);
+    }
+  });
+
+  return Object.entries(facilityMap).map(([name, { rows, cols }]) => {
+    const r1 = Math.min(...rows);
+    const r2 = Math.max(...rows);
+    const c1 = Math.min(...cols);
+    const c2 = Math.max(...cols);
+    return {
+      name,
+      top: r1 * seatSize,
+      left: c1 * seatSize,
+      width: (c2 - c1 + 1) * seatSize,
+      height: (r2 - r1 + 1) * seatSize,
+    };
+  });
+};
+
 // const schedules = [
 //   { time: "12:00 AM", code: "FCM 19", value: "12:00 AM" },
 //   { time: "3:00 AM", code: "FCM 19", value: "3:00 AM" },
@@ -1466,80 +1496,103 @@ const editPassengerFromModal = (passenger) => {
                 </span>
               </div>
 
+              <!-- Legend -->
+              <div class="flex items-center gap-4 mb-4 flex-wrap justify-center">
+                <div class="flex items-center gap-1.5">
+                  <span
+                    class="w-4 h-4 rounded bg-white border border-gray-300 flex-shrink-0"
+                  ></span>
+                  <span class="text-xs text-gray-500">Available</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="w-4 h-4 rounded bg-red-600 flex-shrink-0"></span>
+                  <span class="text-xs text-gray-500">Blocked</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="w-4 h-4 rounded bg-gray-200 flex-shrink-0"></span>
+                  <span class="text-xs text-gray-500">Path</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="w-4 h-4 rounded bg-green-400 flex-shrink-0"></span>
+                  <span class="text-xs text-gray-500">PWD</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span
+                    class="w-4 h-4 rounded bg-orange-400 flex-shrink-0"
+                  ></span>
+                  <span class="text-xs text-gray-500">Facility</span>
+                </div>
+              </div>
+
               <!-- Seatmap Container -->
               <div
-                class="relative h-[350px] overflow-auto border rounded-lg p-2 bg-gray-50"
+                class="relative h-[350px] overflow-auto border rounded-lg p-4 bg-white"
               >
-                <div class="relative w-full h-full">
+                <div
+                  class="relative select-none"
+                  :style="{
+                    width: Math.max(...availableSeats.map(s => s.col)) * 44 + 44 + 'px',
+                    height: Math.max(...availableSeats.map(s => s.row)) * 44 + 44 + 'px',
+                  }"
+                >
                   <!-- Seats with Absolute Positioning -->
                   <div
                     v-for="seat in availableSeats"
                     :key="seat.seat_no"
                     :data-row="seat.row"
                     :data-col="seat.col"
-                    class="absolute flex items-center justify-center border rounded-md text-xs font-medium cursor-pointer select-none transition-all duration-200"
+                    class="absolute flex items-center justify-center border rounded-md text-xs font-medium cursor-pointer select-none transition-colors"
                     :style="{
                       width: '40px',
                       height: '40px',
-                      top: seat.row * 40 + 'px',
-                      left: seat.col * 40 + 'px',
+                      top: seat.row * 44 + 2 + 'px',
+                      left: seat.col * 44 + 2 + 'px',
                     }"
                     :class="{
-                      'bg-gray-300 cursor-not-allowed': seat.path,
-                      'bg-red-700 text-white cursor-not-allowed': seat.blocked,
-                      'bg-gray-100 hover:bg-green-100':
-                        !seat.path &&
+                      'bg-red-600 border-red-700 text-white hover:bg-red-500':
+                        seat.blocked,
+                      'bg-gray-200 border-gray-300 text-gray-400 cursor-default':
+                        seat.path && !seat.blocked,
+                      'bg-orange-400 border-orange-500 text-white cursor-default':
+                        seat.facility && !seat.blocked && !seat.path,
+                      'bg-green-400 border-green-500 text-black':
+                        seat.pwd && !seat.blocked && !seat.path && !seat.facility,
+                      'bg-white border-gray-200 text-gray-700 hover:bg-blue-50 hover:border-blue-300':
                         !seat.blocked &&
+                        !seat.path &&
                         !seat.facility &&
+                        !seat.pwd &&
                         selectedSeat?.seat_no !== seat.seat_no,
-                      'bg-orange-400 text-white cursor-not-allowed':
-                        seat.facility,
                       'bg-blue-600 text-white shadow-lg ring-2 ring-blue-400':
                         selectedSeat?.seat_no === seat.seat_no,
                     }"
                     @click="
-                      !seat.blocked && !seat.path && !seat.facility
+                      !seat.blocked && !seat.path && !seat.facility && !seat.pwd
                         ? (selectedSeat = seat)
                         : null
                     "
                   >
-                    <span v-if="!seat.blocked && !seat.path && !seat.facility">
+                    <span v-if="seat.blocked" class="text-white font-bold text-sm pointer-events-none">✕</span>
+                    <span v-else-if="!seat.path && !seat.facility" class="pointer-events-none">
                       {{ seat.seat_no }}
                     </span>
-                    <span
-                      v-if="seat.facility"
-                      class="pointer-events-none font-bold text-white"
-                      :style="{ opacity: 0.7 }"
-                    >
-                      {{ seat.facility }}
-                    </span>
-                    <span
-                      v-if="seat.blocked"
-                      class="pointer-events-none text-white text-xl font-bold"
-                    >
-                      ✕
-                    </span>
                   </div>
-                </div>
-              </div>
 
-              <!-- Legend -->
-              <div class="flex gap-4 mt-4 text-xs justify-center">
-                <div class="flex items-center gap-1">
-                  <div class="w-6 h-6 bg-gray-100 border rounded"></div>
-                  <span>Available</span>
-                </div>
-                <div class="flex items-center gap-1">
-                  <div class="w-6 h-6 bg-blue-600 rounded"></div>
-                  <span>Selected</span>
-                </div>
-                <div class="flex items-center gap-1">
-                  <div class="w-6 h-6 bg-gray-300 rounded"></div>
-                  <span>Path</span>
-                </div>
-                <div class="flex items-center gap-1">
-                  <div class="w-6 h-6 bg-red-700 rounded"></div>
-                  <span>Blocked</span>
+                  <!-- Facility labels overlay -->
+                  <div
+                    v-for="(facility, index) in computeFacilityLabels(availableSeats)"
+                    :key="index"
+                    class="absolute flex items-center justify-center text-white font-bold pointer-events-none bg-orange-500 rounded-md text-xs"
+                    :style="{
+                      top: facility.top + 2 + 'px',
+                      left: facility.left + 2 + 'px',
+                      width: facility.width - 4 + 'px',
+                      height: facility.height - 4 + 'px',
+                      zIndex: 10,
+                    }"
+                  >
+                    {{ facility.name }}
+                  </div>
                 </div>
               </div>
 

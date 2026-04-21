@@ -27,13 +27,9 @@ const filteredTypes = computed(() => {
   );
 });
 
-// Filter only active types (excluding Institutional Account)
+// Filter only active types
 const activeTypes = computed(() => {
-  return filteredTypes.value.filter(
-    (type) =>
-      type.status === "active" &&
-      type.type.toLowerCase() !== "institutional account",
-  );
+  return filteredTypes.value.filter((type) => type.status === 1);
 });
 
 // Fetch passenger types
