@@ -8,12 +8,22 @@ const route = useRoute();
 <template>
   <div class="flex flex-col min-h-screen">
     <!-- Header -->
-    <Header v-if="route.path !== '/' && route.path !== '/teller-booking'" />
+    <Header
+      v-if="
+        route.path !== '/' &&
+        route.path !== '/teller-booking' &&
+        route.path !== '/teller-refunds'
+      "
+    />
 
     <div class="flex flex-1">
       <!-- SideBar -->
       <SideBar
-        v-if="route.path !== '/' && route.path !== '/teller-booking'"
+        v-if="
+          route.path !== '/' &&
+          route.path !== '/teller-booking' &&
+          route.path !== '/teller-refunds'
+        "
         class="w-80 bg-gray-100 min-h-screen"
       />
       <!-- Main Content -->

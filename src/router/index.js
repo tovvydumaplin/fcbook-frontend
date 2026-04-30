@@ -13,6 +13,8 @@ import VehiclesModule from "../views/VehiclesModule.vue";
 import AgentsModule from "../views/Agents/AgentsLayout.vue";
 import PromosDiscountsLayout from "../views/Promos/PromosDiscountsLayout.vue";
 import VDARModule from "../views/VDARModule.vue";
+import RefundsLayout from "../views/Refunds/RefundsLayout.vue";
+import RefundsModule from "../views/Tellers/RefundsModule.vue";
 
 const routes = [
   { path: "/", component: Login },
@@ -29,6 +31,8 @@ const routes = [
   { path: "/agents", component: AgentsModule },
   { path: "/promos", component: PromosDiscountsLayout },
   { path: "/vdar", component: VDARModule },
+  { path: "/refunds", component: RefundsLayout },
+  { path: "/teller-refunds", component: RefundsModule },
 ];
 
 const router = createRouter({
