@@ -158,56 +158,38 @@ watch(
             </p>
           </div>
 
-          <!-- IA Grid -->
-          <div v-else class="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <!-- IA List -->
+          <div v-else class="space-y-2">
             <button
               v-for="ia in filteredIAs"
               :key="ia.ia_id"
               @click="selectIA(ia)"
               :class="[
-                'relative p-4 rounded-lg border-2 transition-all duration-200 flex flex-col items-center gap-3 hover:shadow-md',
+                'w-full p-4 rounded-lg border-2 transition-all duration-200 flex items-center justify-between hover:shadow-md text-left',
                 selectedIA?.ia_id === ia.ia_id
                   ? 'border-blue-600 bg-blue-50'
                   : 'border-gray-200 hover:border-blue-300',
               ]"
             >
-              <!-- IA Image -->
-              <div
-                class="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center"
-              >
-                <img
-                  v-if="ia.ia_image"
-                  :src="`${apiBase}/${ia.ia_image}`"
-                  :alt="ia.ia_name"
-                  class="w-full h-full object-cover"
-                  @error="(e) => (e.target.style.display = 'none')"
-                />
-                <span v-else class="text-3xl font-bold text-gray-400">
-                  {{ ia.ia_name.charAt(0) }}
-                </span>
-              </div>
-
               <!-- IA Name -->
-              <div class="text-center">
-                <p
-                  :class="[
-                    'text-sm font-semibold',
-                    selectedIA?.ia_id === ia.ia_id
-                      ? 'text-blue-900'
-                      : 'text-gray-900',
-                  ]"
-                >
-                  {{ ia.ia_name }}
-                </p>
-              </div>
+              <p
+                :class="[
+                  'text-base font-semibold',
+                  selectedIA?.ia_id === ia.ia_id
+                    ? 'text-blue-900'
+                    : 'text-gray-900',
+                ]"
+              >
+                {{ ia.ia_name }}
+              </p>
 
               <!-- Selected Indicator -->
               <div
                 v-if="selectedIA?.ia_id === ia.ia_id"
-                class="absolute top-2 right-2 bg-blue-600 rounded-full p-1"
+                class="bg-blue-600 rounded-full p-1"
               >
                 <svg
-                  class="w-4 h-4 text-white"
+                  class="w-5 h-5 text-white"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"

@@ -7,6 +7,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  routeId: {
+    type: Number,
+    default: null,
+  },
 });
 
 const emit = defineEmits(["close", "select", "save"]);
@@ -14,7 +18,9 @@ const emit = defineEmits(["close", "select", "save"]);
 const apiBase = import.meta.env.VITE_API_URL;
 
 const vehicles = ref([]);
+const vehicleRates = ref([]);
 const selectedVehicle = ref(null);
+const plateNumber = ref("");
 const searchQuery = ref("");
 const isLoading = ref(false);
 const activeTab = ref(1); // Active vehicle type tab
@@ -27,9 +33,21 @@ const vehicleTypes = computed(() => {
   return types;
 });
 
-// Get vehicles for active tab
+// Get vehicles for active tab with rates
 const vehiclesForActiveType = computed(() => {
-  return vehicles.value.filter((v) => v.vehicle_type === activeTab.value);
+  const vehiclesInType = vehicles.value.filter((v) => v.vehicle_type === activeTab.value);
+  
+  // Merge with rates
+  return vehiclesInType.map((vehicle) => {
+    const rateInfo = vehicleRates.value.find(
+      (r) => r.vehicle_id === vehicle.vehicle_id
+    );
+    const rate = rateInfo?.vehicle_rate;
+    return {
+      ...vehicle,
+      rate: rate !== null && rate !== undefined ? parseFloat(rate) : null,
+    };
+  });
 });
 
 // Filter vehicles by search for active type
@@ -86,6 +104,43 @@ const fetchVehicles = async () => {
   }
 };
 
+// Fetch vehicle rates for the selected route
+const fetchVehicleRates = async () => {
+  if (!props.routeId) {
+    vehicleRates.value = [];
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem("token");
+    const authHeader = token?.startsWith("Bearer ") ? token : `Bearer ${token}`;
+
+    const response = await fetch(`${apiBase}/vehicle-rates/route/${props.routeId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: authHeader,
+      },
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      console.log("Vehicle Rates Response:", result);
+
+      if (result.success && result.data?.vehicleRates) {
+        vehicleRates.value = result.data.vehicleRates.map((rate) => ({
+          vehicle_id: rate.vehicle?.vehicle_id,
+          vehicle_rate: rate.vehicle_rate,
+        }));
+      }
+    } else {
+      console.error("Failed to fetch vehicle rates:", response.status);
+    }
+  } catch (err) {
+    console.error("Error fetching vehicle rates:", err);
+  }
+};
+
 // Select vehicle class
 const selectVehicle = (vehicle) => {
   selectedVehicle.value = vehicle;
@@ -94,11 +149,17 @@ const selectVehicle = (vehicle) => {
 // Confirm & Save
 const confirmAndSave = () => {
   if (!selectedVehicle.value) return;
+  if (!isBicycle.value && !plateNumber.value) {
+    alert("Please enter a plate number");
+    return;
+  }
 
   const data = {
     vehicle_id: selectedVehicle.value.vehicle_id,
     vehicle_class: selectedVehicle.value.vehicle_class,
     vehicle_type: selectedVehicle.value.vehicle_type,
+    plate_number: plateNumber.value,
+    rate: selectedVehicle.value.rate || 0,
   };
   console.log("Selected Vehicle:", data);
   emit("save", data);
@@ -110,16 +171,20 @@ const closeModal = () => {
   emit("close");
   activeTab.value = 1;
   selectedVehicle.value = null;
+  plateNumber.value = "";
   searchQuery.value = "";
 };
 
 // Watch for modal open and fetch data
 watch(
   () => props.isOpen,
-  (isOpen) => {
-    if (isOpen && vehicles.value.length === 0) {
-      fetchVehicles();
-    } else if (isOpen && vehicles.value.length > 0) {
+  async (isOpen) => {
+    if (isOpen) {
+      if (vehicles.value.length === 0) {
+        await fetchVehicles();
+      }
+      await fetchVehicleRates();
+      
       // Set active tab to first available type
       if (vehicleTypes.value.length > 0) {
         activeTab.value = vehicleTypes.value[0];
@@ -290,6 +355,23 @@ watch(activeTab, () => {
                     >
                       {{ vehicle.vehicle_class }}
                     </span>
+                    <span
+                      v-if="vehicle.rate !== null && vehicle.rate !== undefined"
+                      :class="[
+                        'text-xs font-semibold',
+                        selectedVehicle?.vehicle_id === vehicle.vehicle_id
+                          ? 'text-blue-600'
+                          : 'text-gray-600',
+                      ]"
+                    >
+                      ₱{{ parseFloat(vehicle.rate).toFixed(2) }}
+                    </span>
+                    <span
+                      v-else
+                      class="text-xs text-red-500 font-medium"
+                    >
+                      No rate set
+                    </span>
 
                     <!-- Selected Indicator -->
                     <div
@@ -317,6 +399,20 @@ watch(activeTab, () => {
           </div>
         </div>
 
+        <!-- Plate Number Input (shown when vehicle is selected) -->
+        <div v-if="selectedVehicle && !isBicycle" class="px-6 pb-4 border-b bg-gray-50">
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Plate Number <span class="text-red-500">*</span>
+          </label>
+          <input
+            v-model="plateNumber"
+            type="text"
+            placeholder="Enter plate number (e.g., ABC 1234)"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase"
+            @input="plateNumber = plateNumber.toUpperCase()"
+          />
+        </div>
+
         <!-- Footer -->
         <div class="p-6 border-t bg-gray-50 flex justify-end gap-3">
           <button
@@ -327,10 +423,10 @@ watch(activeTab, () => {
           </button>
           <button
             @click="confirmAndSave"
-            :disabled="!selectedVehicle"
+            :disabled="!selectedVehicle || (!isBicycle && !plateNumber)"
             :class="[
               'px-6 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2',
-              selectedVehicle
+              selectedVehicle && (isBicycle || plateNumber)
                 ? 'bg-blue-600 text-white hover:bg-blue-700'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed',
             ]"

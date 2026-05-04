@@ -19,6 +19,13 @@ node_modules
 /storage/.key
 /storage/pail
 
+# Build outputs
+dist/
+
+# API documentation (local development)
+API_ENDPOINTS_SIMPLE.md
+API_REQUEST_BODIES.md
+
 Homestead.json
 Homestead.yaml
 Thumbs.db

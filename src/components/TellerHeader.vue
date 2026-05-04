@@ -2,6 +2,13 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 
+const props = defineProps({
+  serialNo: {
+    type: String,
+    default: "",
+  },
+});
+
 const tabs = ["WLK-0317089-1", "WLK-0317089-1"];
 const activeTab = ref(tabs[0]);
 const dropdownOpen = ref(false);
@@ -80,6 +87,20 @@ header {
         + New Transaction
       </button>
     </nav>
+    <!-- Refunds Button -->
+    <div class="flex items-center gap-4">
+      <!-- Serial Number -->
+      <span v-if="serialNo" class="text-sm font-semibold text-white bg-blue-900 px-3 py-1.5 rounded">
+        {{ serialNo }}
+      </span>
+      
+      <button
+        @click="router.push('/teller-refunds')"
+        class="px-4 py-1.5 bg-orange-500 text-white text-sm font-medium rounded hover:bg-orange-600 transition-colors duration-200"
+      >
+        Refunds
+      </button>
+    </div>
     <!-- User Dropdown -->
     <div class="relative ml-6">
       <button

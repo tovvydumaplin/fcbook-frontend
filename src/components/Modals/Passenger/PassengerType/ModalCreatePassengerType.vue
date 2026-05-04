@@ -32,7 +32,8 @@ const savePassengerType = async () => {
       type: passengerType.value.passengerTypeName.trim(),
       // UI percent → DB decimal
       discount: Number(passengerType.value.selectedDiscount) / 100,
-      waived: waived.value,
+      waived: waived.value ? 1 : 0,
+      status: 1, // 1 = active, 0 = inactive
     };
 
     const isEdit = !!props.editData;

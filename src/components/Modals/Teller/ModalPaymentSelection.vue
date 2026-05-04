@@ -41,6 +41,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  passengers: {
+    type: Array,
+    default: () => [],
+  },
+  vehicles: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 // Emits
@@ -129,9 +137,29 @@ const filteredPaymentMethods = computed(() => {
   );
 });
 
+// Calculate totals from passengers and vehicles
+const passengerFare = computed(() => {
+  return props.passengers.reduce((sum, p) => sum + parseFloat(p.fare || 0), 0);
+});
+
+const passengerAdminFee = computed(() => {
+  return props.passengers.reduce((sum, p) => sum + parseFloat(p.adminFee || 0), 0);
+});
+
+const passengerDiscount = computed(() => {
+  return props.passengers.reduce((sum, p) => sum + parseFloat(p.discountAmount || 0), 0);
+});
+
+const vehicleFare = computed(() => {
+  return props.vehicles.reduce((sum, v) => sum + parseFloat(v.vehicle?.rate || 0), 0);
+});
+
+const totalAmount = computed(() => {
+  return passengerFare.value + passengerAdminFee.value + vehicleFare.value;
+});
+
 const change = computed(() => {
-  const totalAmount = 5148.0;
-  return Math.max(0, cashRendered.value - totalAmount);
+  return Math.max(0, cashRendered.value - totalAmount.value);
 });
 
 // Methods
@@ -250,25 +278,32 @@ const selectPrintingOption = (option) => {
             </h3>
             <div class="space-y-2 text-sm">
               <div class="flex justify-between">
-                <span class="text-gray-600">Fare</span>
-                <span class="font-medium">3,786.00</span>
+                <span class="text-gray-600">Passenger Count</span>
+                <span class="font-medium">{{ passengers.length }}</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-gray-600">Cargo Rate</span>
-                <span class="font-medium">1,350.00</span>
+                <span class="text-gray-600">Passenger Fare</span>
+                <span class="font-medium">₱{{ passengerFare.toFixed(2) }}</span>
+              </div>
+              <div class="flex justify-between" v-if="vehicles.length > 0">
+                <span class="text-gray-600">Vehicle Count</span>
+                <span class="font-medium">{{ vehicles.length }}</span>
+              </div>
+              <div class="flex justify-between" v-if="vehicles.length > 0">
+                <span class="text-gray-600">Vehicle Fare</span>
+                <span class="font-medium">₱{{ vehicleFare.toFixed(2) }}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-gray-600">Admin Fee</span>
-                <span class="font-medium">2.00</span>
+                <span class="font-medium">₱{{ passengerAdminFee.toFixed(2) }}</span>
               </div>
-              <div class="flex justify-between">
+              <div class="flex justify-between" v-if="passengerDiscount > 0">
                 <span class="text-gray-600">Discount</span>
-                <span class="text-blue-600">Student Discount (5%)</span>
-                <span class="text-red-600">-20%</span>
+                <span class="text-red-600">-₱{{ passengerDiscount.toFixed(2) }}</span>
               </div>
               <div class="flex justify-between pt-2 border-t font-semibold">
                 <span class="text-gray-900">Amount To Be Paid</span>
-                <span class="text-gray-900">PHP 5,148.00</span>
+                <span class="text-gray-900">₱{{ totalAmount.toFixed(2) }}</span>
               </div>
             </div>
           </div>
