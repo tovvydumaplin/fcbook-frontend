@@ -15,6 +15,8 @@ const props = defineProps({
 const form = reactive({
   vehicleType: props.vehicle?.vehicleType || "",
   vehicleClass: props.vehicle?.vehicleClass || "",
+  vehicleLength: props.vehicle?.vehicleLength || 0,
+  vehicleWeight: props.vehicle?.vehicleWeight || 0,
 });
 
 const saveVehicle = async () => {
@@ -30,9 +32,11 @@ const saveVehicle = async () => {
     const payload = {
       vehicle_type: form.vehicleType,
       vehicle_class: form.vehicleClass,
+      length: form.vehicleLength,
+      weight: form.vehicleWeight,
     };
     const res = await fetch(
-      `${import.meta.env.VITE_API_URL}/vehicles/${props.vehicle.vehicle_id}`,
+      `${import.meta.env.VITE_API_URL}/vehicles/${props.vehicle.vehicleId}`,
       {
         method: "PUT",
         headers: {
@@ -106,11 +110,44 @@ const saveVehicle = async () => {
       <form @submit.prevent="saveVehicle" class="p-6 space-y-6">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">
+            Vehicle Type
+          </label>
+          <input
+            type="text"
+            v-model="form.vehicleType"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
             Vehicle Class
           </label>
           <input
             type="text"
             v-model="form.vehicleClass"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Length (meters)
+          </label>
+          <input
+            type="number"
+            v-model="form.vehicleLength"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Weight (kg)
+          </label>
+          <input
+            type="number"
+            v-model="form.vehicleWeight"
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
