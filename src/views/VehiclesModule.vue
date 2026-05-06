@@ -48,9 +48,11 @@ const fetchVehicles = async () => {
     const data = await res.json();
 
     vehicles.value = data.data.vehicles.map((v) => ({
-      vehicle_id: v.vehicle_id,
+      vehicleId: v.vehicle_id,
       vehicleType: Number(v.vehicle_type),
       vehicleClass: v.vehicle_class,
+      vehicleLength: Number(v.length),
+      vehicleWeight: Number(v.weight),
       updatedAt: new Date(v.updated_at).toLocaleDateString(),
     }));
   } catch (err) {
@@ -140,6 +142,12 @@ onMounted(fetchVehicles);
               <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
                 Vehicle Class
               </th>
+              <th class="w-30 px-6 py-3 text-left text-xs text-gray-500">
+                Length
+              </th>
+              <th class="w-30 px-6 py-3 text-left text-xs text-gray-500">
+                Weight
+              </th>
               <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">
                 Updated
               </th>
@@ -164,7 +172,7 @@ onMounted(fetchVehicles);
             <tr
               v-else-if="vehicles.length > 0"
               v-for="(vehicle, index) in filteredVehicles"
-              :key="vehicle.vehicle_id"
+              :key="vehicle.vehicleId"
               class="hover:bg-gray-50"
             >
               <td class="px-6 py-4 text-sm">
@@ -173,6 +181,14 @@ onMounted(fetchVehicles);
 
               <td class="px-6 py-4 text-sm">
                 {{ vehicle.vehicleClass }}
+              </td>
+
+              <td class="px-6 py-4 text-sm">
+                {{ vehicle.vehicleLength ? vehicle.vehicleLength + "m" : "" }}
+              </td>
+
+              <td class="px-6 py-4 text-sm">
+                {{ vehicle.vehicleWeight ? vehicle.vehicleWeight + "kg" : "" }}
               </td>
 
               <td class="px-6 py-4 text-sm">
