@@ -1,12 +1,11 @@
 <script setup>
-import { nextTick, ref, watch } from "vue";
+import { nextTick, ref, watch, computed, onMounted } from "vue";
 import ModalPaymentSelection from "../components/Modals/Teller/ModalPaymentSelection.vue";
 import VehicleSelection from "../components/Modals/Teller/VehicleSelection.vue";
 import ViewTellerPassenger from "../components/Modals/Teller/ViewTellerPassenger.vue";
 import IaModal from "../components/Modals/Teller/IaModal.vue";
 import PassengerTypeModal from "../components/Modals/Teller/PassengerTypeModal.vue";
 import TellerHeader from "../components/TellerHeader.vue";
-import { onMounted } from "vue";
 import {
   CalendarDaysIcon,
   ClockIcon,
@@ -22,7 +21,8 @@ const isVehicleModalOpen = ref(false);
 const isIaModalOpen = ref(false);
 const isPassengerTypeModalOpen = ref(false);
 const isDriverSelectionOpen = ref(false);
-const selectedVehicleIndex = ref(null);
+// Selected vehicle for driver assignment
+const selectedVehicleForDriver = ref(null);
 
 // Active tab for Passenger/Vehicle selection
 const activeTab = ref("Passenger");
@@ -55,11 +55,19 @@ const agentId = ref(null);
 // Passenger categories (Economy, Business, etc.)
 const passengerCategories = ref([]);
 
+// Selected payment method
+const selectedPaymentMethod = ref(null);
+
+// Active serial number tab for filtering bookings
+const activeSerialTab = ref(null);
+
 // Generate serial number
 const generateSerialNo = () => {
   const timestamp = Date.now();
   const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
   serialNo.value = `BK-${timestamp}-${random}`;
+  // Set this as the active tab when generating a new serial
+  activeSerialTab.value = serialNo.value;
 };
 
 const handleVehicleSave = (vehicle) => {
@@ -267,29 +275,20 @@ const bookVehicleEntry = async () => {
       const result = await response.json();
       console.log("Book vehicle response:", result);
 
-      // If response is OK, assume it worked (even if structure differs)
-      // Create entry for display
-      const entry = {
-        date: outboundDate.value,
-        route: `${originPort.value} - ${destinationPort.value}`,
-        schedule: outboundSchedule.value?.time || outboundSchedule.value,
-        vehicle: selectedVehicleDetails.value,
-        institutionalAccount: selectedInstitutionalAccount.value,
-        driver: null, // Will be assigned later
-        bookedVehicleId: result.data?.booked_vehicle_id || result.data?.booked_vehicles?.[0]?.booked_vehicle_id,
-        bookingId: result.data?.booking_id || result.data?.booked_vehicles?.[0]?.booking_id,
-        scheduleBookingId: result.data?.schedule_booking_id || result.data?.booked_vehicles?.[0]?.schedule_booking_id,
-      };
+      // Refresh vehicle list from API
+      await fetchBookedVehicles();
 
-      // Store shared IDs for subsequent bookings
-      if (!sharedBookingId.value && entry.bookingId) {
-        sharedBookingId.value = entry.bookingId;
+      // Try to extract booking IDs from latest vehicle
+      const latestVehicle = vehicles.value[vehicles.value.length - 1];
+      if (latestVehicle) {
+        // Store shared IDs for subsequent bookings
+        if (!sharedBookingId.value && latestVehicle.bookingId) {
+          sharedBookingId.value = latestVehicle.bookingId;
+        }
+        if (!sharedScheduleBookingId.value && latestVehicle.scheduleBookingId) {
+          sharedScheduleBookingId.value = latestVehicle.scheduleBookingId;
+        }
       }
-      if (!sharedScheduleBookingId.value && entry.scheduleBookingId) {
-        sharedScheduleBookingId.value = entry.scheduleBookingId;
-      }
-
-      vehicles.value.push(entry);
 
       showSuccess.value = true;
       setTimeout(() => (showSuccess.value = false), 2000);
@@ -645,8 +644,7 @@ const proceedToPayment = () => {
 };
 
 onMounted(async () => {
-  // Generate serial number
-  generateSerialNo();
+  // Don't generate serial yet - will select latest or generate after fetching
   
   // Get agent ID from logged-in user
   const user = JSON.parse(localStorage.getItem("user") || "{}");
@@ -661,8 +659,40 @@ onMounted(async () => {
   // Fetch passenger categories (accommodations)
   fetchPassengerCategories();
   
-  // Fetch existing booked passengers
-  fetchBookedPassengers();
+  // Fetch existing booked passengers first, then vehicles (to map drivers)
+  await fetchBookedPassengers();
+  
+  // Fetch existing booked vehicles
+  await fetchBookedVehicles();
+  
+  // After fetching, select latest serial or generate new
+  const allSerials = [];
+  passengers.value.forEach(p => {
+    if (p.serialNo) allSerials.push(p.serialNo);
+  });
+  vehicles.value.forEach(v => {
+    if (v.serialNo) allSerials.push(v.serialNo);
+  });
+  
+  if (allSerials.length > 0) {
+    // Find latest serial by extracting timestamp from format BK-{timestamp}-{random}
+    const uniqueSerials = [...new Set(allSerials)];
+    const sortedSerials = uniqueSerials.sort((a, b) => {
+      const timestampA = parseInt(a.split('-')[1] || '0');
+      const timestampB = parseInt(b.split('-')[1] || '0');
+      return timestampB - timestampA; // Descending order (latest first)
+    });
+    
+    // Select the latest serial
+    const latestSerial = sortedSerials[0];
+    serialNo.value = latestSerial;
+    activeSerialTab.value = latestSerial;
+    console.log("Auto-selected latest serial:", latestSerial);
+  } else {
+    // No existing bookings, generate new serial
+    generateSerialNo();
+    console.log("No existing bookings, generated new serial:", serialNo.value);
+  }
   
   try {
     const stored = localStorage.getItem("token");
@@ -962,6 +992,7 @@ const fetchBookedPassengers = async () => {
           bookedPassengerId: p.booked_passenger_id,
           bookingId: p.booking_id,
           scheduleBookingId: p.schedule_booking_id,
+          serialNo: p.serial_no,
         }));
       }
     } else {
@@ -969,6 +1000,81 @@ const fetchBookedPassengers = async () => {
     }
   } catch (err) {
     console.error("Error fetching booked passengers:", err);
+  }
+};
+
+// Fetch booked vehicles from API
+const fetchBookedVehicles = async () => {
+  try {
+    const stored = localStorage.getItem("token");
+    
+    if (!stored) {
+      console.warn("No token found, skipping fetch booked vehicles");
+      return;
+    }
+    
+    const authHeader = stored.startsWith("Bearer ")
+      ? stored
+      : `Bearer ${stored}`;
+
+    const response = await fetch(`${apiBase}/teller-booking/book-vehicle`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: authHeader,
+      },
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      console.log("Fetched booked vehicles:", result);
+
+      if (result.success && result.data?.booked_vehicles) {
+        // Map API response to display format
+        vehicles.value = result.data.booked_vehicles.map((v) => {
+          // Find driver details from passengers array if driver is assigned
+          let driverInfo = null;
+          if (v.driver_passenger_booking_id) {
+            const driverPassenger = passengers.value.find(
+              (p) => String(p.bookedPassengerId) === String(v.driver_passenger_booking_id)
+            );
+            if (driverPassenger) {
+              driverInfo = {
+                id: v.driver_passenger_booking_id,
+                fullname: driverPassenger.fullname,
+                type: driverPassenger.type,
+                gender: driverPassenger.gender,
+              };
+            } else {
+              // Driver not found in current passengers array
+              console.log("Driver not found in passengers:", v.driver_passenger_booking_id, "Available:", passengers.value.map(p => p.bookedPassengerId));
+              driverInfo = { id: v.driver_passenger_booking_id };
+            }
+          }
+          
+          return {
+            date: v.travel_date,
+            route: v.route_snapshot,
+            schedule: v.schedule_snapshot,
+            vehicle: {
+              vehicle_class: v.vehicle_type,
+              plate_number: v.plate_no,
+              rate: parseFloat(v.fare || 0),
+            },
+            institutionalAccount: v.institutional_account_id ? { id: v.institutional_account_id } : null,
+            driver: driverInfo,
+            bookedVehicleId: v.booked_vehicle_id,
+            bookingId: v.booking_id,
+            scheduleBookingId: v.schedule_booking_id,
+            serialNo: v.serial_no,
+          };
+        });
+      }
+    } else {
+      console.error("Failed to fetch booked vehicles:", response.status);
+    }
+  } catch (err) {
+    console.error("Error fetching booked vehicles:", err);
   }
 };
 
@@ -1109,23 +1215,25 @@ const resetForm = () => {
   selectedAccommodation.value = "";
   selectedGender.value = "";
   selectedType.value = "Regular Passenger";
-  passengers.value = [];
-  vehicles.value = [];
+  // Don't clear passengers/vehicles - they contain API data
+  // passengers.value = [];
+  // vehicles.value = [];
   selectedVehicleDetails.value = null;
   selectedInstitutionalAccount.value = null;
   selectedPassengerTypeDetails.value = regularPassengerType.value; // Reset to Regular
-  outboundDate.value = "";
-  returnDate.value = "";
+  // Don't clear dates - keep them for the current booking session
+  // outboundDate.value = "";
+  // returnDate.value = "";
   activeTab.value = "Passenger";
   isInstitutionalAccount.value = false;
   isManualSeatSelection.value = false;
   
-  // Reset shared booking IDs for new transaction
-  sharedBookingId.value = null;
-  sharedScheduleBookingId.value = null;
+  // Don't reset shared booking IDs - they're for the current serial
+  // sharedBookingId.value = null;
+  // sharedScheduleBookingId.value = null;
   
-  // Generate new serial number for next transaction
-  generateSerialNo();
+  // Don't generate new serial - this is just clearing the form
+  // generateSerialNo();
   
   showSuccess.value = true;
   setTimeout(() => (showSuccess.value = false), 2000);
@@ -1166,17 +1274,127 @@ const handlePassengerTypeSelect = (type) => {
 };
 
 const handlePaymentSelected = (method) => {
-  // isPaymentModalOpen.value = false;
+  selectedPaymentMethod.value = method;
+  console.log("Payment method selected:", method);
 };
 
-const handlePrintingSelected = (option) => {
-  isPaymentModalOpen.value = false;
+const handlePrintingSelected = async (option) => {
   if (option === "e-ticket" || option.id === "eticket") {
-    console.log("Passenger Array:", passengers.value);
+    console.log("E-Ticket selected, processing payment...");
+    
+    // Validation checks
+    if (passengers.value.length === 0 && vehicles.value.length === 0) {
+      alert("Please add at least one passenger or vehicle before proceeding to payment.");
+      return;
+    }
+
+    // Try to get booking_id from existing passengers or vehicles, or generate random one
+    let bookingIdToUse = sharedBookingId.value;
+    
+    if (!bookingIdToUse) {
+      // Try from passengers
+      const passengerWithBookingId = passengers.value.find(p => p.bookingId);
+      if (passengerWithBookingId) {
+        bookingIdToUse = passengerWithBookingId.bookingId;
+        sharedBookingId.value = bookingIdToUse;
+      }
+    }
+    
+    if (!bookingIdToUse) {
+      // Try from vehicles
+      const vehicleWithBookingId = vehicles.value.find(v => v.bookingId);
+      if (vehicleWithBookingId) {
+        bookingIdToUse = vehicleWithBookingId.bookingId;
+        sharedBookingId.value = bookingIdToUse;
+      }
+    }
+
+    if (!bookingIdToUse) {
+      // Generate random booking_id as fallback
+      bookingIdToUse = Math.floor(Math.random() * 1000000) + 10000;
+      sharedBookingId.value = bookingIdToUse;
+      console.log("Generated random booking_id:", bookingIdToUse);
+    }
+    
+    try {
+      const stored = localStorage.getItem("token");
+      if (!stored) {
+        alert("Authentication required. Please log in again.");
+        return;
+      }
+      
+      const authHeader = stored.startsWith("Bearer ")
+        ? stored
+        : `Bearer ${stored}`;
+
+      // Calculate totals for payment body
+      const passengerFare = passengers.value.reduce(
+        (sum, p) => sum + parseFloat(p.fare || 0),
+        0
+      );
+      const vehicleFare = vehicles.value.reduce(
+        (sum, v) => sum + parseFloat(v.vehicle?.rate || 0),
+        0
+      );
+      const total_fare = passengerFare + vehicleFare;
+      
+      const total_discount = passengers.value.reduce(
+        (sum, p) => sum + parseFloat(p.discountAmount || 0),
+        0
+      );
+      
+      const total_admin_fee = passengers.value.reduce(
+        (sum, p) => sum + parseFloat(p.adminFee || 0),
+        0
+      );
+      
+      const grand_total = total_fare + total_admin_fee - total_discount;
+
+      const paymentBody = {
+        serial_no: serialNo.value,
+        booking_id: bookingIdToUse,
+        total_fare: parseFloat(total_fare.toFixed(2)),
+        total_discount: parseFloat(total_discount.toFixed(2)),
+        grand_total: parseFloat(grand_total.toFixed(2)),
+        total_admin_fee: parseFloat(total_admin_fee.toFixed(2)),
+        payment_method: selectedPaymentMethod.value?.id || "cash",
+      };
+
+      console.log("Payment request body:", paymentBody);
+
+      const response = await fetch(`${apiBase}/teller-booking/payment`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: authHeader,
+        },
+        body: JSON.stringify(paymentBody),
+      });
+
+      console.log("Payment response status:", response.status);
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log("Payment successful:", result);
+        alert("Payment processed successfully!");
+        isPaymentModalOpen.value = false;
+        // TODO: Generate E-Ticket/Receipt
+      } else {
+        const error = await response.json();
+        console.error("Payment error:", error);
+        alert("Payment failed: " + (error.message || "Unknown error"));
+      }
+    } catch (err) {
+      console.error("Error processing payment:", err);
+      alert("Error processing payment. Please try again.");
+    }
+  } else {
+    // Handle other printing options
+    console.log("Printing option selected:", option);
+    isPaymentModalOpen.value = false;
   }
 };
 
-import { computed } from "vue";
 
 // Filter and group schedules based on selected route
 const filteredSchedules = computed(() => {
@@ -1201,11 +1419,11 @@ const filteredSchedules = computed(() => {
 });
 
 const totalOriginalFare = computed(() => {
-  const passengerFare = passengers.value.reduce(
+  const passengerFare = filteredPassengers.value.reduce(
     (sum, p) => sum + Number(p.fare) + Number(p.discountAmount),
     0,
   );
-  const vehicleFare = vehicles.value.reduce(
+  const vehicleFare = filteredVehicles.value.reduce(
     (sum, v) => sum + Number(v.vehicle?.rate || 0),
     0,
   );
@@ -1213,22 +1431,22 @@ const totalOriginalFare = computed(() => {
 });
 
 const totalFare = computed(() =>
-  passengers.value.reduce((sum, p) => sum + parseFloat(p.fare), 0),
+  filteredPassengers.value.reduce((sum, p) => sum + parseFloat(p.fare), 0),
 );
 const totalCargo = computed(() =>
-  passengers.value.reduce((sum, p) => sum + parseFloat(p.cargoFare), 0),
+  filteredPassengers.value.reduce((sum, p) => sum + parseFloat(p.cargoFare), 0),
 );
 const totalAdmin = computed(() =>
-  passengers.value.reduce((sum, p) => sum + parseFloat(p.adminFee || 0), 0),
+  filteredPassengers.value.reduce((sum, p) => sum + parseFloat(p.adminFee || 0), 0),
 );
 const totalDiscount = computed(() =>
-  passengers.value.reduce(
+  filteredPassengers.value.reduce(
     (sum, p) => sum + parseFloat(p.discountAmount || 0),
     0,
   ),
 );
 const totalAmount = computed(() => {
-  const vehicleFare = vehicles.value.reduce(
+  const vehicleFare = filteredVehicles.value.reduce(
     (sum, v) => sum + Number(v.vehicle?.rate || 0),
     0,
   );
@@ -1238,6 +1456,59 @@ const totalAmount = computed(() => {
     totalAdmin.value -
     totalDiscount.value
   );
+});
+
+// Get unique serial numbers from all bookings
+const uniqueSerialNumbers = computed(() => {
+  const serials = new Set();
+  passengers.value.forEach(p => {
+    if (p.bookedPassengerId) serials.add(p.serialNo || serialNo.value);
+  });
+  vehicles.value.forEach(v => {
+    if (v.bookedVehicleId) serials.add(v.serialNo || serialNo.value);
+  });
+  // Add current serial if we have it
+  if (serialNo.value) serials.add(serialNo.value);
+  return Array.from(serials);
+});
+
+// Handle new transaction from header
+const handleNewTransaction = () => {
+  // Generate a new serial number for the new transaction
+  generateSerialNo();
+  
+  // Clear form fields for new passenger entry
+  fullname.value = "";
+  selectedDiscount.value = "0";
+  selectedAccommodation.value = "";
+  selectedGender.value = "";
+  selectedVehicleDetails.value = null;
+  selectedInstitutionalAccount.value = null;
+  selectedPassengerTypeDetails.value = regularPassengerType.value;
+  isInstitutionalAccount.value = false;
+  isManualSeatSelection.value = false;
+  selectedSeat.value = null;
+  
+  // Reset shared booking IDs for new transaction
+  sharedBookingId.value = null;
+  sharedScheduleBookingId.value = null;
+  
+  // Switch to Passenger tab
+  activeTab.value = "Passenger";
+  
+  console.log("New transaction started with serial:", serialNo.value);
+};
+
+// Filter passengers by active serial tab
+const filteredPassengers = computed(() => {
+  if (!activeSerialTab.value) return passengers.value;
+  return passengers.value.filter(p => (p.serialNo || serialNo.value) === activeSerialTab.value);
+});
+
+// Filter vehicles by active serial tab
+const filteredVehicles = computed(() => {
+  if (!activeSerialTab.value) return vehicles.value;
+  return vehicles.value.filter(v => (v.serialNo || serialNo.value) === activeSerialTab.value);
 });
 
 const stepInstruction = computed(() => {
@@ -1270,9 +1541,7 @@ watch(stepInstruction, async () => {
   }
 });
 
-const removePassenger = async (idx) => {
-  const passenger = passengers.value[idx];
-  
+const removePassenger = async (passenger) => {
   if (!passenger) return;
 
   // Confirm deletion
@@ -1340,29 +1609,170 @@ const removePassenger = async (idx) => {
         seatToUnblock.blocked = false;
       }
     }
-    passengers.value.splice(idx, 1);
+    // Find and remove passenger from array
+    const idx = passengers.value.findIndex(p => p === passenger);
+    if (idx !== -1) {
+      passengers.value.splice(idx, 1);
+    }
   }
 };
 
-const removeVehicle = (idx) => {
-  vehicles.value.splice(idx, 1);
+const removeVehicle = async (vehicle) => {
+  if (!vehicle) return;
+
+  // Confirm deletion
+  const confirmed = confirm(`Remove vehicle ${vehicle.vehicle?.plate_number || 'this vehicle'} from booking?`);
+  if (!confirmed) return;
+
+  // If vehicle has a booked_vehicle_id, delete from backend
+  if (vehicle.bookedVehicleId) {
+    try {
+      const stored = localStorage.getItem("token");
+      
+      if (!stored) {
+        alert("Authentication required. Please log in again.");
+        return;
+      }
+      
+      const authHeader = stored.startsWith("Bearer ") ? stored : `Bearer ${stored}`;
+
+      const response = await fetch(`${apiBase}/teller-booking/book-vehicle/${vehicle.bookedVehicleId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: authHeader,
+        },
+      });
+
+      // Even if response has error, the deletion might have worked
+      // So we refresh the list to check
+      const previousCount = vehicles.value.length;
+      await fetchBookedVehicles();
+      const newCount = vehicles.value.length;
+
+      if (newCount < previousCount) {
+        // Vehicle was deleted successfully
+        console.log("Vehicle deleted successfully");
+      } else {
+        // Deletion failed
+        try {
+          const result = await response.json();
+          alert("Failed to delete vehicle: " + (result.message || result.error || response.statusText));
+        } catch {
+          alert("Failed to delete vehicle");
+        }
+      }
+    } catch (err) {
+      console.error("Error deleting vehicle:", err);
+      alert("Network error: " + err.message);
+    }
+  } else {
+    // Local-only vehicle (not yet saved to backend)
+    const idx = vehicles.value.findIndex(v => v === vehicle);
+    if (idx !== -1) {
+      vehicles.value.splice(idx, 1);
+    }
+  }
 };
 
-const openDriverSelection = (index) => {
-  selectedVehicleIndex.value = index;
+const openDriverSelection = (vehicle) => {
+  selectedVehicleForDriver.value = vehicle;
   isDriverSelectionOpen.value = true;
 };
 
-const assignDriver = (passenger) => {
-  if (selectedVehicleIndex.value !== null) {
-    vehicles.value[selectedVehicleIndex.value].driver = passenger;
-    isDriverSelectionOpen.value = false;
-    selectedVehicleIndex.value = null;
+const assignDriver = async (passenger) => {
+  if (selectedVehicleForDriver.value) {
+    const vehicle = selectedVehicleForDriver.value;
+    
+    try {
+      const stored = localStorage.getItem("token");
+      if (!stored) {
+        alert("Authentication required. Please log in again.");
+        return;
+      }
+      
+      const authHeader = stored.startsWith("Bearer ")
+        ? stored
+        : `Bearer ${stored}`;
+
+      const requestBody = {
+        plateNo: vehicle.vehicle.plate_number,
+        driver_passenger_booking_id: String(passenger.bookedPassengerId),
+      };
+      
+      console.log("Assigning driver to vehicle:", {
+        url: `${apiBase}/teller-booking/book-vehicle/${vehicle.bookedVehicleId}`,
+        method: "PATCH",
+        body: requestBody,
+      });
+
+      const response = await fetch(`${apiBase}/teller-booking/book-vehicle/${vehicle.bookedVehicleId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: authHeader,
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log("Driver assignment response status:", response.status, response.statusText);
+
+      if (response.ok) {
+        console.log("Driver assigned successfully");
+        // Refresh vehicle list from backend to sync
+        await fetchBookedVehicles();
+        isDriverSelectionOpen.value = false;
+        selectedVehicleForDriver.value = null;
+      } else {
+        const error = await response.json();
+        console.error("Driver assignment error:", error);
+        alert("Failed to assign driver: " + (error.message || "Unknown error"));
+      }
+    } catch (err) {
+      console.error("Error assigning driver:", err);
+      alert("Error assigning driver. Please try again.");
+    }
   }
 };
 
-const removeDriver = (vehicleIndex) => {
-  vehicles.value[vehicleIndex].driver = null;
+const removeDriver = async (vehicle) => {
+  if (!vehicle || !vehicle.driver) return;
+  
+  try {
+    const stored = localStorage.getItem("token");
+    if (!stored) {
+      alert("Authentication required. Please log in again.");
+      return;
+    }
+    
+    const authHeader = stored.startsWith("Bearer ")
+      ? stored
+      : `Bearer ${stored}`;
+
+    const response = await fetch(`${apiBase}/teller-booking/book-vehicle/${vehicle.bookedVehicleId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: authHeader,
+      },
+      body: JSON.stringify({
+        plateNo: vehicle.vehicle.plate_number,
+        driver_passenger_booking_id: null,
+      }),
+    });
+
+    if (response.ok) {
+      console.log("Driver removed successfully");
+      // Refresh vehicle list from backend
+      await fetchBookedVehicles();
+    } else {
+      const error = await response.json();
+      alert("Failed to remove driver: " + (error.message || "Unknown error"));
+    }
+  } catch (err) {
+    console.error("Error removing driver:", err);
+    alert("Error removing driver. Please try again.");
+  }
 };
 
 // View Passenger
@@ -1438,7 +1848,13 @@ const editPassengerFromModal = (passenger) => {
 </style>
 
 <template>
-  <TellerHeader :serialNo="serialNo" />
+  <TellerHeader 
+    :serialNo="serialNo" 
+    :uniqueSerialNumbers="uniqueSerialNumbers"
+    :activeSerialTab="activeSerialTab"
+    @update:activeSerialTab="activeSerialTab = $event"
+    @newTransaction="handleNewTransaction"
+  />
   <!-- Passenger View -->
   <ViewTellerPassenger
     :isOpen="isViewPassengerOpen"
@@ -1591,6 +2007,7 @@ const editPassengerFromModal = (passenger) => {
               <p class="fare__amount font-bold">{{ totalAmount.toFixed(2) }}</p>
             </div>
           </div>
+          
           <div class="max-w-6xl mx-auto rounded-lg">
             <div class="mb-6">
               <div class="flex items-center justify-between">
@@ -1629,7 +2046,7 @@ const editPassengerFromModal = (passenger) => {
                   </thead>
                   <tbody>
                     <!-- If no passengers -->
-                    <tr v-if="passengers.length === 0">
+                    <tr v-if="filteredPassengers.length === 0">
                       <td
                         colspan="6"
                         class="px-2 py-4 text-center text-gray-500 text-sm italic"
@@ -1641,7 +2058,7 @@ const editPassengerFromModal = (passenger) => {
                     <!-- If there are passengers -->
                     <tr
                       v-else
-                      v-for="(p, index) in passengers"
+                      v-for="(p, index) in filteredPassengers"
                       :key="index"
                       class="bg-white hover:bg-gray-50"
                     >
@@ -1688,7 +2105,7 @@ const editPassengerFromModal = (passenger) => {
                         </button>
                         <button
                           class="p-2 text-red-600 hover:bg-red-50 rounded-md cursor-pointer"
-                          @click="removePassenger(index)"
+                          @click="removePassenger(p)"
                           title="Remove Passenger"
                         >
                           <svg
@@ -1722,14 +2139,14 @@ const editPassengerFromModal = (passenger) => {
             </div>
             
             <!-- No vehicles message -->
-            <div v-if="vehicles.length === 0" class="text-center py-8 text-gray-500 text-sm italic">
+            <div v-if="filteredVehicles.length === 0" class="text-center py-8 text-gray-500 text-sm italic">
               No vehicles
             </div>
 
             <!-- Vehicle Cards -->
             <div v-else class="space-y-4">
               <div
-                v-for="(v, index) in vehicles"
+                v-for="(v, index) in filteredVehicles"
                 :key="index"
                 class="bg-white rounded-lg border border-gray-300 p-4 hover:shadow-md transition-shadow"
               >
@@ -1753,7 +2170,7 @@ const editPassengerFromModal = (passenger) => {
                     </div>
                     <div>
                       <p class="text-xs text-gray-500 mb-1">Fare</p>
-                      <p class="text-sm font-semibold text-blue-600">₱{{ (v.vehicle.rate || 0).toFixed(2) }}</p>
+                      <p class="text-sm font-semibold text-blue-600">₱{{ parseFloat(v.vehicle.rate || 0).toFixed(2) }}</p>
                     </div>
                   </div>
 
@@ -1767,7 +2184,7 @@ const editPassengerFromModal = (passenger) => {
                           <p class="text-xs text-gray-500">{{ v.driver.type }}</p>
                         </div>
                         <button
-                          @click="removeDriver(index)"
+                          @click="removeDriver(v)"
                           class="text-red-500 hover:text-red-700"
                           title="Remove Driver"
                         >
@@ -1779,7 +2196,7 @@ const editPassengerFromModal = (passenger) => {
                     </div>
                     <button
                       v-else
-                      @click="openDriverSelection(index)"
+                      @click="openDriverSelection(v)"
                       class="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
                     >
                       + Driver
@@ -1788,7 +2205,7 @@ const editPassengerFromModal = (passenger) => {
 
                   <!-- Remove Vehicle Button -->
                   <button
-                    @click="removeVehicle(index)"
+                    @click="removeVehicle(v)"
                     class="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors flex-shrink-0"
                     title="Remove Vehicle"
                   >
