@@ -556,17 +556,19 @@ const schedules = ref([]); // Will be deprecated, kept for compatibility
 
 // Prepare booking data for backend
 const prepareBookingData = () => {
-  // Calculate totals
-  const passengerTotal = passengers.value.reduce((sum, p) => {
-    return sum + parseFloat(p.fare) + parseFloat(p.adminFee);
+  // Calculate admin fee: 2 pesos per passenger, 25 pesos per vehicle
+  const totalAdminFee = (filteredPassengers.value.length * 2) + (filteredVehicles.value.length * 25);
+  
+  // Calculate totals using filtered lists (active serial tab only)
+  const passengerTotal = filteredPassengers.value.reduce((sum, p) => {
+    return sum + parseFloat(p.fare);
   }, 0);
 
-  const vehicleTotal = vehicles.value.reduce((sum, v) => {
-    // Assuming vehicle has a rate/fare - adjust as needed when vehicle pricing is implemented
+  const vehicleTotal = filteredVehicles.value.reduce((sum, v) => {
     return sum + (parseFloat(v.vehicle?.rate || 0));
   }, 0);
 
-  const totalAmount = passengerTotal + vehicleTotal;
+  const totalAmount = passengerTotal + vehicleTotal + totalAdminFee;
 
   const bookingData = {
     metadata: {
@@ -581,7 +583,7 @@ const prepareBookingData = () => {
       returnSchedule: returnSchedule.value?.time || returnSchedule.value || null,
       bookingDate: new Date().toISOString(),
     },
-    passengers: passengers.value.map((p) => ({
+    passengers: filteredPassengers.value.map((p) => ({
       fullname: p.fullname,
       type: p.type || p.passengerTypeDetails?.type || "",
       typeDetails: p.passengerTypeDetails,
@@ -591,19 +593,20 @@ const prepareBookingData = () => {
       discount: p.discount,
       discountAmount: parseFloat(p.discountAmount),
       fare: parseFloat(p.fare),
-      adminFee: parseFloat(p.adminFee),
+      adminFee: 2, // 2 pesos per passenger
       cargoFare: parseFloat(p.cargoFare),
-      subtotal: parseFloat(p.fare) + parseFloat(p.adminFee),
+      subtotal: parseFloat(p.fare) + 2,
       institutionalAccount: p.institutionalAccount ? {
         id: p.institutionalAccount.ia_id || p.institutionalAccount.id,
         name: p.institutionalAccount.ia_name,
       } : null,
     })),
-    vehicles: vehicles.value.map((v) => ({
+    vehicles: filteredVehicles.value.map((v) => ({
       vehicleClass: v.vehicle.vehicle_class || v.vehicle.type,
       plateNumber: v.vehicle.plate_number,
       vehicleType: v.vehicle.type,
       fare: parseFloat(v.vehicle.rate || 0),
+      adminFee: 25, // 25 pesos per vehicle
       driver: v.driver ? {
         fullname: v.driver.fullname,
         type: v.driver.type,
@@ -615,12 +618,13 @@ const prepareBookingData = () => {
       } : null,
     })),
     summary: {
-      passengerCount: passengers.value.length,
-      vehicleCount: vehicles.value.length,
+      passengerCount: filteredPassengers.value.length,
+      vehicleCount: filteredVehicles.value.length,
       passengerTotal: parseFloat(passengerTotal.toFixed(2)),
       vehicleTotal: parseFloat(vehicleTotal.toFixed(2)),
+      totalAdminFee: totalAdminFee,
       totalAmount: parseFloat(totalAmount.toFixed(2)),
-      totalDiscount: passengers.value.reduce((sum, p) => sum + parseFloat(p.discountAmount), 0),
+      totalDiscount: filteredPassengers.value.reduce((sum, p) => sum + parseFloat(p.discountAmount), 0),
     },
   };
 
@@ -1282,18 +1286,18 @@ const handlePrintingSelected = async (option) => {
   if (option === "e-ticket" || option.id === "eticket") {
     console.log("E-Ticket selected, processing payment...");
     
-    // Validation checks
-    if (passengers.value.length === 0 && vehicles.value.length === 0) {
+    // Validation checks - use filtered lists for active serial
+    if (filteredPassengers.value.length === 0 && filteredVehicles.value.length === 0) {
       alert("Please add at least one passenger or vehicle before proceeding to payment.");
       return;
     }
 
-    // Try to get booking_id from existing passengers or vehicles, or generate random one
+    // Try to get booking_id from existing passengers or vehicles (filtered), or generate random one
     let bookingIdToUse = sharedBookingId.value;
     
     if (!bookingIdToUse) {
-      // Try from passengers
-      const passengerWithBookingId = passengers.value.find(p => p.bookingId);
+      // Try from passengers (filtered by active serial)
+      const passengerWithBookingId = filteredPassengers.value.find(p => p.bookingId);
       if (passengerWithBookingId) {
         bookingIdToUse = passengerWithBookingId.bookingId;
         sharedBookingId.value = bookingIdToUse;
@@ -1301,8 +1305,8 @@ const handlePrintingSelected = async (option) => {
     }
     
     if (!bookingIdToUse) {
-      // Try from vehicles
-      const vehicleWithBookingId = vehicles.value.find(v => v.bookingId);
+      // Try from vehicles (filtered by active serial)
+      const vehicleWithBookingId = filteredVehicles.value.find(v => v.bookingId);
       if (vehicleWithBookingId) {
         bookingIdToUse = vehicleWithBookingId.bookingId;
         sharedBookingId.value = bookingIdToUse;
@@ -1327,26 +1331,24 @@ const handlePrintingSelected = async (option) => {
         ? stored
         : `Bearer ${stored}`;
 
-      // Calculate totals for payment body
-      const passengerFare = passengers.value.reduce(
+      // Calculate totals for payment body - use filtered lists for active serial
+      const passengerFare = filteredPassengers.value.reduce(
         (sum, p) => sum + parseFloat(p.fare || 0),
         0
       );
-      const vehicleFare = vehicles.value.reduce(
+      const vehicleFare = filteredVehicles.value.reduce(
         (sum, v) => sum + parseFloat(v.vehicle?.rate || 0),
         0
       );
       const total_fare = passengerFare + vehicleFare;
       
-      const total_discount = passengers.value.reduce(
+      const total_discount = filteredPassengers.value.reduce(
         (sum, p) => sum + parseFloat(p.discountAmount || 0),
         0
       );
       
-      const total_admin_fee = passengers.value.reduce(
-        (sum, p) => sum + parseFloat(p.adminFee || 0),
-        0
-      );
+      // Admin fee: 2 pesos per passenger, 25 pesos per vehicle
+      const total_admin_fee = (filteredPassengers.value.length * 2) + (filteredVehicles.value.length * 25);
       
       const grand_total = total_fare + total_admin_fee - total_discount;
 
@@ -1436,9 +1438,10 @@ const totalFare = computed(() =>
 const totalCargo = computed(() =>
   filteredPassengers.value.reduce((sum, p) => sum + parseFloat(p.cargoFare), 0),
 );
-const totalAdmin = computed(() =>
-  filteredPassengers.value.reduce((sum, p) => sum + parseFloat(p.adminFee || 0), 0),
-);
+const totalAdmin = computed(() => {
+  // Admin fee: 2 pesos per passenger, 25 pesos per vehicle
+  return (filteredPassengers.value.length * 2) + (filteredVehicles.value.length * 25);
+});
 const totalDiscount = computed(() =>
   filteredPassengers.value.reduce(
     (sum, p) => sum + parseFloat(p.discountAmount || 0),
@@ -1501,13 +1504,13 @@ const handleNewTransaction = () => {
 
 // Filter passengers by active serial tab
 const filteredPassengers = computed(() => {
-  if (!activeSerialTab.value) return passengers.value;
+  if (!activeSerialTab.value) return [];
   return passengers.value.filter(p => (p.serialNo || serialNo.value) === activeSerialTab.value);
 });
 
 // Filter vehicles by active serial tab
 const filteredVehicles = computed(() => {
-  if (!activeSerialTab.value) return vehicles.value;
+  if (!activeSerialTab.value) return [];
   return vehicles.value.filter(v => (v.serialNo || serialNo.value) === activeSerialTab.value);
 });
 
@@ -1865,8 +1868,8 @@ const editPassengerFromModal = (passenger) => {
   <!-- Payment Selection Modal -->
   <ModalPaymentSelection
     :isOpen="isPaymentModalOpen"
-    :passengers="passengers"
-    :vehicles="vehicles"
+    :passengers="filteredPassengers"
+    :vehicles="filteredVehicles"
     @close="isPaymentModalOpen = false"
     @paymentSelected="handlePaymentSelected"
     @printingSelected="handlePrintingSelected"
@@ -1961,7 +1964,7 @@ const editPassengerFromModal = (passenger) => {
                 <div class="description__box">
                   <p class="text-gray-400 text-sm">Passengers</p>
                   <p class="text-neutral-700 text-base font-semibold">
-                    {{ passengers.length }}
+                    {{ filteredPassengers.length }}
                   </p>
                 </div>
               </div>

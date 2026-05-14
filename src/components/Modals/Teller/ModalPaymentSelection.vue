@@ -143,7 +143,8 @@ const passengerFare = computed(() => {
 });
 
 const passengerAdminFee = computed(() => {
-  return props.passengers.reduce((sum, p) => sum + parseFloat(p.adminFee || 0), 0);
+  // Admin fee: 2 pesos per passenger, 25 pesos per vehicle
+  return (props.passengers.length * 2) + (props.vehicles.length * 25);
 });
 
 const passengerDiscount = computed(() => {
@@ -155,7 +156,7 @@ const vehicleFare = computed(() => {
 });
 
 const totalAmount = computed(() => {
-  return passengerFare.value + passengerAdminFee.value + vehicleFare.value;
+  return passengerFare.value + passengerAdminFee.value + vehicleFare.value - passengerDiscount.value;
 });
 
 const change = computed(() => {
