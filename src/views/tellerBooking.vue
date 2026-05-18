@@ -21,6 +21,9 @@ const isVehicleModalOpen = ref(false);
 const isIaModalOpen = ref(false);
 const isPassengerTypeModalOpen = ref(false);
 const isDriverSelectionOpen = ref(false);
+const isBookingPassenger = ref(false);
+const isBookingVehicle = ref(false);
+const isProcessingPayment = ref(false);
 // Selected vehicle for driver assignment
 const selectedVehicleForDriver = ref(null);
 
@@ -221,7 +224,7 @@ const returnTrip = ref(false);
 const originPort = ref("Batangas Port");
 const destinationPort = ref("Calapan Port");
 
-const outboundDate = ref("");
+const outboundDate = ref(new Date().toISOString().split('T')[0]);
 const returnDate = ref("");
 
 const passengers = ref([]);
@@ -229,6 +232,7 @@ const vehicles = ref([]);
 
 const bookVehicleEntry = async () => {
   if (!selectedVehicleDetails.value) return;
+  isBookingVehicle.value = true;
 
   // Build API request body
   const requestBody = {
@@ -306,6 +310,8 @@ const bookVehicleEntry = async () => {
   } catch (err) {
     console.error("Error booking vehicle:", err);
     alert("Network error: " + err.message);
+  } finally {
+    isBookingVehicle.value = false;
   }
 };
 
@@ -1093,6 +1099,7 @@ const handleAccommodationClick = (accommodation) => {
 };
 
 const bookEntry = async () => {
+  isBookingPassenger.value = true;
   const fare = getCurrentRate();
   const adminFee = getCurrentAdminFee();
   const discountValue = selectedDiscount.value || "0";
@@ -1209,6 +1216,8 @@ const bookEntry = async () => {
   } catch (err) {
     console.error("Error booking passenger:", err);
     alert("Network error: " + err.message);
+  } finally {
+    isBookingPassenger.value = false;
   }
 };
 
@@ -1284,6 +1293,7 @@ const handlePaymentSelected = (method) => {
 
 const handlePrintingSelected = async (option) => {
   if (option === "e-ticket" || option.id === "eticket") {
+    isProcessingPayment.value = true;
     console.log("E-Ticket selected, processing payment...");
     
     // Validation checks - use filtered lists for active serial
@@ -1378,9 +1388,8 @@ const handlePrintingSelected = async (option) => {
       if (response.ok) {
         const result = await response.json();
         console.log("Payment successful:", result);
-        alert("Payment processed successfully!");
         isPaymentModalOpen.value = false;
-        // TODO: Generate E-Ticket/Receipt
+        resetAfterTransaction();
       } else {
         const error = await response.json();
         console.error("Payment error:", error);
@@ -1389,12 +1398,40 @@ const handlePrintingSelected = async (option) => {
     } catch (err) {
       console.error("Error processing payment:", err);
       alert("Error processing payment. Please try again.");
+    } finally {
+      isProcessingPayment.value = false;
     }
   } else {
     // Handle other printing options
     console.log("Printing option selected:", option);
     isPaymentModalOpen.value = false;
   }
+};
+
+const resetAfterTransaction = () => {
+  passengers.value = [];
+  vehicles.value = [];
+  sharedBookingId.value = null;
+  sharedScheduleBookingId.value = null;
+  fullname.value = "";
+  selectedDiscount.value = "0";
+  selectedCategory.value = "Passenger";
+  selectedAccommodation.value = "";
+  selectedGender.value = "";
+  selectedVehicleDetails.value = null;
+  selectedInstitutionalAccount.value = null;
+  selectedPassengerTypeDetails.value = regularPassengerType.value;
+  isInstitutionalAccount.value = false;
+  isManualSeatSelection.value = false;
+  selectedSeat.value = null;
+  vesselSeatmap.value = null;
+  availableSeats.value = [];
+  activeTab.value = "Passenger";
+  outboundSchedule.value = null;
+  generateSerialNo();
+
+  showSuccess.value = true;
+  setTimeout(() => (showSuccess.value = false), 3000);
 };
 
 
@@ -1461,6 +1498,9 @@ const totalAmount = computed(() => {
   );
 });
 
+// Track manually-closed empty tabs
+const closedEmptyTabs = ref([]);
+
 // Get unique serial numbers from all bookings
 const uniqueSerialNumbers = computed(() => {
   const serials = new Set();
@@ -1470,10 +1510,35 @@ const uniqueSerialNumbers = computed(() => {
   vehicles.value.forEach(v => {
     if (v.bookedVehicleId) serials.add(v.serialNo || serialNo.value);
   });
-  // Add current serial if we have it
-  if (serialNo.value) serials.add(serialNo.value);
+  if (serialNo.value && !closedEmptyTabs.value.includes(serialNo.value)) {
+    serials.add(serialNo.value);
+  }
   return Array.from(serials);
 });
+
+// Serials that have at least one actual booking (passenger or vehicle)
+const serialsWithBookings = computed(() => {
+  const serials = new Set();
+  passengers.value.forEach(p => {
+    if (p.bookedPassengerId) serials.add(p.serialNo || serialNo.value);
+  });
+  vehicles.value.forEach(v => {
+    if (v.bookedVehicleId) serials.add(v.serialNo || serialNo.value);
+  });
+  return Array.from(serials);
+});
+
+const handleCloseTab = (serial) => {
+  closedEmptyTabs.value.push(serial);
+  if (activeSerialTab.value === serial) {
+    const remaining = uniqueSerialNumbers.value.filter(s => s !== serial);
+    if (remaining.length > 0) {
+      activeSerialTab.value = remaining[remaining.length - 1];
+    } else {
+      generateSerialNo();
+    }
+  }
+};
 
 // Handle new transaction from header
 const handleNewTransaction = () => {
@@ -1851,64 +1916,62 @@ const editPassengerFromModal = (passenger) => {
 </style>
 
 <template>
-  <TellerHeader 
-    :serialNo="serialNo" 
-    :uniqueSerialNumbers="uniqueSerialNumbers"
-    :activeSerialTab="activeSerialTab"
-    @update:activeSerialTab="activeSerialTab = $event"
-    @newTransaction="handleNewTransaction"
-  />
-  <!-- Passenger View -->
+  <!-- Fixed-position modals and toasts — unaffected by layout -->
   <ViewTellerPassenger
     :isOpen="isViewPassengerOpen"
     :passenger="selectedPassenger"
     @close="closePassengerView"
     @edit="editPassengerFromModal"
   />
-  <!-- Payment Selection Modal -->
   <ModalPaymentSelection
     :isOpen="isPaymentModalOpen"
     :passengers="filteredPassengers"
     :vehicles="filteredVehicles"
+    :isProcessingPayment="isProcessingPayment"
     @close="isPaymentModalOpen = false"
     @paymentSelected="handlePaymentSelected"
     @printingSelected="handlePrintingSelected"
   />
-  <!-- Success Toast Notification -->
   <div
     v-if="showSuccess"
     class="fixed top-6 right-6 z-50 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg font-semibold text-base transition-all duration-300"
   >
     Passenger Added!
   </div>
-  <!-- Vehicle Selection Modal -->
   <VehicleSelection
     :isOpen="isVehicleModalOpen"
     :routeId="selectedRoute?.route_id || selectedRoute?.id"
     @close="isVehicleModalOpen = false"
     @save="handleVehicleSave"
   />
-
-  <!-- Institutional Account Modal -->
   <IaModal
     :isOpen="isIaModalOpen"
     @close="isIaModalOpen = false"
     @select="handleIaSelect"
   />
-
-  <!-- Passenger Type Modal -->
   <PassengerTypeModal
     :isOpen="isPassengerTypeModalOpen"
     @close="isPassengerTypeModalOpen = false"
     @select="handlePassengerTypeSelect"
   />
 
-  <main>
-    <div class="w-full grid grid-cols-[0.75fr_1.25fr]">
-      <div
-        class="left-panel h-screen overflow-y-auto scrollbar-hidden bg-white"
-      >
-        <div class="top-header border-b border-gray-300 pt-8 pb-8 pl-10 pr-10">
+  <!-- Full-viewport shell: header fixed on top, panels below -->
+  <div class="h-screen flex flex-col overflow-hidden">
+    <TellerHeader
+      :serialNo="serialNo"
+      :uniqueSerialNumbers="uniqueSerialNumbers"
+      :activeSerialTab="activeSerialTab"
+      :serialsWithBookings="serialsWithBookings"
+      @update:activeSerialTab="activeSerialTab = $event"
+      @newTransaction="handleNewTransaction"
+      @closeTab="handleCloseTab"
+    />
+    <main class="flex-1 min-h-0 overflow-hidden">
+      <div class="h-full w-full grid grid-cols-[0.75fr_1.25fr]">
+        <div
+          class="left-panel h-full flex flex-col overflow-hidden bg-white"
+        >
+        <div class="top-header border-b border-gray-300 pt-8 pb-8 pl-10 pr-10 flex-shrink-0">
           <div class="flex justify-between items-start mb-6">
             <div class="text-header">
               <p class="text-neutral-700 text-3xl font-bold">
@@ -1972,7 +2035,7 @@ const editPassengerFromModal = (passenger) => {
           </div>
         </div>
         <!-- Payment Breakdown Section -->
-        <div class="main-body pt-8 pb-8 pl-10 pr-10">
+        <div class="main-body flex-1 overflow-y-auto scrollbar-hidden pt-8 pb-4 pl-10 pr-10">
           <div
             class="payment-breakdown border border-gray-300 py-8 px-7 rounded-lg mb-6"
           >
@@ -2278,48 +2341,49 @@ const editPassengerFromModal = (passenger) => {
             </div>
           </transition>
 
-          <!-- Action Buttons -->
-          <div class="bg-white border-t-2 border-gray-300">
-            <div class="px-10 py-4 flex items-center justify-between">
-              <button
-                class="flex items-center gap-2 text-gray-600 hover:text-gray-800 text-base"
+        </div>
+
+        <!-- Action Buttons — pinned to bottom -->
+        <div class="flex-shrink-0 bg-white border-t-2 border-gray-300">
+          <div class="px-10 py-4 flex items-center justify-between">
+            <button
+              class="flex items-center gap-2 text-gray-600 hover:text-gray-800 text-base"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                  ></path>
-                </svg>
-                Save for later
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                ></path>
+              </svg>
+              Save for later
+            </button>
+            <div class="flex gap-3">
+              <button
+                class="px-6 py-2 text-gray-600 hover:text-gray-800 font-medium text-base"
+                @click="resetForm"
+              >
+                Cancel
               </button>
-              <div class="flex gap-3">
-                <button
-                  class="px-6 py-2 text-gray-600 hover:text-gray-800 font-medium text-base"
-                  @click="resetForm"
-                >
-                  Cancel
-                </button>
-                <button
-                  class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium text-base"
-                  @click="proceedToPayment"
-                >
-                  Proceed To Payment
-                </button>
-              </div>
+              <button
+                class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium text-base"
+                @click="proceedToPayment"
+              >
+                Proceed To Payment
+              </button>
             </div>
           </div>
         </div>
       </div>
       <div
         ref="rightPanel"
-        class="right-panel bg-gray-100 h-screen overflow-y-auto scrollbar-hidden"
+        class="right-panel bg-gray-100 h-full overflow-y-auto scrollbar-hidden"
       >
         <div
           class="flex flex-col gap-8 border-b border-gray-300 pt-8 pb-8 pl-10 pr-10"
@@ -2558,9 +2622,14 @@ const editPassengerFromModal = (passenger) => {
             <button
               v-if="selectedVehicleDetails"
               @click="bookVehicleEntry"
-              class="w-full p-4 rounded-lg text-base font-medium transition-all duration-300 bg-orange-500 text-white hover:bg-orange-600"
+              :disabled="isBookingVehicle"
+              class="w-full p-4 rounded-lg text-base font-medium transition-all duration-300 bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Book Entry
+              <svg v-if="isBookingVehicle" class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 22 6.477 22 12h-4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              {{ isBookingVehicle ? 'Booking...' : 'Book Entry' }}
             </button>
           </div>
 
@@ -2962,14 +3031,19 @@ const editPassengerFromModal = (passenger) => {
           <button
             v-if="activeTab === 'Passenger' && selectedGender"
             @click="bookEntry"
+            :disabled="isBookingPassenger"
             :class="[
-              'w-full p-4 rounded-lg text-base font-medium transition-all duration-300',
+              'w-full p-4 rounded-lg text-base font-medium transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed',
               bookingActive
                 ? 'bg-white shadow-border-brand-color font-medium'
                 : 'bg-orange-500 text-white hover:bg-orange-600',
             ]"
           >
-            Book Entry
+            <svg v-if="isBookingPassenger" class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 22 6.477 22 12h-4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            {{ isBookingPassenger ? 'Booking...' : 'Book Entry' }}
           </button>
         </div>
         <div class="mt-8 mb-8">
@@ -2981,5 +3055,6 @@ const editPassengerFromModal = (passenger) => {
         </div>
       </div>
     </div>
-  </main>
+    </main>
+  </div>
 </template>

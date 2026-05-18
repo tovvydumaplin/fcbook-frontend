@@ -15,9 +15,13 @@ const props = defineProps({
     type: String,
     default: null,
   },
+  serialsWithBookings: {
+    type: Array,
+    default: () => [],
+  },
 });
 
-const emit = defineEmits(['update:activeSerialTab', 'newTransaction']);
+const emit = defineEmits(['update:activeSerialTab', 'newTransaction', 'closeTab']);
 const dropdownOpen = ref(false);
 const userName = ref("User"); // You can get this from localStorage if needed
 const router = useRouter();
@@ -77,13 +81,19 @@ header {
         :key="serial"
         @click="emit('update:activeSerialTab', serial)"
         :class="[
-          'px-4 py-1.5 rounded text-sm font-medium transition-all',
+          'flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-all',
           activeSerialTab === serial
             ? 'bg-white text-blue-800 shadow-md'
             : 'bg-blue-700 text-white hover:bg-blue-600'
         ]"
       >
-        {{ serial }}
+        <span>{{ serial }}</span>
+        <span
+          @click.stop="!serialsWithBookings.includes(serial) && emit('closeTab', serial)"
+          class="ml-0.5 w-4 h-4 flex items-center justify-center rounded-full text-xs leading-none transition-colors"
+          :class="!serialsWithBookings.includes(serial) ? 'hover:bg-red-500 hover:text-white cursor-pointer' : 'invisible pointer-events-none'"
+          title="Close tab"
+        >✕</span>
       </button>
       <button 
         @click="emit('newTransaction')"
