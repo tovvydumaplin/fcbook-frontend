@@ -1971,314 +1971,221 @@ const editPassengerFromModal = (passenger) => {
         <div
           class="left-panel h-full flex flex-col overflow-hidden bg-white"
         >
-        <div class="top-header border-b border-gray-300 pt-8 pb-8 pl-10 pr-10 flex-shrink-0">
-          <div class="flex justify-between items-start mb-6">
-            <div class="text-header">
-              <p class="text-neutral-700 text-3xl font-bold">
-                {{ originPort }} - {{ destinationPort }}
+        <div class="top-header border-b border-gray-200 px-10 py-6 flex-shrink-0">
+          <!-- Route + action -->
+          <div class="flex items-start justify-between mb-5">
+            <div>
+              <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Active Route</p>
+              <p class="text-2xl font-bold text-gray-900 leading-tight">
+                {{ originPort }}
+                <span class="text-gray-400 font-normal mx-1">→</span>
+                {{ destinationPort }}
               </p>
-              <p class="text-neutral-600 font-medium text-base">FCM 19</p>
+              <p class="text-sm text-gray-400 mt-1">{{ outboundSchedule?.code || 'No vessel selected' }}</p>
             </div>
-            <div class="flex items-center gap-3">
-              <button
-                class="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700 flex items-center gap-2 cursor-pointer transition-colors"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Book Different Port
-              </button>
-            </div>
+            <button
+              class="mt-1 flex items-center gap-1.5 text-sm text-gray-500 border border-gray-300 px-3 py-1.5 rounded-lg hover:border-gray-400 hover:text-gray-700 transition-colors"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4" />
+              </svg>
+              Different Port
+            </button>
           </div>
-          <!-- Details -->
-          <div class="booking__box grid grid-cols-3 gap-6">
-            <div class="booking__container">
-              <div class="booking__item flex items-center gap-4">
-                <div class="icon__box">
-                  <CalendarDaysIcon class="text-blue-900 w-6 h-6" />
-                </div>
-                <div class="description__box">
-                  <p class="text-gray-400 text-sm">Date</p>
-                  <p class="text-neutral-700 text-base font-semibold">
-                    {{ outboundDate || "Select a date" }}
-                    <span v-if="returnTrip && returnDate" class="text-blue-600"> ⇄ {{ returnDate }}</span>
-                  </p>
-                </div>
+
+          <!-- Stats row -->
+          <div class="grid grid-cols-3 divide-x divide-gray-200 border border-gray-200 rounded-lg overflow-hidden">
+            <div class="px-5 py-3">
+              <p class="text-xs text-gray-400 mb-1.5">Date</p>
+              <div class="flex items-center gap-2">
+                <CalendarDaysIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <span class="text-sm font-semibold text-gray-800 truncate">
+                  {{ outboundDate || '—' }}
+                  <span v-if="returnTrip && returnDate" class="text-gray-400 font-normal"> ⇄ {{ returnDate }}</span>
+                </span>
               </div>
             </div>
-            <div class="booking__container">
-              <div class="booking__item flex items-center gap-4">
-                <div class="icon__box">
-                  <ClockIcon class="text-blue-900 w-6 h-6" />
-                </div>
-                <div class="description__box">
-                  <p class="text-gray-400 text-sm">Schedule</p>
-                  <p class="text-neutral-700 text-base font-semibold">
-                    {{ outboundSchedule?.time || "00:00 AM" }}
-                  </p>
-                </div>
+            <div class="px-5 py-3">
+              <p class="text-xs text-gray-400 mb-1.5">Schedule</p>
+              <div class="flex items-center gap-2">
+                <ClockIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <span class="text-sm font-semibold text-gray-800">{{ outboundSchedule?.time || '—' }}</span>
               </div>
             </div>
-            <div class="booking__container">
-              <div class="booking__item flex items-center gap-4">
-                <div class="icon__box">
-                  <UserIcon class="text-blue-900 w-6 h-6" />
-                </div>
-                <div class="description__box">
-                  <p class="text-gray-400 text-sm">Passengers</p>
-                  <p class="text-neutral-700 text-base font-semibold">
-                    {{ filteredPassengers.length }}
-                  </p>
-                </div>
+            <div class="px-5 py-3">
+              <p class="text-xs text-gray-400 mb-1.5">Passengers</p>
+              <div class="flex items-center gap-2">
+                <UserIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <span class="text-sm font-semibold text-gray-800">{{ filteredPassengers.length }}</span>
               </div>
             </div>
           </div>
         </div>
         <!-- Payment Breakdown Section -->
         <div class="main-body flex-1 overflow-y-auto scrollbar-hidden pt-8 pb-4 pl-10 pr-10">
-          <div
-            class="payment-breakdown border border-gray-300 py-8 px-7 rounded-lg mb-6"
-          >
-            <p class="text-neutral-700 text-2xl font-bold">Payment Breakdown</p>
-            <div
-              class="fares flex justify-between mb-2 border-b border-gray-300 pt-7 pb-4"
-            >
-              <p class="fare__text">Fare:</p>
-              <p class="fare__amount">
-                {{ totalOriginalFare.toFixed(2) }}
-              </p>
-            </div>
-            <div
-              class="fares flex justify-between mb-2 border-b border-gray-300 pb-4"
-            >
-              <p class="fare__text">Cargo Rate:</p>
-              <p class="fare__amount">{{ totalCargo.toFixed(2) }}</p>
-            </div>
-            <div
-              class="fares flex justify-between mb-2 border-b border-gray-300 pb-4"
-            >
-              <p class="fare__text">Admin Fee:</p>
-              <p class="fare__amount">{{ totalAdmin.toFixed(2) }}</p>
-            </div>
-            <div
-              class="fares flex justify-between mb-2 border-b border-gray-300 pb-4"
-            >
-              <p class="fare__text">Discount:</p>
-              <p class="fare__amount">-{{ totalDiscount.toFixed(2) }}</p>
-            </div>
-            <div
-              class="fares flex justify-between mb-2 border-b border-gray-300 pb-4"
-            >
-              <p class="fare__text font-bold">Amount to be paid:</p>
-              <p class="fare__amount font-bold">{{ totalAmount.toFixed(2) }}</p>
+          <div class="mb-6">
+            <p class="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-3">Payment Breakdown</p>
+            <div class="rounded-lg border border-gray-200 overflow-hidden">
+              <div class="divide-y divide-gray-100">
+                <div class="flex justify-between items-center px-4 py-2.5">
+                  <span class="text-sm text-gray-500">Fare</span>
+                  <span class="text-sm font-medium text-gray-800">₱{{ totalOriginalFare.toFixed(2) }}</span>
+                </div>
+                <div class="flex justify-between items-center px-4 py-2.5">
+                  <span class="text-sm text-gray-500">Cargo Rate</span>
+                  <span class="text-sm font-medium text-gray-800">₱{{ totalCargo.toFixed(2) }}</span>
+                </div>
+                <div class="flex justify-between items-center px-4 py-2.5">
+                  <span class="text-sm text-gray-500">Admin Fee</span>
+                  <span class="text-sm font-medium text-gray-800">₱{{ totalAdmin.toFixed(2) }}</span>
+                </div>
+                <div v-if="totalDiscount > 0" class="flex justify-between items-center px-4 py-2.5">
+                  <span class="text-sm text-gray-500">Discount</span>
+                  <span class="text-sm font-medium text-green-600">−₱{{ totalDiscount.toFixed(2) }}</span>
+                </div>
+              </div>
+              <div class="flex justify-between items-center px-4 py-3 bg-gray-50 border-t border-gray-200">
+                <span class="text-sm font-semibold text-gray-600">Total Due</span>
+                <span class="text-xl font-bold text-gray-900">₱{{ totalAmount.toFixed(2) }}</span>
+              </div>
             </div>
           </div>
           
-          <div class="max-w-6xl mx-auto rounded-lg">
-            <div class="mb-6">
-              <div class="flex items-center justify-between">
-                <h1 class="text-2xl font-semibold text-gray-800">
-                  Passenger List
-                </h1>
-                <span v-if="selectedInstitutionalAccount" class="text-base font-medium text-blue-900">
-                  {{ selectedInstitutionalAccount.ia_name }}
-                </span>
-              </div>
+          <div class="mb-6">
+            <div class="flex items-center justify-between mb-3">
+              <p class="text-xs font-semibold text-gray-600 uppercase tracking-widest">Passenger List</p>
+              <span v-if="selectedInstitutionalAccount" class="text-xs font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                {{ selectedInstitutionalAccount.ia_name }}
+              </span>
             </div>
-            <div class="rounded-lg overflow-hidden">
-              <div class="overflow-x-auto">
-                <table class="w-full">
-                  <thead>
-                    <tr class="bg-blue-900 text-white">
-                      <th class="px-3 py-3 text-left font-semibold text-sm">
-                        Fullname
-                      </th>
-                      <th class="px-3 py-3 text-left font-semibold text-sm">
-                        Seat
-                      </th>
-                      <th class="px-3 py-3 text-left font-semibold text-sm">
-                        Fare
-                      </th>
-                      <th class="px-3 py-3 text-left font-semibold text-sm">
-                        Type
-                      </th>
-                      <th class="px-3 py-3 text-left font-semibold text-sm">
-                        Class
-                      </th>
-                      <th class="px-3 py-3 text-left font-semibold text-sm">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <!-- If no passengers -->
-                    <tr v-if="filteredPassengers.length === 0">
-                      <td
-                        colspan="6"
-                        class="px-2 py-4 text-center text-gray-500 text-sm italic"
-                      >
-                        No passengers
-                      </td>
-                    </tr>
 
-                    <!-- If there are passengers -->
-                    <tr
-                      v-else
-                      v-for="(p, index) in filteredPassengers"
-                      :key="index"
-                      class="bg-white hover:bg-gray-50"
-                    >
-                      <td class="px-2 py-2 font-medium text-gray-900 text-sm">
-                        {{ p.fullname }}
-                      </td>
-                      <td class="px-2 py-2 text-gray-700 text-sm">
-                        {{ p.seat }}
-                      </td>
-                      <td class="px-2 py-2 text-gray-700 text-sm">
-                        ₱{{ p.fare }}
-                        <span v-if="parseFloat(p.discountAmount) > 0" class="text-xs text-green-600 ml-1">
-                          (-₱{{ p.discountAmount }})
-                        </span>
-                      </td>
-                      <td class="px-2 py-2 text-gray-700 text-sm capitalize">
-                        {{ p.passengerTypeDetails?.type || 'Regular' }}
-                        <span v-if="p.passengerTypeDetails?.discount && parseFloat(p.passengerTypeDetails.discount) > 0" class="text-xs text-green-600 ml-1">
-                          ({{ (parseFloat(p.passengerTypeDetails.discount) * 100).toFixed(0) }}%)
-                        </span>
-                      </td>
-                      <td class="px-2 py-2 text-gray-700 text-sm">
-                        {{ p.accommodation }}
-                      </td>
-                      <td class="px-2 py-2">
-                        <button
-                          class="p-2 text-blue-600 hover:bg-blue-50 rounded-md cursor-pointer"
-                          @click="openPassengerView(p)"
-                          title="View Passenger"
-                        >
-                          <svg
-                            class="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                            />
-                          </svg>
-                        </button>
-                        <button
-                          class="p-2 text-red-600 hover:bg-red-50 rounded-md cursor-pointer"
-                          @click="removePassenger(p)"
-                          title="Remove Passenger"
-                        >
-                          <svg
-                            class="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m2 0v14a2 2 0 01-2 2H8a2 2 0 01-2-2V6m5 10v-6"
-                            />
-                          </svg>
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+            <div class="rounded-lg border border-gray-200 overflow-hidden">
+              <!-- Empty state -->
+              <div v-if="filteredPassengers.length === 0" class="py-10 flex flex-col items-center gap-2">
+                <UserIcon class="w-7 h-7 text-gray-300" />
+                <p class="text-sm text-gray-400">No passengers added yet</p>
               </div>
+
+              <!-- Table -->
+              <table v-else class="w-full">
+                <thead>
+                  <tr class="bg-gray-50 border-b border-gray-200">
+                    <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Name</th>
+                    <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Seat</th>
+                    <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Fare</th>
+                    <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Type</th>
+                    <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Class</th>
+                    <th class="px-3 py-2.5"></th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr
+                    v-for="(p, index) in filteredPassengers"
+                    :key="index"
+                    class="hover:bg-gray-50 transition-colors"
+                  >
+                    <td class="px-3 py-2.5 text-sm font-medium text-gray-900">{{ p.fullname }}</td>
+                    <td class="px-3 py-2.5 text-sm text-gray-500">{{ p.seat }}</td>
+                    <td class="px-3 py-2.5 text-sm text-gray-700">
+                      ₱{{ p.fare }}
+                      <span v-if="parseFloat(p.discountAmount) > 0" class="text-xs text-green-600 ml-0.5">
+                        (−₱{{ p.discountAmount }})
+                      </span>
+                    </td>
+                    <td class="px-3 py-2.5 text-sm text-gray-500 capitalize">{{ p.passengerTypeDetails?.type || 'Regular' }}</td>
+                    <td class="px-3 py-2.5 text-sm text-gray-500">{{ p.accommodation }}</td>
+                    <td class="px-3 py-2.5">
+                      <div class="flex items-center justify-end gap-0.5">
+                        <button
+                          @click="openPassengerView(p)"
+                          title="Edit"
+                          class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        >
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          @click="removePassenger(p)"
+                          title="Remove"
+                          class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                        >
+                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m2 0v14a2 2 0 01-2 2H8a2 2 0 01-2-2V6m5 10v-6" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
 
           <!-- Vehicle List Section -->
-          <div class="max-w-6xl mx-auto rounded-lg mt-8">
-            <div class="mb-6">
-              <h1 class="text-2xl font-semibold text-gray-800">
-                Vehicle List
-              </h1>
-            </div>
-            
-            <!-- No vehicles message -->
-            <div v-if="filteredVehicles.length === 0" class="text-center py-8 text-gray-500 text-sm italic">
-              No vehicles
-            </div>
+          <div class="mb-6 mt-6">
+            <p class="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-3">Vehicle List</p>
 
-            <!-- Vehicle Cards -->
-            <div v-else class="space-y-4">
-              <div
-                v-for="(v, index) in filteredVehicles"
-                :key="index"
-                class="bg-white rounded-lg border border-gray-300 p-4 hover:shadow-md transition-shadow"
-              >
-                <div class="flex items-center gap-4">
-                  <!-- Vehicle Icon -->
-                  <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                    </svg>
-                  </div>
+            <div class="rounded-lg border border-gray-200 overflow-hidden">
+              <!-- Empty state -->
+              <div v-if="filteredVehicles.length === 0" class="py-10 flex flex-col items-center gap-2">
+                <svg class="w-7 h-7 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+                <p class="text-sm text-gray-400">No vehicles added yet</p>
+              </div>
 
-                  <!-- Vehicle Details -->
-                  <div class="flex-1 grid grid-cols-3 gap-4">
-                    <div>
-                      <p class="text-xs text-gray-500 mb-1">Vehicle Class</p>
-                      <p class="text-sm font-semibold text-gray-900">{{ v.vehicle.vehicle_class || v.vehicle.type || "Vehicle" }}</p>
-                    </div>
-                    <div>
-                      <p class="text-xs text-gray-500 mb-1">Plate Number</p>
-                      <p class="text-sm font-medium text-gray-700">{{ v.vehicle.plate_number || "N/A" }}</p>
-                    </div>
-                    <div>
-                      <p class="text-xs text-gray-500 mb-1">Fare</p>
-                      <p class="text-sm font-semibold text-blue-600">₱{{ parseFloat(v.vehicle.rate || 0).toFixed(2) }}</p>
-                    </div>
-                  </div>
-
-                  <!-- Driver Section -->
-                  <div class="flex-shrink-0 w-48">
-                    <p class="text-xs text-gray-500 mb-2">Driver</p>
-                    <div v-if="v.driver" class="bg-green-50 border border-green-200 rounded-lg p-2">
-                      <div class="flex items-center justify-between">
-                        <div>
-                          <p class="text-sm font-medium text-gray-900">{{ v.driver.fullname }}</p>
-                          <p class="text-xs text-gray-500">{{ v.driver.type }}</p>
-                        </div>
+              <!-- Vehicle rows -->
+              <div v-else class="divide-y divide-gray-100">
+                <div
+                  v-for="(v, index) in filteredVehicles"
+                  :key="index"
+                  class="px-4 py-3 hover:bg-gray-50 transition-colors"
+                >
+                  <div class="flex items-start justify-between gap-2">
+                    <div class="flex-1 min-w-0">
+                      <!-- Vehicle class + plate + fare -->
+                      <div class="flex items-center gap-2 mb-1.5">
+                        <span class="text-sm font-semibold text-gray-900">{{ v.vehicle.vehicle_class || v.vehicle.type || 'Vehicle' }}</span>
+                        <span class="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{{ v.vehicle.plate_number || 'N/A' }}</span>
+                        <span class="text-sm font-semibold text-gray-700 ml-auto">₱{{ parseFloat(v.vehicle.rate || 0).toFixed(2) }}</span>
+                      </div>
+                      <!-- Driver row -->
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-xs text-gray-400">Driver:</span>
+                        <template v-if="v.driver">
+                          <span class="text-xs font-medium text-gray-600">{{ v.driver.fullname }}</span>
+                          <button
+                            @click="removeDriver(v)"
+                            title="Remove driver"
+                            class="text-gray-300 hover:text-red-500 transition-colors"
+                          >
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </template>
                         <button
-                          @click="removeDriver(v)"
-                          class="text-red-500 hover:text-red-700"
-                          title="Remove Driver"
+                          v-else
+                          @click="openDriverSelection(v)"
+                          class="text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors"
                         >
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                          </svg>
+                          + Assign driver
                         </button>
                       </div>
                     </div>
+
+                    <!-- Remove vehicle -->
                     <button
-                      v-else
-                      @click="openDriverSelection(v)"
-                      class="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                      @click="removeVehicle(v)"
+                      title="Remove vehicle"
+                      class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors flex-shrink-0"
                     >
-                      + Driver
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
                     </button>
                   </div>
-
-                  <!-- Remove Vehicle Button -->
-                  <button
-                    @click="removeVehicle(v)"
-                    class="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors flex-shrink-0"
-                    title="Remove Vehicle"
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
                 </div>
               </div>
             </div>
@@ -2443,17 +2350,6 @@ const editPassengerFromModal = (passenger) => {
                 </div>
               </div>
             </div>
-            <!-- Return Trip - Hidden for now -->
-            <!-- <div class="flex items-end">
-              <label class="flex items-center gap-2 pb-3">
-                <input
-                  type="checkbox"
-                  v-model="returnTrip"
-                  class="theme-checkbox"
-                />
-                <span class="text-sm font-medium text-gray-700">Return Trip</span>
-              </label>
-            </div> -->
           </div>
           <div>
             <div class="flex gap-4 items-center mb-3 justify-between">
@@ -2519,7 +2415,7 @@ const editPassengerFromModal = (passenger) => {
                   @click="returnTrip ? (returnSchedule = time) : (outboundSchedule = time)"
                   :class="[
                     'p-3 text-center rounded-lg text-base border-2 transition-all duration-300',
-                    returnTrip 
+                    returnTrip
                       ? (returnSchedule?.id === time.id ? 'border-2 bg-blue-900 text-white' : 'bg-white text-gray-700 border-gray-300 hover:shadow-[0_0_0_2px_#3b3b3b]')
                       : (outboundSchedule?.id === time.id ? 'border-2 bg-blue-900 text-white' : 'bg-white text-gray-700 border-gray-300 hover:shadow-[0_0_0_2px_#3b3b3b]'),
                   ]"
