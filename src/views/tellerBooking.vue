@@ -1975,7 +1975,7 @@ const editPassengerFromModal = (passenger) => {
           <!-- Route + action -->
           <div class="flex items-start justify-between mb-5">
             <div>
-              <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Active Route</p>
+              <p class="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-1">Active Route</p>
               <p class="text-2xl font-bold text-gray-900 leading-tight">
                 {{ originPort }}
                 <span class="text-gray-400 font-normal mx-1">→</span>
@@ -1996,7 +1996,7 @@ const editPassengerFromModal = (passenger) => {
           <!-- Stats row -->
           <div class="grid grid-cols-3 divide-x divide-gray-200 border border-gray-200 rounded-lg overflow-hidden">
             <div class="px-5 py-3">
-              <p class="text-xs text-gray-400 mb-1.5">Date</p>
+              <p class="text-xs text-gray-600 mb-1.5">Date</p>
               <div class="flex items-center gap-2">
                 <CalendarDaysIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
                 <span class="text-sm font-semibold text-gray-800 truncate">
@@ -2006,14 +2006,14 @@ const editPassengerFromModal = (passenger) => {
               </div>
             </div>
             <div class="px-5 py-3">
-              <p class="text-xs text-gray-400 mb-1.5">Schedule</p>
+              <p class="text-xs text-gray-600 mb-1.5">Schedule</p>
               <div class="flex items-center gap-2">
                 <ClockIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
                 <span class="text-sm font-semibold text-gray-800">{{ outboundSchedule?.time || '—' }}</span>
               </div>
             </div>
             <div class="px-5 py-3">
-              <p class="text-xs text-gray-400 mb-1.5">Passengers</p>
+              <p class="text-xs text-gray-600 mb-1.5">Passengers</p>
               <div class="flex items-center gap-2">
                 <UserIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
                 <span class="text-sm font-semibold text-gray-800">{{ filteredPassengers.length }}</span>
@@ -2070,11 +2070,11 @@ const editPassengerFromModal = (passenger) => {
               <table v-else class="w-full">
                 <thead>
                   <tr class="bg-gray-50 border-b border-gray-200">
-                    <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Name</th>
-                    <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Seat</th>
-                    <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Fare</th>
-                    <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Type</th>
-                    <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Class</th>
+                    <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
+                    <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Seat</th>
+                    <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Fare</th>
+                    <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
+                    <th class="px-3 py-2.5 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Class</th>
                     <th class="px-3 py-2.5"></th>
                   </tr>
                 </thead>
