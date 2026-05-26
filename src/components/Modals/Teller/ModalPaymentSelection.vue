@@ -1,73 +1,180 @@
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed } from "vue";
 import cashImg from "../../../assets/payment-method-images/cash.png";
 import gcashImg from "../../../assets/payment-method-images/gcash.png";
 import paymongoImg from "../../../assets/payment-method-images/paymongo.png";
 import checkImg from "../../../assets/payment-method-images/check.png";
 import creditImg from "../../../assets/payment-method-images/credit.png";
 
+// Icon components
+const CashIcon = {
+  template: `<svg fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>`,
+};
+const GcashIcon = {
+  template: `<div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xs">G</div>`,
+};
+const PaymongoIcon = {
+  template: `<div class="w-6 h-6 bg-purple-600 rounded-full"></div>`,
+};
+const CheckIcon = {
+  template: `<svg fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>`,
+};
+const CardIcon = {
+  template: `<svg fill="currentColor" viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>`,
+};
+const TicketIcon = {
+  template: `<svg fill="currentColor" viewBox="0 0 24 24"><path d="M22 10V6c0-1.11-.89-2-2-2H4c-1.11 0-2 .89-2 2v4c1.11 0 2 .89 2 2s-.89 2-2 2v4c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2v-4c-1.11 0-2-.89-2-2s.89-2 2-2z"/></svg>`,
+};
+const QrCodeIcon = {
+  template: `<svg fill="currentColor" viewBox="0 0 24 24"><path d="M3 11h8V3H3v8zm2-6h4v4H5V5zM3 21h8v-8H3v8zm2-6h4v4H5v-4zM13 3v8h8V3h-8zm6 6h-4V5h4v4zM19 13h2v2h-2zM13 13h2v2h-2zM15 15h2v2h-2zM13 17h2v2h-2zM15 19h2v2h-2zM17 17h2v2h-2zM17 19h2v2h-2zM19 17h2v2h-2z"/></svg>`,
+};
+const BothIcon = {
+  template: `<svg fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>`,
+};
+const DocumentIcon = {
+  template: `<svg fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>`,
+};
+
+// Props
 const props = defineProps({
-  isOpen: { type: Boolean, default: false },
-  passengers: { type: Array, default: () => [] },
-  vehicles: { type: Array, default: () => [] },
-  isProcessingPayment: { type: Boolean, default: false },
+  isOpen: {
+    type: Boolean,
+    default: false,
+  },
+  passengers: {
+    type: Array,
+    default: () => [],
+  },
+  vehicles: {
+    type: Array,
+    default: () => [],
+  },
 });
 
+// Emits
 const emit = defineEmits(["close", "paymentSelected", "printingSelected"]);
 
+// Reactive data
+const searchQuery = ref("");
 const selectedPaymentMethod = ref(null);
 const referenceNumber = ref("");
 const cashRendered = ref(0);
 
+// Payment methods data
+// Payment methods data
 const paymentMethods = ref([
-  { id: "cash",     name: "Cash",     logo: cashImg,     color: "green" },
-  { id: "gcash",    name: "GCash",    logo: gcashImg,    color: "blue" },
-  { id: "paymongo", name: "Paymongo", logo: paymongoImg, color: "purple" },
-  { id: "check",    name: "Check",    logo: checkImg,    color: "gray" },
-  { id: "prepaid",  name: "Prepaid",  logo: creditImg,   color: "indigo" },
-  { id: "credit",   name: "Credit",   logo: creditImg,   color: "red" },
+  {
+    id: "cash",
+    name: "Cash",
+    logo: cashImg,
+    iconColor: "text-green-600",
+  },
+  {
+    id: "gcash",
+    name: "Gcash",
+    logo: gcashImg,
+    iconColor: "text-blue-600",
+  },
+  {
+    id: "paymongo",
+    name: "Paymongo",
+    logo: paymongoImg,
+    iconColor: "text-purple-600",
+  },
+  {
+    id: "check",
+    name: "Check",
+    logo: checkImg,
+    iconColor: "text-gray-600",
+  },
+  {
+    id: "prepaid",
+    name: "Prepaid",
+    logo: creditImg,
+    iconColor: "text-blue-600",
+  },
+  {
+    id: "credit",
+    name: "Credit",
+    logo: creditImg,
+    iconColor: "text-red-600",
+  },
 ]);
 
-const printingOptions = [
-  { id: "eticket", name: "E-Ticket",         bg: "bg-orange-500", icon: "M15 5H9a2 2 0 00-2 2v10a2 2 0 002 2h6a2 2 0 002-2V7a2 2 0 00-2-2zM9 7h6v2H9V7zm0 4h6v2H9v-2zm0 4h4v2H9v-2z" },
-  { id: "qrcode",  name: "QR Code",          bg: "bg-blue-500",   icon: "M3 3h7v7H3V3zm2 2v3h3V5H5zm7-2h7v7h-7V3zm2 2v3h3V5h-3zM3 13h7v7H3v-7zm2 2v3h3v-3H5zm9 0h2v2h-2v-2zm2 2h2v2h-2v-2zm-2 2h2v2h-2v-2zm4-4h2v2h-2v-2zm-2 4h2v2h-2v-2z" },
-  { id: "both",    name: "E-Ticket + QR",    bg: "bg-teal-500",   icon: "M4 6h16M4 10h16M4 14h10M4 18h6" },
-  { id: "bill",    name: "Bill of Lading",   bg: "bg-slate-600",  icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" },
-];
+// Printing options data
+const printingOptions = ref([
+  {
+    id: "eticket",
+    name: "E-ticket",
+    icon: TicketIcon,
+    bgColor: "bg-orange-500",
+  },
+  {
+    id: "qrcode",
+    name: "QR Code",
+    icon: QrCodeIcon,
+    bgColor: "bg-blue-500",
+  },
+  {
+    id: "both",
+    name: "E-ticket & QR Code",
+    icon: BothIcon,
+    bgColor: "bg-green-500",
+  },
+  {
+    id: "bill",
+    name: "Bill of Lading",
+    icon: DocumentIcon,
+    bgColor: "bg-teal-500",
+  },
+]);
 
-const passengerFare = computed(() =>
-  props.passengers.reduce((s, p) => s + parseFloat(p.fare || 0), 0)
-);
-const vehicleFare = computed(() =>
-  props.vehicles.reduce((s, v) => s + parseFloat(v.vehicle?.rate || 0), 0)
-);
-const adminFee = computed(() =>
-  props.passengers.length * 2 + props.vehicles.length * 25
-);
-const discount = computed(() =>
-  props.passengers.reduce((s, p) => s + parseFloat(p.discountAmount || 0), 0)
-);
-const totalAmount = computed(() =>
-  passengerFare.value + vehicleFare.value + adminFee.value - discount.value
-);
-const change = computed(() =>
-  Math.max(0, cashRendered.value - totalAmount.value)
-);
-
-const processingOptionId = ref(null);
-
-watch(() => props.isProcessingPayment, (val) => {
-  if (!val) processingOptionId.value = null;
+// Computed properties
+const filteredPaymentMethods = computed(() => {
+  if (!searchQuery.value) return paymentMethods.value;
+  return paymentMethods.value.filter((method) =>
+    method.name.toLowerCase().includes(searchQuery.value.toLowerCase()),
+  );
 });
+
+// Calculate totals from passengers and vehicles
+const passengerFare = computed(() => {
+  return props.passengers.reduce((sum, p) => sum + parseFloat(p.fare || 0), 0);
+});
+
+const passengerAdminFee = computed(() => {
+  // Admin fee: 2 pesos per passenger, 25 pesos per vehicle
+  return (props.passengers.length * 2) + (props.vehicles.length * 25);
+});
+
+const passengerDiscount = computed(() => {
+  return props.passengers.reduce((sum, p) => sum + parseFloat(p.discountAmount || 0), 0);
+});
+
+const vehicleFare = computed(() => {
+  return props.vehicles.reduce((sum, v) => sum + parseFloat(v.vehicle?.rate || 0), 0);
+});
+
+const totalAmount = computed(() => {
+  return passengerFare.value + passengerAdminFee.value + vehicleFare.value - passengerDiscount.value;
+});
+
+const change = computed(() => {
+  return Math.max(0, cashRendered.value - totalAmount.value);
+});
+
+// Methods
+const closeModal = () => {
+  emit("close");
+};
 
 const selectPaymentMethod = (method) => {
   selectedPaymentMethod.value = method;
   emit("paymentSelected", method);
 };
 
-const handlePrintingClick = (option) => {
-  processingOptionId.value = option.id;
-  emit("printingSelected", option);
+const selectPrintingOption = (option) => {
+  emit("printingSelected", option, referenceNumber.value);
 };
 </script>
 
@@ -75,178 +182,196 @@ const handlePrintingClick = (option) => {
   <transition name="modal-fade">
     <div
       v-if="isOpen"
-      class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
     >
       <div
-        class="bg-white rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden"
-        style="max-height: 92vh;"
-        @click.stop
+        class="modal-card bg-white rounded-lg w-full max-w-2xl mx-4 max-h-[90vh]"
       >
         <!-- Header -->
-        <div class="flex items-center justify-between px-6 py-4 bg-blue-900 text-white">
-          <div>
-            <h2 class="text-lg font-bold tracking-tight">Complete Payment</h2>
-            <p class="text-blue-300 text-xs mt-0.5">Select payment method and confirm the transaction</p>
-          </div>
-          <button
-            @click="emit('close')"
-            class="p-2 rounded-lg hover:bg-blue-800 text-blue-200 hover:text-white transition-colors"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        <div class="flex items-center justify-between p-4 border-b">
+          <h2 class="text-lg font-semibold text-gray-900">
+            Select Payment Method
+          </h2>
+          <button @click="closeModal" class="text-gray-400 hover:text-gray-600">
+            <svg
+              class="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
 
-        <!-- Body: two columns -->
-        <div class="flex overflow-hidden" style="max-height: calc(92vh - 64px)">
+        <div class="p-4 space-y-6 max-h-[70vh] overflow-y-scroll">
+          <!-- Search -->
+          <div class="relative">
+            <svg
+              class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="Search payment method..."
+              class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
 
-          <!-- LEFT: Payment method selection + input -->
-          <div class="w-2/5 border-r border-gray-200 p-6 overflow-y-auto space-y-6">
-
-            <!-- Payment Methods -->
-            <div>
-              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Payment Method</p>
-              <div class="grid grid-cols-3 gap-2">
-                <button
-                  v-for="method in paymentMethods"
-                  :key="method.id"
-                  @click="selectPaymentMethod(method)"
-                  :class="[
-                    'relative flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all',
-                    selectedPaymentMethod?.id === method.id
-                      ? 'border-blue-600 bg-blue-50 shadow-sm'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  ]"
-                >
-                  <!-- Selected indicator — absolute top-right -->
-                  <div
-                    class="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-blue-600 flex items-center justify-center transition-opacity duration-150"
-                    :class="selectedPaymentMethod?.id === method.id ? 'opacity-100' : 'opacity-0'"
-                  >
-                    <svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414L8.414 15l-4.121-4.121a1 1 0 011.414-1.414L8.414 12.172l6.879-6.879a1 1 0 011.414 0z" clip-rule="evenodd" />
-                    </svg>
-                  </div>
-                  <div class="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100">
-                    <img :src="method.logo" :alt="method.name" class="w-7 h-7 object-contain" />
-                  </div>
-                  <span class="text-xs font-medium text-gray-700 leading-tight text-center">{{ method.name }}</span>
-                </button>
-              </div>
+          <!-- Payment Methods -->
+          <div>
+            <h3 class="text-sm font-medium text-gray-700 mb-3">
+              Payment Methods
+            </h3>
+            <div class="grid grid-cols-3 gap-3">
+              <button
+                v-for="method in filteredPaymentMethods"
+                :key="method.id"
+                type="button"
+                @click="selectPaymentMethod(method)"
+                :class="[
+                  'flex flex-col items-center p-3 border rounded-lg transition-colors',
+                  selectedPaymentMethod?.id === method.id
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300',
+                ]"
+              >
+                <div class="w-8 h-8 mb-2 flex items-center justify-center">
+                  <img
+                    v-if="method.logo"
+                    :src="method.logo"
+                    :alt="method.name + ' logo'"
+                    class="w-6 h-6 object-contain"
+                  />
+                  <component
+                    v-else
+                    :is="method.icon"
+                    class="w-6 h-6"
+                    :class="method.iconColor"
+                  />
+                </div>
+                <span class="text-xs font-medium text-gray-700">{{
+                  method.name
+                }}</span>
+              </button>
             </div>
+          </div>
 
-            <!-- Payment Input -->
-            <div class="space-y-4">
-              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment Details</p>
-
-              <!-- Reference Number (non-cash) — always in DOM to prevent shift -->
-              <div :class="selectedPaymentMethod && selectedPaymentMethod.id !== 'cash' ? '' : 'invisible'">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Reference Number</label>
-                <input
-                  v-model="referenceNumber"
-                  type="text"
-                  placeholder="Enter reference number"
-                  class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+          <!-- Payment Breakdown -->
+          <div>
+            <h3 class="text-sm font-medium text-gray-700 mb-3">
+              Payment Breakdown
+            </h3>
+            <div class="space-y-2 text-sm">
+              <div class="flex justify-between">
+                <span class="text-gray-600">Passenger Count</span>
+                <span class="font-medium">{{ passengers.length }}</span>
               </div>
-
-              <!-- Cash Rendered -->
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Cash Rendered</label>
-                <input
-                  v-model="cashRendered"
-                  type="number"
-                  placeholder="0.00"
-                  class="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+              <div class="flex justify-between">
+                <span class="text-gray-600">Passenger Fare</span>
+                <span class="font-medium">₱{{ passengerFare.toFixed(2) }}</span>
               </div>
-
-              <!-- Change -->
-              <div class="flex items-center justify-between bg-gray-50 px-4 py-3 rounded-lg border border-gray-200">
-                <span class="text-sm text-gray-600 font-medium">Change</span>
-                <span class="text-lg font-bold" :class="change > 0 ? 'text-green-600' : 'text-gray-700'">
-                  ₱{{ change.toFixed(2) }}
-                </span>
+              <div class="flex justify-between" v-if="vehicles.length > 0">
+                <span class="text-gray-600">Vehicle Count</span>
+                <span class="font-medium">{{ vehicles.length }}</span>
+              </div>
+              <div class="flex justify-between" v-if="vehicles.length > 0">
+                <span class="text-gray-600">Vehicle Fare</span>
+                <span class="font-medium">₱{{ vehicleFare.toFixed(2) }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Admin Fee</span>
+                <span class="font-medium">₱{{ passengerAdminFee.toFixed(2) }}</span>
+              </div>
+              <div class="flex justify-between" v-if="passengerDiscount > 0">
+                <span class="text-gray-600">Discount</span>
+                <span class="text-red-600">-₱{{ passengerDiscount.toFixed(2) }}</span>
+              </div>
+              <div class="flex justify-between pt-2 border-t font-semibold">
+                <span class="text-gray-900">Amount To Be Paid</span>
+                <span class="text-gray-900">₱{{ totalAmount.toFixed(2) }}</span>
               </div>
             </div>
           </div>
 
-          <!-- RIGHT: Breakdown + Printing -->
-          <div class="w-3/5 p-6 overflow-y-auto bg-gray-50 space-y-6 flex flex-col">
-
-            <!-- Summary Banner -->
-            <div class="bg-blue-900 rounded-xl px-6 py-4 text-white flex items-center justify-between">
-              <div>
-                <p class="text-blue-300 text-xs font-medium uppercase tracking-wider">Total Amount Due</p>
-                <p class="text-3xl font-bold mt-1">₱{{ totalAmount.toFixed(2) }}</p>
-              </div>
-              <div class="text-right text-sm text-blue-200 space-y-1">
-                <p>{{ passengers.length }} Passenger{{ passengers.length !== 1 ? 's' : '' }}</p>
-                <p v-if="vehicles.length">{{ vehicles.length }} Vehicle{{ vehicles.length !== 1 ? 's' : '' }}</p>
-              </div>
-            </div>
-
-            <!-- Breakdown Table -->
-            <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <div class="px-4 py-3 border-b border-gray-100 bg-gray-50">
-                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Breakdown</p>
-              </div>
-              <div class="divide-y divide-gray-100 text-sm">
-                <div class="flex justify-between px-4 py-2.5">
-                  <span class="text-gray-600">Passenger Fare</span>
-                  <span class="font-medium text-gray-900">₱{{ passengerFare.toFixed(2) }}</span>
-                </div>
-                <div v-if="vehicles.length" class="flex justify-between px-4 py-2.5">
-                  <span class="text-gray-600">Vehicle Fare</span>
-                  <span class="font-medium text-gray-900">₱{{ vehicleFare.toFixed(2) }}</span>
-                </div>
-                <div class="flex justify-between px-4 py-2.5">
-                  <span class="text-gray-600">Admin Fee</span>
-                  <span class="font-medium text-gray-900">₱{{ adminFee.toFixed(2) }}</span>
-                </div>
-                <div v-if="discount > 0" class="flex justify-between px-4 py-2.5">
-                  <span class="text-gray-600">Discount</span>
-                  <span class="font-medium text-green-600">-₱{{ discount.toFixed(2) }}</span>
-                </div>
-                <div class="flex justify-between px-4 py-3 bg-blue-50 font-semibold">
-                  <span class="text-blue-900">Total</span>
-                  <span class="text-blue-900">₱{{ totalAmount.toFixed(2) }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Printing Options -->
-            <div class="flex-1">
-              <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Print & Confirm</p>
-              <div class="grid grid-cols-2 gap-3">
-                <button
-                  v-for="option in printingOptions"
-                  :key="option.id"
-                  @click="handlePrintingClick(option)"
-                  :disabled="isProcessingPayment"
-                  :class="[option.bg, 'flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl text-white font-medium text-sm transition-all hover:opacity-90 hover:shadow-md active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed']"
+          <!-- Payment -->
+          <div>
+            <h3 class="text-sm font-medium text-gray-700 mb-3">Payment</h3>
+            <div class="space-y-3">
+              <!-- Reference Number: show unless cash is selected -->
+              <div
+                v-if="
+                  selectedPaymentMethod && selectedPaymentMethod.id !== 'cash'
+                "
+              >
+                <label class="block text-xs text-gray-600 mb-1"
+                  >Reference Number</label
                 >
-                  <svg
-                    v-if="processingOptionId === option.id"
-                    class="animate-spin w-4 h-4 flex-shrink-0"
-                    fill="none" viewBox="0 0 24 24"
-                  >
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 22 6.477 22 12h-4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  <svg
-                    v-else
-                    class="w-5 h-5 flex-shrink-0"
-                    fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"
-                  >
-                    <path stroke-linecap="round" stroke-linejoin="round" :d="option.icon" />
-                  </svg>
-                  <span>{{ processingOptionId === option.id ? 'Processing...' : option.name }}</span>
-                </button>
+                <input
+                  v-model="referenceNumber"
+                  type="text"
+                  placeholder="00.00"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+              </div>
+              <div>
+                <label class="block text-xs text-gray-600 mb-1"
+                  >Cash Rendered</label
+                >
+                <div class="flex gap-2">
+                  <input
+                    v-model="cashRendered"
+                    type="number"
+                    placeholder="00.00"
+                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  />
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-600">Change</span>
+                    <span
+                      class="px-2 py-1 bg-gray-100 rounded text-sm font-medium"
+                      >{{ change.toFixed(2) }}</span
+                    >
+                  </div>
+                </div>
               </div>
             </div>
+          </div>
 
+          <!-- Printing Options -->
+          <div>
+            <h3 class="text-sm font-medium text-gray-700 mb-3">
+              Printing Options
+            </h3>
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                v-for="option in printingOptions"
+                :key="option.id"
+                @click="selectPrintingOption(option)"
+                :class="[
+                  'flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-white text-sm font-medium transition-colors',
+                  option.bgColor,
+                  'hover:opacity-90',
+                ]"
+              >
+                <component :is="option.icon" class="w-4 h-4" />
+                {{ option.name }}
+              </button>
+            </div>
           </div>
         </div>
       </div>

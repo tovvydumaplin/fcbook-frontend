@@ -21,7 +21,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['update:activeSerialTab', 'newTransaction', 'closeTab']);
+const emit = defineEmits(['update:activeSerialTab', 'newTransaction', 'closeTab', 'openBookings']);
 const dropdownOpen = ref(false);
 const userName = ref("User"); // You can get this from localStorage if needed
 const router = useRouter();
@@ -102,12 +102,19 @@ header {
         + New Transaction
       </button>
     </nav>
-    <!-- Refunds Button -->
+    <!-- Refunds and Bookings Buttons -->
     <div class="flex items-center gap-4">
       <!-- Serial Number -->
       <span v-if="serialNo" class="text-sm font-semibold text-white bg-blue-900 px-3 py-1.5 rounded">
         {{ serialNo }}
       </span>
+      
+      <button
+        @click="emit('openBookings')"
+        class="px-4 py-1.5 bg-green-600 text-white text-sm font-medium rounded hover:bg-green-700 transition-colors duration-200"
+      >
+        Bookings Demo
+      </button>
       
       <button
         @click="router.push('/teller-refunds')"
