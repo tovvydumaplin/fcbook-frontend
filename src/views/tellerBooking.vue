@@ -234,7 +234,7 @@ const bookVehicleEntry = async () => {
 
   // Build API request body
   const requestBody = {
-    serial_no: serialNo.value,
+    serial_no: activeSerialTab.value || serialNo.value,
     travel_date: outboundDate.value,
     schedule_id: outboundSchedule.value?.schedule_id || outboundSchedule.value?.id,
     schedule_snapshot: outboundSchedule.value?.time || outboundSchedule.value,
@@ -651,6 +651,41 @@ const proceedToPayment = () => {
   isPaymentModalOpen.value = true;
 };
 
+// Populate date/schedule/route from a given serial's first booking.
+// Called on mount and whenever the active tab changes.
+const applySerialContext = async (serial) => {
+  const firstBooking =
+    passengers.value.find(p => p.serialNo === serial) ||
+    vehicles.value.find(v => v.serialNo === serial);
+
+  if (firstBooking?.date) {
+    outboundDate.value = firstBooking.date;
+  } else {
+    outboundDate.value = new Date().toISOString().split("T")[0];
+  }
+
+  if (firstBooking?.routeId) {
+    const matchedRoute = routes.value.find(r => r.route_id === Number(firstBooking.routeId));
+    if (matchedRoute) selectedRoute.value = matchedRoute;
+  }
+
+  // watch(selectedRoute) clears outboundSchedule — wait for it before setting
+  await nextTick();
+
+  if (firstBooking?.scheduleBookingId) {
+    const targetId = Number(firstBooking.scheduleBookingId);
+    const matched =
+      allSchedules.value.find(s => Number(s.id) === targetId) ||
+      allSchedules.value.find(s => s.time === firstBooking.schedule);
+    if (matched) outboundSchedule.value = matched;
+  }
+};
+
+// Re-apply when user switches serial tabs
+watch(activeSerialTab, (serial) => {
+  if (serial) applySerialContext(serial);
+});
+
 onMounted(async () => {
   // Don't generate serial yet - will select latest or generate after fetching
   
@@ -795,6 +830,9 @@ onMounted(async () => {
       if (routes.value.length > 0) {
         selectedRoute.value = routes.value[0];
       }
+
+      // Initial population for the active serial
+      applySerialContext(activeSerialTab.value);
     } else {
       console.error("Failed to fetch routes:", result.message || result);
     }
@@ -980,9 +1018,9 @@ const fetchBookedPassengers = async () => {
       if (result.success && result.data?.booked_passengers) {
         // Map API response to display format
         passengers.value = result.data.booked_passengers.map((p) => ({
-          date: p.travel_date,
-          route: p.route_snapshot,
-          schedule: p.schedule_snapshot,
+          date: p.temp_booking?.travel_date?.split("T")[0] ?? "",
+          route: p.temp_booking?.route_snapshot ?? "",
+          schedule: p.temp_booking?.schedule_snapshot ?? "",
           category: "Passenger",
           type: p.passenger_type_snapshot,
           accommodation: p.passenger_category_snapshot,
@@ -992,14 +1030,18 @@ const fetchBookedPassengers = async () => {
           seat: p.seat_number_snapshot,
           fare: parseFloat(p.fare).toFixed(2),
           cargoFare: "0.00",
-          adminFee: "0.00", // Not in API response
+          adminFee: "0.00",
           discountAmount: parseFloat(p.discount_amount).toFixed(2),
           vehicle: null,
-          institutionalAccount: p.institutional_account_id ? { id: p.institutional_account_id } : null,
+          institutionalAccount: p.temp_booking?.institutional_account_id
+            ? { id: p.temp_booking.institutional_account_id, ia_name: p.temp_booking.institutional_account_snapshot }
+            : null,
           passengerTypeDetails: { type: p.passenger_type_snapshot },
           bookedPassengerId: p.booked_passenger_id,
-          bookingId: p.booking_id,
-          scheduleBookingId: p.schedule_booking_id,
+          bookingId: p.temp_booking_id,
+          scheduleBookingId: p.temp_booking?.schedule_booking_id ?? null,
+          scheduleId: p.temp_booking?.schedule_id ?? null,
+          routeId: p.temp_booking?.route_id ?? null,
           serialNo: p.serial_no,
         }));
       }
@@ -1110,7 +1152,7 @@ const bookEntry = async () => {
 
   // Build API request body
   const requestBody = {
-    serial_no: serialNo.value,
+    serial_no: activeSerialTab.value || serialNo.value,
     travel_date: outboundDate.value,
     schedule_id: outboundSchedule.value?.schedule_id || outboundSchedule.value?.id,
     schedule_snapshot: outboundSchedule.value?.time || outboundSchedule.value,
@@ -1358,7 +1400,7 @@ const handlePrintingSelected = async (option, referenceNumber = null) => {
       const grand_total = total_fare + total_admin_fee - total_discount;
 
       const paymentBody = {
-        serial_no: serialNo.value,
+        serial_no: activeSerialTab.value || serialNo.value,
         booking_id: bookingIdToUse,
         total_fare: parseFloat(total_fare.toFixed(2)),
         total_discount: parseFloat(total_discount.toFixed(2)),
@@ -1426,46 +1468,29 @@ const filteredSchedules = computed(() => {
   };
 });
 
-const totalOriginalFare = computed(() => {
-  const passengerFare = filteredPassengers.value.reduce(
-    (sum, p) => sum + Number(p.fare) + Number(p.discountAmount),
-    0,
-  );
-  const vehicleFare = filteredVehicles.value.reduce(
-    (sum, v) => sum + Number(v.vehicle?.rate || 0),
-    0,
-  );
-  return passengerFare + vehicleFare;
-});
-
-const totalFare = computed(() =>
-  filteredPassengers.value.reduce((sum, p) => sum + parseFloat(p.fare), 0),
+// p.fare from API is already the post-discount fare
+const totalPassengerFare = computed(() =>
+  filteredPassengers.value.reduce((sum, p) => sum + parseFloat(p.fare || 0), 0)
+);
+const totalVehicleFare = computed(() =>
+  filteredVehicles.value.reduce((sum, v) => sum + parseFloat(v.vehicle?.rate || 0), 0)
 );
 const totalCargo = computed(() =>
-  filteredPassengers.value.reduce((sum, p) => sum + parseFloat(p.cargoFare), 0),
+  filteredPassengers.value.reduce((sum, p) => sum + parseFloat(p.cargoFare || 0), 0)
 );
-const totalAdmin = computed(() => {
-  // Admin fee: 2 pesos per passenger, 25 pesos per vehicle
-  return (filteredPassengers.value.length * 2) + (filteredVehicles.value.length * 25);
-});
+const totalAdmin = computed(() =>
+  filteredPassengers.value.length * 2 + filteredVehicles.value.length * 25
+);
 const totalDiscount = computed(() =>
-  filteredPassengers.value.reduce(
-    (sum, p) => sum + parseFloat(p.discountAmount || 0),
-    0,
-  ),
+  filteredPassengers.value.reduce((sum, p) => sum + parseFloat(p.discountAmount || 0), 0)
 );
-const totalAmount = computed(() => {
-  const vehicleFare = filteredVehicles.value.reduce(
-    (sum, v) => sum + Number(v.vehicle?.rate || 0),
-    0,
-  );
-  return (
-    totalOriginalFare.value +
-    totalCargo.value +
-    totalAdmin.value -
-    totalDiscount.value
-  );
-});
+const totalAmount = computed(() =>
+  totalPassengerFare.value + totalVehicleFare.value + totalCargo.value + totalAdmin.value
+);
+
+// Keep for backward compat with any remaining references
+const totalOriginalFare = totalPassengerFare;
+const totalFare = totalPassengerFare;
 
 // Get unique serial numbers from all bookings
 const uniqueSerialNumbers = computed(() => {
@@ -1506,6 +1531,56 @@ const handleNewTransaction = () => {
   activeTab.value = "Passenger";
   
   console.log("New transaction started with serial:", serialNo.value);
+};
+
+// Handle closing a serial tab — deletes all its bookings from backend and local state
+const handleCloseTab = async (serialToClose) => {
+  const stored = localStorage.getItem("token");
+  if (!stored) return;
+  const authHeader = stored.startsWith("Bearer ") ? stored : `Bearer ${stored}`;
+
+  const passengersToDelete = passengers.value.filter(
+    (p) => (p.serialNo || serialNo.value) === serialToClose && p.bookedPassengerId
+  );
+  const vehiclesToDelete = vehicles.value.filter(
+    (v) => (v.serialNo || serialNo.value) === serialToClose && v.bookedVehicleId
+  );
+
+  await Promise.all([
+    ...passengersToDelete.map((p) =>
+      fetch(`${apiBase}/teller-booking/book-passenger/${p.bookedPassengerId}`, {
+        method: "DELETE",
+        headers: { Authorization: authHeader },
+      })
+    ),
+    ...vehiclesToDelete.map((v) =>
+      fetch(`${apiBase}/teller-booking/book-vehicle/${v.bookedVehicleId}`, {
+        method: "DELETE",
+        headers: { Authorization: authHeader },
+      })
+    ),
+  ]);
+
+  // Remove from local state
+  passengers.value = passengers.value.filter(
+    (p) => (p.serialNo || serialNo.value) !== serialToClose
+  );
+  vehicles.value = vehicles.value.filter(
+    (v) => (v.serialNo || serialNo.value) !== serialToClose
+  );
+
+  // If closing the active tab, switch to another or generate new
+  if (activeSerialTab.value === serialToClose || serialNo.value === serialToClose) {
+    const remaining = uniqueSerialNumbers.value.filter((s) => s !== serialToClose);
+    if (remaining.length > 0) {
+      serialNo.value = remaining[remaining.length - 1];
+      activeSerialTab.value = serialNo.value;
+    } else {
+      generateSerialNo();
+    }
+    sharedBookingId.value = null;
+    sharedScheduleBookingId.value = null;
+  }
 };
 
 // Handle opening bookings modal
@@ -1862,14 +1937,7 @@ const editPassengerFromModal = (passenger) => {
 </style>
 
 <template>
-  <TellerHeader 
-    :serialNo="serialNo" 
-    :uniqueSerialNumbers="uniqueSerialNumbers"
-    :activeSerialTab="activeSerialTab"
-    @update:activeSerialTab="activeSerialTab = $event"
-    @newTransaction="handleNewTransaction"
-    @openBookings="handleOpenBookings"
-  />
+  <!-- Modals (fixed-positioned, order doesn't affect layout) -->
   <!-- Passenger View -->
   <ViewTellerPassenger
     :isOpen="isViewPassengerOpen"
@@ -1921,316 +1989,224 @@ const editPassengerFromModal = (passenger) => {
     @close="isBookingsModalOpen = false"
   />
 
-  <main>
-    <div class="w-full grid grid-cols-[0.75fr_1.25fr]">
-      <div
-        class="left-panel h-screen overflow-y-auto scrollbar-hidden bg-white"
-      >
-        <div class="top-header border-b border-gray-300 pt-8 pb-8 pl-10 pr-10">
-          <div class="flex justify-between items-start mb-6">
-            <div class="text-header">
-              <p class="text-neutral-700 text-3xl font-bold">
-                {{ originPort }} - {{ destinationPort }}
-              </p>
-              <p class="text-neutral-600 font-medium text-base">FCM 19</p>
-            </div>
-            <div class="flex items-center gap-3">
-              <button
-                class="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700 flex items-center gap-2 cursor-pointer transition-colors"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+  <!-- App shell: header fixed, panels fill remaining height -->
+  <div class="h-screen flex flex-col overflow-hidden">
+    <TellerHeader
+      :serialNo="serialNo"
+      :uniqueSerialNumbers="uniqueSerialNumbers"
+      :activeSerialTab="activeSerialTab"
+      @update:activeSerialTab="activeSerialTab = $event"
+      @newTransaction="handleNewTransaction"
+      @closeTab="handleCloseTab"
+      @openBookings="handleOpenBookings"
+    />
+  <main class="flex-1 min-h-0 grid grid-cols-[0.75fr_1.25fr]">
+      <!-- LEFT PANEL -->
+      <div class="left-panel h-full flex flex-col bg-white border-r border-gray-200">
+
+        <!-- Scrollable content -->
+        <div class="flex-1 overflow-y-auto scrollbar-hidden px-8 pt-7 pb-6 space-y-6">
+
+          <!-- Route Header -->
+          <div class="flex items-start justify-between">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-widest text-gray-600 mb-1">Active Route</p>
+              <h2 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                {{ originPort }}
+                <svg class="w-5 h-5 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
-                Book Different Port
-              </button>
-            </div>
-          </div>
-          <!-- Details -->
-          <div class="booking__box grid grid-cols-3 gap-6">
-            <div class="booking__container">
-              <div class="booking__item flex items-center gap-4">
-                <div class="icon__box">
-                  <CalendarDaysIcon class="text-blue-900 w-6 h-6" />
-                </div>
-                <div class="description__box">
-                  <p class="text-gray-400 text-sm">Date</p>
-                  <p class="text-neutral-700 text-base font-semibold">
-                    {{ outboundDate || "Select a date" }}
-                    <span v-if="returnTrip && returnDate" class="text-blue-600"> ⇄ {{ returnDate }}</span>
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div class="booking__container">
-              <div class="booking__item flex items-center gap-4">
-                <div class="icon__box">
-                  <ClockIcon class="text-blue-900 w-6 h-6" />
-                </div>
-                <div class="description__box">
-                  <p class="text-gray-400 text-sm">Schedule</p>
-                  <p class="text-neutral-700 text-base font-semibold">
-                    {{ outboundSchedule?.time || "00:00 AM" }}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div class="booking__container">
-              <div class="booking__item flex items-center gap-4">
-                <div class="icon__box">
-                  <UserIcon class="text-blue-900 w-6 h-6" />
-                </div>
-                <div class="description__box">
-                  <p class="text-gray-400 text-sm">Passengers</p>
-                  <p class="text-neutral-700 text-base font-semibold">
-                    {{ filteredPassengers.length }}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <!-- Payment Breakdown Section -->
-        <div class="main-body pt-8 pb-8 pl-10 pr-10">
-          <div
-            class="payment-breakdown border border-gray-300 py-8 px-7 rounded-lg mb-6"
-          >
-            <p class="text-neutral-700 text-2xl font-bold">Payment Breakdown</p>
-            <div
-              class="fares flex justify-between mb-2 border-b border-gray-300 pt-7 pb-4"
-            >
-              <p class="fare__text">Fare:</p>
-              <p class="fare__amount">
-                {{ totalOriginalFare.toFixed(2) }}
+                {{ destinationPort }}
+              </h2>
+              <p class="text-sm text-gray-400 mt-0.5">
+                {{ outboundSchedule?.code || 'No vessel selected' }}
               </p>
             </div>
-            <div
-              class="fares flex justify-between mb-2 border-b border-gray-300 pb-4"
-            >
-              <p class="fare__text">Cargo Rate:</p>
-              <p class="fare__amount">{{ totalCargo.toFixed(2) }}</p>
-            </div>
-            <div
-              class="fares flex justify-between mb-2 border-b border-gray-300 pb-4"
-            >
-              <p class="fare__text">Admin Fee:</p>
-              <p class="fare__amount">{{ totalAdmin.toFixed(2) }}</p>
-            </div>
-            <div
-              class="fares flex justify-between mb-2 border-b border-gray-300 pb-4"
-            >
-              <p class="fare__text">Discount:</p>
-              <p class="fare__amount">-{{ totalDiscount.toFixed(2) }}</p>
-            </div>
-            <div
-              class="fares flex justify-between mb-2 border-b border-gray-300 pb-4"
-            >
-              <p class="fare__text font-bold">Amount to be paid:</p>
-              <p class="fare__amount font-bold">{{ totalAmount.toFixed(2) }}</p>
-            </div>
+            <button class="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition-colors flex-shrink-0 mt-1">
+              <ArrowsRightLeftIcon class="w-4 h-4" />
+              Different Port
+            </button>
           </div>
-          
-          <div class="max-w-6xl mx-auto rounded-lg">
-            <div class="mb-6">
-              <div class="flex items-center justify-between">
-                <h1 class="text-2xl font-semibold text-gray-800">
-                  Passenger List
-                </h1>
-                <span v-if="selectedInstitutionalAccount" class="text-base font-medium text-blue-900">
-                  {{ selectedInstitutionalAccount.ia_name }}
-                </span>
+
+          <!-- Trip Details Card -->
+          <div class="grid grid-cols-3 divide-x divide-gray-200 border border-gray-200 rounded-xl overflow-hidden">
+            <div class="px-4 py-3">
+              <p class="text-xs text-gray-400 mb-1">Date</p>
+              <div class="flex items-center gap-1.5">
+                <CalendarDaysIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <p class="text-sm font-semibold text-gray-800">
+                  {{ outboundDate || filteredPassengers[0]?.date || filteredVehicles[0]?.date || '—' }}
+                  <span v-if="returnTrip && returnDate" class="text-blue-600"> ⇄ {{ returnDate }}</span>
+                </p>
               </div>
             </div>
-            <div class="rounded-lg overflow-hidden">
-              <div class="overflow-x-auto">
-                <table class="w-full">
-                  <thead>
-                    <tr class="bg-blue-900 text-white">
-                      <th class="px-3 py-3 text-left font-semibold text-sm">
-                        Fullname
-                      </th>
-                      <th class="px-3 py-3 text-left font-semibold text-sm">
-                        Seat
-                      </th>
-                      <th class="px-3 py-3 text-left font-semibold text-sm">
-                        Fare
-                      </th>
-                      <th class="px-3 py-3 text-left font-semibold text-sm">
-                        Type
-                      </th>
-                      <th class="px-3 py-3 text-left font-semibold text-sm">
-                        Class
-                      </th>
-                      <th class="px-3 py-3 text-left font-semibold text-sm">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <!-- If no passengers -->
-                    <tr v-if="filteredPassengers.length === 0">
-                      <td
-                        colspan="6"
-                        class="px-2 py-4 text-center text-gray-500 text-sm italic"
-                      >
-                        No passengers
-                      </td>
-                    </tr>
+            <div class="px-4 py-3">
+              <p class="text-xs text-gray-400 mb-1">Schedule</p>
+              <div class="flex items-center gap-1.5">
+                <ClockIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <p class="text-sm font-semibold text-gray-800">{{ outboundSchedule?.time || filteredPassengers[0]?.schedule || filteredVehicles[0]?.schedule || '—' }}</p>
+              </div>
+            </div>
+            <div class="px-4 py-3">
+              <p class="text-xs text-gray-400 mb-1">Passengers</p>
+              <div class="flex items-center gap-1.5">
+                <UserIcon class="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <p class="text-sm font-bold text-blue-600">{{ filteredPassengers.length }}</p>
+              </div>
+            </div>
+          </div>
 
-                    <!-- If there are passengers -->
-                    <tr
-                      v-else
-                      v-for="(p, index) in filteredPassengers"
-                      :key="index"
-                      class="bg-white hover:bg-gray-50"
-                    >
-                      <td class="px-2 py-2 font-medium text-gray-900 text-sm">
-                        {{ p.fullname }}
-                      </td>
-                      <td class="px-2 py-2 text-gray-700 text-sm">
-                        {{ p.seat }}
-                      </td>
-                      <td class="px-2 py-2 text-gray-700 text-sm">
-                        ₱{{ p.fare }}
-                        <span v-if="parseFloat(p.discountAmount) > 0" class="text-xs text-green-600 ml-1">
-                          (-₱{{ p.discountAmount }})
-                        </span>
-                      </td>
-                      <td class="px-2 py-2 text-gray-700 text-sm capitalize">
-                        {{ p.passengerTypeDetails?.type || 'Regular' }}
-                        <span v-if="p.passengerTypeDetails?.discount && parseFloat(p.passengerTypeDetails.discount) > 0" class="text-xs text-green-600 ml-1">
-                          ({{ (parseFloat(p.passengerTypeDetails.discount) * 100).toFixed(0) }}%)
-                        </span>
-                      </td>
-                      <td class="px-2 py-2 text-gray-700 text-sm">
-                        {{ p.accommodation }}
-                      </td>
-                      <td class="px-2 py-2">
+          <!-- Payment Breakdown -->
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-widest text-gray-600 mb-2">Payment Breakdown</p>
+            <div class="border border-gray-200 rounded-xl overflow-hidden">
+              <div class="divide-y divide-gray-100 text-sm">
+                <div class="flex justify-between items-center px-4 py-3">
+                  <span class="text-gray-500">Passenger Fare</span>
+                  <span class="font-medium text-gray-800">₱{{ totalPassengerFare.toFixed(2) }}</span>
+                </div>
+                <div v-if="totalVehicleFare > 0" class="flex justify-between items-center px-4 py-3">
+                  <span class="text-gray-500">Vehicle Fare</span>
+                  <span class="font-medium text-gray-800">₱{{ totalVehicleFare.toFixed(2) }}</span>
+                </div>
+                <div v-if="totalCargo > 0" class="flex justify-between items-center px-4 py-3">
+                  <span class="text-gray-500">Cargo Rate</span>
+                  <span class="font-medium text-gray-800">₱{{ totalCargo.toFixed(2) }}</span>
+                </div>
+                <div class="flex justify-between items-center px-4 py-3">
+                  <span class="text-gray-500">Admin Fee</span>
+                  <span class="font-medium text-gray-800">₱{{ totalAdmin.toFixed(2) }}</span>
+                </div>
+                <div class="flex justify-between items-center px-4 py-3.5 bg-gray-50">
+                  <span class="font-bold text-gray-900">Total Due</span>
+                  <span class="font-bold text-gray-900 text-base">₱{{ totalAmount.toFixed(2) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Passenger List -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <p class="text-xs font-semibold uppercase tracking-widest text-gray-600">Passenger List</p>
+              <span v-if="selectedInstitutionalAccount" class="text-xs font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full">
+                {{ selectedInstitutionalAccount.ia_name }}
+              </span>
+            </div>
+            <div class="border border-gray-200 rounded-xl overflow-hidden">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="bg-gray-50 border-b border-gray-200">
+                    <th class="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Name</th>
+                    <th class="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Seat</th>
+                    <th class="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Fare</th>
+                    <th class="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Type</th>
+                    <th class="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Class</th>
+                    <th class="px-2 py-2.5"></th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  <tr v-if="filteredPassengers.length === 0">
+                    <td colspan="6" class="px-4 py-6 text-center text-gray-400 text-sm">
+                      No passengers added yet
+                    </td>
+                  </tr>
+                  <tr
+                    v-else
+                    v-for="(p, index) in filteredPassengers"
+                    :key="index"
+                    class="hover:bg-gray-50 transition-colors"
+                  >
+                    <td class="px-4 py-3 font-semibold text-gray-900">{{ p.fullname }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ p.seat }}</td>
+                    <td class="px-4 py-3 text-gray-600">
+                      ₱{{ p.fare }}
+                      <span v-if="parseFloat(p.discountAmount) > 0" class="text-xs text-green-600 ml-1">(-₱{{ p.discountAmount }})</span>
+                    </td>
+                    <td class="px-4 py-3 text-gray-600 capitalize">{{ p.passengerTypeDetails?.type || 'Regular' }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ p.accommodation }}</td>
+                    <td class="px-2 py-3">
+                      <div class="flex items-center gap-0.5">
                         <button
-                          class="p-2 text-blue-600 hover:bg-blue-50 rounded-md cursor-pointer"
                           @click="openPassengerView(p)"
-                          title="View Passenger"
-                        >
-                          <svg
-                            class="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                            />
-                          </svg>
-                        </button>
-                        <button
-                          class="p-2 text-red-600 hover:bg-red-50 rounded-md cursor-pointer"
-                          @click="removePassenger(p)"
-                          title="Remove Passenger"
-                        >
-                          <svg
-                            class="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m2 0v14a2 2 0 01-2 2H8a2 2 0 01-2-2V6m5 10v-6"
-                            />
-                          </svg>
-                        </button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <!-- Vehicle List Section -->
-          <div class="max-w-6xl mx-auto rounded-lg mt-8">
-            <div class="mb-6">
-              <h1 class="text-2xl font-semibold text-gray-800">
-                Vehicle List
-              </h1>
-            </div>
-            
-            <!-- No vehicles message -->
-            <div v-if="filteredVehicles.length === 0" class="text-center py-8 text-gray-500 text-sm italic">
-              No vehicles
-            </div>
-
-            <!-- Vehicle Cards -->
-            <div v-else class="space-y-4">
-              <div
-                v-for="(v, index) in filteredVehicles"
-                :key="index"
-                class="bg-white rounded-lg border border-gray-300 p-4 hover:shadow-md transition-shadow"
-              >
-                <div class="flex items-center gap-4">
-                  <!-- Vehicle Icon -->
-                  <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                    </svg>
-                  </div>
-
-                  <!-- Vehicle Details -->
-                  <div class="flex-1 grid grid-cols-3 gap-4">
-                    <div>
-                      <p class="text-xs text-gray-500 mb-1">Vehicle Class</p>
-                      <p class="text-sm font-semibold text-gray-900">{{ v.vehicle.vehicle_class || v.vehicle.type || "Vehicle" }}</p>
-                    </div>
-                    <div>
-                      <p class="text-xs text-gray-500 mb-1">Plate Number</p>
-                      <p class="text-sm font-medium text-gray-700">{{ v.vehicle.plate_number || "N/A" }}</p>
-                    </div>
-                    <div>
-                      <p class="text-xs text-gray-500 mb-1">Fare</p>
-                      <p class="text-sm font-semibold text-blue-600">₱{{ parseFloat(v.vehicle.rate || 0).toFixed(2) }}</p>
-                    </div>
-                  </div>
-
-                  <!-- Driver Section -->
-                  <div class="flex-shrink-0 w-48">
-                    <p class="text-xs text-gray-500 mb-2">Driver</p>
-                    <div v-if="v.driver" class="bg-green-50 border border-green-200 rounded-lg p-2">
-                      <div class="flex items-center justify-between">
-                        <div>
-                          <p class="text-sm font-medium text-gray-900">{{ v.driver.fullname }}</p>
-                          <p class="text-xs text-gray-500">{{ v.driver.type }}</p>
-                        </div>
-                        <button
-                          @click="removeDriver(v)"
-                          class="text-red-500 hover:text-red-700"
-                          title="Remove Driver"
+                          class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                          title="Edit"
                         >
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          @click="removePassenger(p)"
+                          class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                          title="Remove"
+                        >
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m2 0v14a2 2 0 01-2 2H8a2 2 0 01-2-2V6m5 10v-6" />
                           </svg>
                         </button>
                       </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Vehicle List -->
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-widest text-gray-600 mb-2">Vehicle List</p>
+            <div class="border border-gray-200 rounded-xl overflow-hidden">
+              <!-- Empty state -->
+              <div v-if="filteredVehicles.length === 0" class="flex flex-col items-center justify-center py-10 text-gray-400">
+                <ArrowsRightLeftIcon class="w-8 h-8 mb-2 text-gray-300" />
+                <p class="text-sm">No vehicles added yet</p>
+              </div>
+
+              <!-- Vehicle rows -->
+              <div v-else class="divide-y divide-gray-100">
+                <div
+                  v-for="(v, index) in filteredVehicles"
+                  :key="index"
+                  class="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors"
+                >
+                  <div class="flex-1 grid grid-cols-3 gap-3 text-sm">
+                    <div>
+                      <p class="text-xs text-gray-400 mb-0.5">Class</p>
+                      <p class="font-semibold text-gray-900">{{ v.vehicle.vehicle_class || v.vehicle.type || 'Vehicle' }}</p>
+                    </div>
+                    <div>
+                      <p class="text-xs text-gray-400 mb-0.5">Plate</p>
+                      <p class="text-gray-700">{{ v.vehicle.plate_number || 'N/A' }}</p>
+                    </div>
+                    <div>
+                      <p class="text-xs text-gray-400 mb-0.5">Fare</p>
+                      <p class="font-semibold text-blue-600">₱{{ parseFloat(v.vehicle.rate || 0).toFixed(2) }}</p>
+                    </div>
+                  </div>
+
+                  <!-- Driver -->
+                  <div class="flex-shrink-0">
+                    <div v-if="v.driver" class="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-1.5 text-sm">
+                      <span class="font-medium text-gray-800">{{ v.driver.fullname }}</span>
+                      <button @click="removeDriver(v)" class="text-gray-400 hover:text-red-500 transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
                     </div>
                     <button
                       v-else
                       @click="openDriverSelection(v)"
-                      class="w-full px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                      class="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors"
                     >
                       + Driver
                     </button>
                   </div>
 
-                  <!-- Remove Vehicle Button -->
-                  <button
-                    @click="removeVehicle(v)"
-                    class="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors flex-shrink-0"
-                    title="Remove Vehicle"
-                  >
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <!-- Remove -->
+                  <button @click="removeVehicle(v)" class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors flex-shrink-0">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </button>
@@ -2243,101 +2219,80 @@ const editPassengerFromModal = (passenger) => {
           <transition name="modal-fade">
             <div
               v-if="isDriverSelectionOpen"
-              class="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50"
+              class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
               @click="isDriverSelectionOpen = false"
             >
-              <div
-                class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden"
-                @click.stop
-              >
+              <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden" @click.stop>
                 <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                  <h3 class="text-xl font-semibold text-gray-800">Select Driver from Passenger List</h3>
-                  <button
-                    @click="isDriverSelectionOpen = false"
-                    class="text-gray-400 hover:text-gray-600"
-                  >
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <h3 class="text-lg font-semibold text-gray-800">Select Driver</h3>
+                  <button @click="isDriverSelectionOpen = false" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
-                
-                <div class="p-6 overflow-y-auto max-h-[60vh]">
-                  <div v-if="passengers.length === 0" class="text-center py-8 text-gray-500">
+                <div class="p-6 overflow-y-auto max-h-[60vh] space-y-2">
+                  <div v-if="filteredPassengers.length === 0" class="text-center py-8 text-gray-500 text-sm">
                     No passengers available. Please add passengers first.
                   </div>
-                  
-                  <div v-else class="space-y-2">
-                    <button
-                      v-for="(passenger, index) in passengers"
-                      :key="index"
-                      @click="assignDriver(passenger)"
-                      class="w-full p-4 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-400 rounded-lg text-left transition-all"
-                    >
-                      <div class="flex items-center justify-between">
-                        <div>
-                          <p class="font-semibold text-gray-900">{{ passenger.fullname }}</p>
-                          <div class="flex gap-4 mt-1 text-sm text-gray-600">
-                            <span>{{ passenger.type }}</span>
-                            <span>•</span>
-                            <span>{{ passenger.gender }}</span>
-                            <span>•</span>
-                            <span>Seat {{ passenger.seat }}</span>
-                          </div>
+                  <button
+                    v-else
+                    v-for="(passenger, index) in filteredPassengers"
+                    :key="index"
+                    @click="assignDriver(passenger)"
+                    class="w-full p-4 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-400 rounded-lg text-left transition-all"
+                  >
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <p class="font-semibold text-gray-900">{{ passenger.fullname }}</p>
+                        <div class="flex gap-3 mt-1 text-sm text-gray-500">
+                          <span>{{ passenger.type }}</span>
+                          <span>·</span>
+                          <span>{{ passenger.gender }}</span>
+                          <span>·</span>
+                          <span>Seat {{ passenger.seat }}</span>
                         </div>
-                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                        </svg>
                       </div>
-                    </button>
-                  </div>
+                      <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </button>
                 </div>
               </div>
             </div>
           </transition>
 
-          <!-- Action Buttons -->
-          <div class="bg-white border-t-2 border-gray-300">
-            <div class="px-10 py-4 flex items-center justify-between">
-              <button
-                class="flex items-center gap-2 text-gray-600 hover:text-gray-800 text-base"
-              >
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                  ></path>
-                </svg>
-                Save for later
-              </button>
-              <div class="flex gap-3">
-                <button
-                  class="px-6 py-2 text-gray-600 hover:text-gray-800 font-medium text-base"
-                  @click="resetForm"
-                >
-                  Cancel
-                </button>
-                <button
-                  class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium text-base"
-                  @click="proceedToPayment"
-                >
-                  Proceed To Payment
-                </button>
-              </div>
-            </div>
+        </div>
+
+        <!-- Sticky bottom action bar -->
+        <div class="border-t border-gray-200 bg-white px-8 py-4 flex items-center justify-between flex-shrink-0">
+          <button class="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+            </svg>
+            Save for later
+          </button>
+          <div class="flex items-center gap-3">
+            <button
+              class="px-5 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 transition-colors"
+              @click="resetForm"
+            >
+              Cancel
+            </button>
+            <button
+              class="px-6 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors"
+              @click="proceedToPayment"
+            >
+              Proceed To Payment
+            </button>
           </div>
         </div>
+
       </div>
       <div
         ref="rightPanel"
-        class="right-panel bg-gray-100 h-screen overflow-y-auto scrollbar-hidden"
+        class="right-panel bg-gray-100 h-full overflow-y-auto scrollbar-hidden"
       >
         <div
           class="flex flex-col gap-8 border-b border-gray-300 pt-8 pb-8 pl-10 pr-10"
@@ -2998,6 +2953,6 @@ const editPassengerFromModal = (passenger) => {
           </h4>
         </div>
       </div>
-    </div>
   </main>
+  </div>
 </template>

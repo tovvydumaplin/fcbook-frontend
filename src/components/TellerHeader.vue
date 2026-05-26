@@ -89,9 +89,8 @@ header {
       >
         <span>{{ serial }}</span>
         <span
-          @click.stop="!serialsWithBookings.includes(serial) && emit('closeTab', serial)"
-          class="ml-0.5 w-4 h-4 flex items-center justify-center rounded-full text-xs leading-none transition-colors"
-          :class="!serialsWithBookings.includes(serial) ? 'hover:bg-red-500 hover:text-white cursor-pointer' : 'invisible pointer-events-none'"
+          @click.stop="emit('closeTab', serial)"
+          class="ml-0.5 w-4 h-4 flex items-center justify-center rounded-full text-xs leading-none transition-colors hover:bg-red-500 hover:text-white cursor-pointer"
           title="Close tab"
         >✕</span>
       </button>
@@ -104,11 +103,6 @@ header {
     </nav>
     <!-- Refunds and Bookings Buttons -->
     <div class="flex items-center gap-4">
-      <!-- Serial Number -->
-      <span v-if="serialNo" class="text-sm font-semibold text-white bg-blue-900 px-3 py-1.5 rounded">
-        {{ serialNo }}
-      </span>
-      
       <button
         @click="emit('openBookings')"
         class="px-4 py-1.5 bg-green-600 text-white text-sm font-medium rounded hover:bg-green-700 transition-colors duration-200"
