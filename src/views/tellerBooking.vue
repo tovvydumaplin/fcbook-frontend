@@ -229,6 +229,9 @@ const returnDate = ref("");
 const passengers = ref([]);
 const vehicles = ref([]);
 
+// List of incomplete bookings — drives the serial number tabs
+const bookings = ref([]);
+
 const bookVehicleEntry = async () => {
   if (!selectedVehicleDetails.value) return;
 
@@ -266,7 +269,7 @@ const bookVehicleEntry = async () => {
     
     const authHeader = stored.startsWith("Bearer ") ? stored : `Bearer ${stored}`;
 
-    const response = await fetch(`${apiBase}/teller-booking/book-vehicle`, {
+    const response = await fetch(`${apiBase}/teller-booking/booked-vehicles`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -279,11 +282,13 @@ const bookVehicleEntry = async () => {
       const result = await response.json();
       console.log("Book vehicle response:", result);
 
-      // Refresh vehicle list from API
-      await fetchBookedVehicles();
+      // Refresh booking details + tab list
+      const activeSerial = activeSerialTab.value || serialNo.value;
+      await fetchBookingDetails(activeSerial);
+      await fetchBookings();
 
-      // Try to extract booking IDs from latest vehicle
-      const latestVehicle = vehicles.value[vehicles.value.length - 1];
+      // Try to extract booking IDs from latest vehicle in filtered list
+      const latestVehicle = filteredVehicles.value[filteredVehicles.value.length - 1];
       if (latestVehicle) {
         // Store shared IDs for subsequent bookings
         if (!sharedBookingId.value && latestVehicle.bookingId) {
@@ -395,22 +400,98 @@ watch(outboundSchedule, (newSchedule) => {
 });
 
 // Fetch seatmap when accommodation is selected
+// Fetch booked/locked seats from backend for the current schedule + date
+const fetchBookedSeats = async () => {
+  const scheduleId = outboundSchedule.value?.schedule_id ?? outboundSchedule.value?.id;
+  const travelDate = outboundDate.value;
+
+  console.log("🔍 fetchBookedSeats called", {
+    scheduleId,
+    travelDate,
+    rawSchedule: outboundSchedule.value,
+  });
+
+  if (!scheduleId || !travelDate) {
+    console.warn("⚠️ fetchBookedSeats: missing scheduleId or travelDate — skipping");
+    return null;
+  }
+
+  try {
+    const stored = localStorage.getItem("token");
+    if (!stored) return null;
+    const authHeader = stored.startsWith("Bearer ") ? stored : `Bearer ${stored}`;
+
+    const url = `${apiBase}/teller-booking/booked-seats?schedule_id=${scheduleId}&travel_date=${travelDate}`;
+    console.log("📡 booked-seats request:", url);
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: authHeader,
+      },
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      console.log("✅ booked-seats response:", {
+        total_locked: result.data?.total_locked,
+        total_booked: result.data?.total_booked,
+        total_unavailable: result.data?.total_unavailable,
+        locked_seats: result.data?.locked_seats,
+        booked_seats: result.data?.booked_seats,
+        seat_status_map: result.data?.seat_status_map,
+      });
+      return result.data?.seat_status_map ?? null;
+    } else {
+      console.error("❌ booked-seats fetch failed:", response.status);
+    }
+  } catch (err) {
+    console.error("Error fetching booked seats:", err);
+  }
+  return null;
+};
+
+// Apply backend seat_status_map onto availableSeats — mark booked/locked as blocked
+const markBackendBlockedSeats = async () => {
+  const statusMap = await fetchBookedSeats();
+
+  if (!statusMap) {
+    console.warn("⚠️ markBackendBlockedSeats: no seat_status_map returned");
+    return;
+  }
+
+  const occupiedIds = Object.keys(statusMap);
+  console.log(`🪑 seat_status_map has ${occupiedIds.length} occupied seat(s):`, occupiedIds);
+
+  let blockedCount = 0;
+  availableSeats.value.forEach((seat) => {
+    const key = String(seat.id ?? seat.seat_id);
+    const seatStatus = statusMap[key];
+    if (seatStatus && (seatStatus.status === "booked" || seatStatus.status === "locked")) {
+      seat.blocked = true;
+      blockedCount++;
+      console.log(`🚫 Blocked seat ${seat.seat_no} (id=${key}) — status: ${seatStatus.status}`);
+    }
+  });
+
+  console.log(`✅ markBackendBlockedSeats done — ${blockedCount} seat(s) blocked out of ${availableSeats.value.length} in class`);
+};
+
 watch(selectedAccommodation, async (newAccommodation) => {
-  console.log(
-    "Watch triggered - selectedAccommodation changed to:",
-    newAccommodation,
-  );
-  console.log("Current schedule:", outboundSchedule.value);
-  console.log("Vessel ID:", outboundSchedule.value?.vesselId);
+  console.log("🛋️ selectedAccommodation →", newAccommodation);
+  console.log("📅 outboundDate:", outboundDate.value);
+  console.log("🗓️ outboundSchedule:", outboundSchedule.value);
+  console.log("🚢 vesselId:", outboundSchedule.value?.vesselId);
 
   if (!newAccommodation || !outboundSchedule.value?.vesselId) {
     vesselSeatmap.value = null;
     availableSeats.value = [];
     selectedSeat.value = null;
     if (!newAccommodation) {
-      console.log("No accommodation selected");
-    } else if (!outboundSchedule.value?.vesselId) {
-      console.log("No vessel ID found in schedule:", outboundSchedule.value);
+      console.warn("⚠️ Seatmap skipped: no accommodation selected");
+    } else {
+      console.warn("⚠️ Seatmap skipped: vesselId is missing from schedule. Full schedule object:", JSON.parse(JSON.stringify(outboundSchedule.value ?? {})));
     }
     return;
   }
@@ -464,24 +545,23 @@ watch(selectedAccommodation, async (newAccommodation) => {
       if (selectedClass) {
         // Get seats for this class
         availableSeats.value = selectedClass.seats || [];
-        console.log(
-          `✓ Found ${availableSeats.value.length} seats for ${newAccommodation}`,
-        );
-        console.log("First few seats:", availableSeats.value.slice(0, 5));
+        console.log(`✓ Found ${availableSeats.value.length} seats for ${newAccommodation}`);
+        console.log("🪑 First 5 raw seats from layout (check id/seat_id field):", JSON.parse(JSON.stringify(availableSeats.value.slice(0, 5))));
 
-        // Mark seats as blocked if they're already assigned to passengers
+        // 1. Block seats already taken in the current local session
         passengers.value.forEach((passenger) => {
           if (passenger.accommodation === newAccommodation && passenger.seat) {
             const seat = availableSeats.value.find(
               (s) => s.seat_no === passenger.seat,
             );
-            if (seat) {
-              seat.blocked = true;
-            }
+            if (seat) seat.blocked = true;
           }
         });
 
-        // Auto-select the first available seat
+        // 2. Block seats that are booked/locked on the backend
+        await markBackendBlockedSeats();
+
+        // 3. Auto-select the first available seat
         const firstAvailable = availableSeats.value.find(
           (s) => !s.blocked && !s.path && !s.facility && !s.pwd
         );
@@ -651,32 +731,47 @@ const proceedToPayment = () => {
   isPaymentModalOpen.value = true;
 };
 
-// Populate date/schedule/route from a given serial's first booking.
-// Called on mount and whenever the active tab changes.
+// Populate date/schedule/route from a given serial's booking data.
+// Fetches detail only if the serial exists in the bookings list (i.e. has backend data).
 const applySerialContext = async (serial) => {
+  // Only fetch if this serial has been saved to the backend
+  const bookingSummary = bookings.value.find(b => b.serial_no === serial);
+  if (bookingSummary) {
+    await fetchBookingDetails(serial);
+  }
+
+  // Prefer detail from passengers/vehicles, fall back to bookings list summary
   const firstBooking =
     passengers.value.find(p => p.serialNo === serial) ||
     vehicles.value.find(v => v.serialNo === serial);
 
+  // Set travel date
   if (firstBooking?.date) {
     outboundDate.value = firstBooking.date;
+  } else if (bookingSummary?.travel_date) {
+    outboundDate.value = bookingSummary.travel_date.split("T")[0];
   } else {
     outboundDate.value = new Date().toISOString().split("T")[0];
   }
 
-  if (firstBooking?.routeId) {
-    const matchedRoute = routes.value.find(r => r.route_id === Number(firstBooking.routeId));
+  // Set route
+  const routeId = firstBooking?.routeId ?? bookingSummary?.route_id;
+  if (routeId) {
+    const matchedRoute = routes.value.find(r => r.route_id === Number(routeId));
     if (matchedRoute) selectedRoute.value = matchedRoute;
   }
 
   // watch(selectedRoute) clears outboundSchedule — wait for it before setting
   await nextTick();
 
-  if (firstBooking?.scheduleBookingId) {
-    const targetId = Number(firstBooking.scheduleBookingId);
+  // Set schedule
+  const scheduleId = firstBooking?.scheduleBookingId ?? bookingSummary?.schedule_id;
+  const scheduleTime = firstBooking?.schedule ?? bookingSummary?.schedule_snapshot;
+  if (scheduleId) {
+    const targetId = Number(scheduleId);
     const matched =
       allSchedules.value.find(s => Number(s.id) === targetId) ||
-      allSchedules.value.find(s => s.time === firstBooking.schedule);
+      allSchedules.value.find(s => s.time === scheduleTime);
     if (matched) outboundSchedule.value = matched;
   }
 };
@@ -702,35 +797,18 @@ onMounted(async () => {
   // Fetch passenger categories (accommodations)
   fetchPassengerCategories();
   
-  // Fetch existing booked passengers first, then vehicles (to map drivers)
-  await fetchBookedPassengers();
-  
-  // Fetch existing booked vehicles
-  await fetchBookedVehicles();
-  
+  // Fetch incomplete bookings list (tab list)
+  await fetchBookings();
+
   // After fetching, select latest serial or generate new
-  const allSerials = [];
-  passengers.value.forEach(p => {
-    if (p.serialNo) allSerials.push(p.serialNo);
-  });
-  vehicles.value.forEach(v => {
-    if (v.serialNo) allSerials.push(v.serialNo);
-  });
-  
-  if (allSerials.length > 0) {
-    // Find latest serial by extracting timestamp from format BK-{timestamp}-{random}
-    const uniqueSerials = [...new Set(allSerials)];
-    const sortedSerials = uniqueSerials.sort((a, b) => {
-      const timestampA = parseInt(a.split('-')[1] || '0');
-      const timestampB = parseInt(b.split('-')[1] || '0');
-      return timestampB - timestampA; // Descending order (latest first)
-    });
-    
-    // Select the latest serial
-    const latestSerial = sortedSerials[0];
+  if (bookings.value.length > 0) {
+    // API returns bookings ordered by created_at desc; pick the first
+    const latestSerial = bookings.value[0].serial_no;
     serialNo.value = latestSerial;
     activeSerialTab.value = latestSerial;
     console.log("Auto-selected latest serial:", latestSerial);
+    // Load full detail for the active tab
+    await fetchBookingDetails(latestSerial);
   } else {
     // No existing bookings, generate new serial
     generateSerialNo();
@@ -989,142 +1067,140 @@ const fetchPassengerCategories = async () => {
   }
 };
 
-// Fetch booked passengers from API
-const fetchBookedPassengers = async () => {
+// Fetch list of incomplete bookings — populates serial number tabs
+const fetchBookings = async () => {
   try {
     const stored = localStorage.getItem("token");
-    
     if (!stored) {
-      console.warn("No token found, skipping fetch booked passengers");
+      console.warn("No token found, skipping fetchBookings");
       return;
     }
-    
-    const authHeader = stored.startsWith("Bearer ")
-      ? stored
-      : `Bearer ${stored}`;
+    const authHeader = stored.startsWith("Bearer ") ? stored : `Bearer ${stored}`;
 
-    const response = await fetch(`${apiBase}/teller-booking/book-passenger`, {
+    const response = await fetch(`${apiBase}/teller-booking/bookings`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: authHeader,
-      },
+      headers: { "Content-Type": "application/json", Authorization: authHeader },
     });
 
     if (response.ok) {
       const result = await response.json();
-      console.log("Fetched booked passengers:", result);
-
-      if (result.success && result.data?.booked_passengers) {
-        // Map API response to display format
-        passengers.value = result.data.booked_passengers.map((p) => ({
-          date: p.temp_booking?.travel_date?.split("T")[0] ?? "",
-          route: p.temp_booking?.route_snapshot ?? "",
-          schedule: p.temp_booking?.schedule_snapshot ?? "",
-          category: "Passenger",
-          type: p.passenger_type_snapshot,
-          accommodation: p.passenger_category_snapshot,
-          gender: p.gender,
-          discount: p.discount_id ? String(p.discount_id) : "0",
-          fullname: p.fullname,
-          seat: p.seat_number_snapshot,
-          fare: parseFloat(p.fare).toFixed(2),
-          cargoFare: "0.00",
-          adminFee: "0.00",
-          discountAmount: parseFloat(p.discount_amount).toFixed(2),
-          vehicle: null,
-          institutionalAccount: p.temp_booking?.institutional_account_id
-            ? { id: p.temp_booking.institutional_account_id, ia_name: p.temp_booking.institutional_account_snapshot }
-            : null,
-          passengerTypeDetails: { type: p.passenger_type_snapshot },
-          bookedPassengerId: p.booked_passenger_id,
-          bookingId: p.temp_booking_id,
-          scheduleBookingId: p.temp_booking?.schedule_booking_id ?? null,
-          scheduleId: p.temp_booking?.schedule_id ?? null,
-          routeId: p.temp_booking?.route_id ?? null,
-          serialNo: p.serial_no,
-        }));
+      console.log("Fetched bookings list:", result);
+      if (result.data?.bookings) {
+        bookings.value = result.data.bookings;
       }
     } else {
-      console.error("Failed to fetch booked passengers:", response.status);
+      console.error("Failed to fetch bookings list:", response.status);
     }
   } catch (err) {
-    console.error("Error fetching booked passengers:", err);
+    console.error("Error fetching bookings list:", err);
   }
 };
 
-// Fetch booked vehicles from API
-const fetchBookedVehicles = async () => {
+// Fetch full detail for a single serial — populates passengers + vehicles for that tab
+const fetchBookingDetails = async (serial) => {
+  if (!serial) return;
   try {
     const stored = localStorage.getItem("token");
-    
     if (!stored) {
-      console.warn("No token found, skipping fetch booked vehicles");
+      console.warn("No token found, skipping fetchBookingDetails");
       return;
     }
-    
-    const authHeader = stored.startsWith("Bearer ")
-      ? stored
-      : `Bearer ${stored}`;
+    const authHeader = stored.startsWith("Bearer ") ? stored : `Bearer ${stored}`;
 
-    const response = await fetch(`${apiBase}/teller-booking/book-vehicle`, {
+    const response = await fetch(`${apiBase}/teller-booking/bookings/${serial}`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: authHeader,
-      },
+      headers: { "Content-Type": "application/json", Authorization: authHeader },
     });
 
     if (response.ok) {
       const result = await response.json();
-      console.log("Fetched booked vehicles:", result);
+      console.log(`Fetched booking details for ${serial}:`, result);
+      const booking = result.data?.booking;
+      if (!booking) return;
 
-      if (result.success && result.data?.booked_vehicles) {
-        // Map API response to display format
-        vehicles.value = result.data.booked_vehicles.map((v) => {
-          // Find driver details from passengers array if driver is assigned
-          let driverInfo = null;
-          if (v.driver_passenger_booking_id) {
-            const driverPassenger = passengers.value.find(
-              (p) => String(p.bookedPassengerId) === String(v.driver_passenger_booking_id)
-            );
-            if (driverPassenger) {
-              driverInfo = {
-                id: v.driver_passenger_booking_id,
-                fullname: driverPassenger.fullname,
-                type: driverPassenger.type,
-                gender: driverPassenger.gender,
-              };
-            } else {
-              // Driver not found in current passengers array
-              console.log("Driver not found in passengers:", v.driver_passenger_booking_id, "Available:", passengers.value.map(p => p.bookedPassengerId));
-              driverInfo = { id: v.driver_passenger_booking_id };
-            }
+      // Map passengers
+      const mappedPassengers = (booking.passengers || []).map((p) => ({
+        date: booking.travel_date?.split("T")[0] ?? "",
+        route: booking.route_snapshot ?? "",
+        schedule: booking.schedule_snapshot ?? "",
+        category: "Passenger",
+        type: p.passenger_type_snapshot,
+        accommodation: p.passenger_category_snapshot,
+        gender: p.gender,
+        discount: p.discount_id ? String(p.discount_id) : "0",
+        fullname: p.fullname,
+        seat: p.seat_number_snapshot,
+        fare: parseFloat(p.fare || 0).toFixed(2),
+        cargoFare: "0.00",
+        adminFee: "0.00",
+        discountAmount: parseFloat(p.discount_amount || 0).toFixed(2),
+        vehicle: null,
+        institutionalAccount: booking.institutional_account_id
+          ? { id: booking.institutional_account_id, ia_name: booking.institutional_account_snapshot }
+          : null,
+        passengerTypeDetails: { type: p.passenger_type_snapshot },
+        bookedPassengerId: p.booked_passenger_id,
+        bookingId: p.temp_booking_id,
+        scheduleBookingId: booking.schedule_id ?? null,
+        scheduleId: booking.schedule_id ?? null,
+        routeId: booking.route_id ?? null,
+        serialNo: booking.serial_no,
+      }));
+
+      // Map vehicles — driver resolved from mappedPassengers
+      const mappedVehicles = (booking.vehicles || []).map((v) => {
+        let driverInfo = null;
+        if (v.driver_passenger_booking_id) {
+          const driverPassenger = mappedPassengers.find(
+            (p) => String(p.bookedPassengerId) === String(v.driver_passenger_booking_id)
+          );
+          if (driverPassenger) {
+            driverInfo = {
+              id: v.driver_passenger_booking_id,
+              fullname: driverPassenger.fullname,
+              type: driverPassenger.type,
+              gender: driverPassenger.gender,
+            };
+          } else {
+            driverInfo = { id: v.driver_passenger_booking_id };
           }
-          
-          return {
-            date: v.travel_date,
-            route: v.route_snapshot,
-            schedule: v.schedule_snapshot,
-            vehicle: {
-              vehicle_class: v.vehicle_type,
-              plate_number: v.plate_no,
-              rate: parseFloat(v.fare || 0),
-            },
-            institutionalAccount: v.institutional_account_id ? { id: v.institutional_account_id } : null,
-            driver: driverInfo,
-            bookedVehicleId: v.booked_vehicle_id,
-            bookingId: v.booking_id,
-            scheduleBookingId: v.schedule_booking_id,
-            serialNo: v.serial_no,
-          };
-        });
-      }
+        }
+        return {
+          date: booking.travel_date?.split("T")[0] ?? "",
+          route: booking.route_snapshot ?? "",
+          schedule: booking.schedule_snapshot ?? "",
+          vehicle: {
+            vehicle_class: v.vehicle_type,
+            plate_number: v.plate_no,
+            rate: parseFloat(v.fare || 0),
+          },
+          institutionalAccount: booking.institutional_account_id
+            ? { id: booking.institutional_account_id }
+            : null,
+          driver: driverInfo,
+          bookedVehicleId: v.booked_vehicle_id,
+          bookingId: v.temp_booking_id,
+          scheduleBookingId: booking.schedule_id ?? null,
+          scheduleId: booking.schedule_id ?? null,
+          routeId: booking.route_id ?? null,
+          serialNo: booking.serial_no,
+        };
+      });
+
+      // Replace passengers/vehicles for this serial only, keeping others intact
+      passengers.value = [
+        ...passengers.value.filter(p => p.serialNo !== serial),
+        ...mappedPassengers,
+      ];
+      vehicles.value = [
+        ...vehicles.value.filter(v => v.serialNo !== serial),
+        ...mappedVehicles,
+      ];
     } else {
-      console.error("Failed to fetch booked vehicles:", response.status);
+      console.error(`Failed to fetch booking details for ${serial}:`, response.status);
     }
   } catch (err) {
-    console.error("Error fetching booked vehicles:", err);
+    console.error("Error fetching booking details:", err);
   }
 };
 
@@ -1189,7 +1265,7 @@ const bookEntry = async () => {
     
     const authHeader = stored.startsWith("Bearer ") ? stored : `Bearer ${stored}`;
 
-    const response = await fetch(`${apiBase}/teller-booking/book-passenger`, {
+    const response = await fetch(`${apiBase}/teller-booking/booked-passengers`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1202,14 +1278,16 @@ const bookEntry = async () => {
       const result = await response.json();
       console.log("Book passenger response:", result);
 
-      // Refresh passenger list from API to check if creation worked
-      const previousCount = passengers.value.length;
-      await fetchBookedPassengers();
-      const newCount = passengers.value.length;
+      // Refresh booking details + tab list
+      const activeSerial = activeSerialTab.value || serialNo.value;
+      const prevFilteredCount = filteredPassengers.value.length;
+      await fetchBookingDetails(activeSerial);
+      await fetchBookings();
+      const newFilteredCount = filteredPassengers.value.length;
 
-      if (newCount > previousCount) {
+      if (newFilteredCount > prevFilteredCount) {
         // Passenger was created successfully
-        const newPassenger = passengers.value[passengers.value.length - 1];
+        const newPassenger = filteredPassengers.value[filteredPassengers.value.length - 1];
 
         // Store shared IDs for subsequent bookings
         if (!sharedBookingId.value && newPassenger.bookingId) {
@@ -1492,18 +1570,11 @@ const totalAmount = computed(() =>
 const totalOriginalFare = totalPassengerFare;
 const totalFare = totalPassengerFare;
 
-// Get unique serial numbers from all bookings
+// Get unique serial numbers: from bookings list + current in-progress serial
 const uniqueSerialNumbers = computed(() => {
-  const serials = new Set();
-  passengers.value.forEach(p => {
-    if (p.bookedPassengerId) serials.add(p.serialNo || serialNo.value);
-  });
-  vehicles.value.forEach(v => {
-    if (v.bookedVehicleId) serials.add(v.serialNo || serialNo.value);
-  });
-  // Add current serial if we have it
-  if (serialNo.value) serials.add(serialNo.value);
-  return Array.from(serials);
+  const set = new Set(bookings.value.map(b => b.serial_no).filter(Boolean));
+  if (serialNo.value) set.add(serialNo.value);
+  return Array.from(set);
 });
 
 // Handle new transaction from header
@@ -1539,22 +1610,28 @@ const handleCloseTab = async (serialToClose) => {
   if (!stored) return;
   const authHeader = stored.startsWith("Bearer ") ? stored : `Bearer ${stored}`;
 
+  // Ensure detail is loaded before we try to delete
+  if (!passengers.value.some(p => p.serialNo === serialToClose) &&
+      !vehicles.value.some(v => v.serialNo === serialToClose)) {
+    await fetchBookingDetails(serialToClose);
+  }
+
   const passengersToDelete = passengers.value.filter(
-    (p) => (p.serialNo || serialNo.value) === serialToClose && p.bookedPassengerId
+    (p) => p.serialNo === serialToClose && p.bookedPassengerId
   );
   const vehiclesToDelete = vehicles.value.filter(
-    (v) => (v.serialNo || serialNo.value) === serialToClose && v.bookedVehicleId
+    (v) => v.serialNo === serialToClose && v.bookedVehicleId
   );
 
   await Promise.all([
     ...passengersToDelete.map((p) =>
-      fetch(`${apiBase}/teller-booking/book-passenger/${p.bookedPassengerId}`, {
+      fetch(`${apiBase}/teller-booking/booked-passengers/${p.bookedPassengerId}`, {
         method: "DELETE",
         headers: { Authorization: authHeader },
       })
     ),
     ...vehiclesToDelete.map((v) =>
-      fetch(`${apiBase}/teller-booking/book-vehicle/${v.bookedVehicleId}`, {
+      fetch(`${apiBase}/teller-booking/booked-vehicles/${v.bookedVehicleId}`, {
         method: "DELETE",
         headers: { Authorization: authHeader },
       })
@@ -1562,12 +1639,11 @@ const handleCloseTab = async (serialToClose) => {
   ]);
 
   // Remove from local state
-  passengers.value = passengers.value.filter(
-    (p) => (p.serialNo || serialNo.value) !== serialToClose
-  );
-  vehicles.value = vehicles.value.filter(
-    (v) => (v.serialNo || serialNo.value) !== serialToClose
-  );
+  passengers.value = passengers.value.filter(p => p.serialNo !== serialToClose);
+  vehicles.value = vehicles.value.filter(v => v.serialNo !== serialToClose);
+
+  // Refresh bookings list — this removes the closed serial from the tab bar
+  await fetchBookings();
 
   // If closing the active tab, switch to another or generate new
   if (activeSerialTab.value === serialToClose || serialNo.value === serialToClose) {
@@ -1591,13 +1667,15 @@ const handleOpenBookings = () => {
 // Filter passengers by active serial tab
 const filteredPassengers = computed(() => {
   if (!activeSerialTab.value) return [];
-  return passengers.value.filter(p => (p.serialNo || serialNo.value) === activeSerialTab.value);
+  return passengers.value.filter(
+    p => (p.serialNo || serialNo.value) === activeSerialTab.value
+  );
 });
 
-// Filter vehicles by active serial tab
+// Filter vehicles by active serial tab — strict: serialNo must be explicitly set
 const filteredVehicles = computed(() => {
   if (!activeSerialTab.value) return [];
-  return vehicles.value.filter(v => (v.serialNo || serialNo.value) === activeSerialTab.value);
+  return vehicles.value.filter(v => v.serialNo === activeSerialTab.value);
 });
 
 const stepInstruction = computed(() => {
@@ -1649,7 +1727,7 @@ const removePassenger = async (passenger) => {
       
       const authHeader = stored.startsWith("Bearer ") ? stored : `Bearer ${stored}`;
 
-      const response = await fetch(`${apiBase}/teller-booking/book-passenger/${passenger.bookedPassengerId}`, {
+      const response = await fetch(`${apiBase}/teller-booking/booked-passengers/${passenger.bookedPassengerId}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -1657,13 +1735,13 @@ const removePassenger = async (passenger) => {
         },
       });
 
-      // Even if response has error, the deletion might have worked
-      // So we refresh the list to check
-      const previousCount = passengers.value.length;
-      await fetchBookedPassengers();
-      const newCount = passengers.value.length;
+      // Refresh booking details + tab list to check if deletion worked
+      const prevCount = passengers.value.filter(p => p.serialNo === (activeSerialTab.value || serialNo.value)).length;
+      await fetchBookingDetails(activeSerialTab.value || serialNo.value);
+      await fetchBookings();
+      const newCount = passengers.value.filter(p => p.serialNo === (activeSerialTab.value || serialNo.value)).length;
 
-      if (newCount < previousCount) {
+      if (newCount < prevCount) {
         // Passenger was deleted successfully
         // Unblock the seat
         if (passenger.seat && passenger.seat !== "N/A") {
@@ -1725,7 +1803,7 @@ const removeVehicle = async (vehicle) => {
       
       const authHeader = stored.startsWith("Bearer ") ? stored : `Bearer ${stored}`;
 
-      const response = await fetch(`${apiBase}/teller-booking/book-vehicle/${vehicle.bookedVehicleId}`, {
+      const response = await fetch(`${apiBase}/teller-booking/booked-vehicles/${vehicle.bookedVehicleId}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -1733,13 +1811,13 @@ const removeVehicle = async (vehicle) => {
         },
       });
 
-      // Even if response has error, the deletion might have worked
-      // So we refresh the list to check
-      const previousCount = vehicles.value.length;
-      await fetchBookedVehicles();
-      const newCount = vehicles.value.length;
+      // Refresh booking details + tab list to check if deletion worked
+      const prevVehicleCount = vehicles.value.filter(v => v.serialNo === (activeSerialTab.value || serialNo.value)).length;
+      await fetchBookingDetails(activeSerialTab.value || serialNo.value);
+      await fetchBookings();
+      const newVehicleCount = vehicles.value.filter(v => v.serialNo === (activeSerialTab.value || serialNo.value)).length;
 
-      if (newCount < previousCount) {
+      if (newVehicleCount < prevVehicleCount) {
         // Vehicle was deleted successfully
         console.log("Vehicle deleted successfully");
       } else {
@@ -1784,18 +1862,25 @@ const assignDriver = async (passenger) => {
         ? stored
         : `Bearer ${stored}`;
 
+      if (!vehicle.bookedVehicleId) {
+        console.error("assignDriver: vehicle.bookedVehicleId is missing", vehicle);
+        alert("Cannot assign driver: vehicle ID is missing. Try refreshing the page.");
+        return;
+      }
+
       const requestBody = {
         plate_no: vehicle.vehicle.plate_number,
-        driver_passenger_booking_id: String(passenger.bookedPassengerId),
+        driver_passenger_booking_id: parseInt(passenger.bookedPassengerId, 10),
       };
-      
+
       console.log("Assigning driver to vehicle:", {
-        url: `${apiBase}/teller-booking/book-vehicle/${vehicle.bookedVehicleId}`,
+        url: `${apiBase}/teller-booking/booked-vehicles/${vehicle.bookedVehicleId}`,
         method: "PATCH",
         body: requestBody,
+        vehicleObj: vehicle,
       });
 
-      const response = await fetch(`${apiBase}/teller-booking/book-vehicle/${vehicle.bookedVehicleId}`, {
+      const response = await fetch(`${apiBase}/teller-booking/booked-vehicles/${vehicle.bookedVehicleId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -1808,8 +1893,8 @@ const assignDriver = async (passenger) => {
 
       if (response.ok) {
         console.log("Driver assigned successfully");
-        // Refresh vehicle list from backend to sync
-        await fetchBookedVehicles();
+        // Refresh booking details to sync driver assignment
+        await fetchBookingDetails(activeSerialTab.value || serialNo.value);
         isDriverSelectionOpen.value = false;
         selectedVehicleForDriver.value = null;
       } else {
@@ -1838,7 +1923,7 @@ const removeDriver = async (vehicle) => {
       ? stored
       : `Bearer ${stored}`;
 
-    const response = await fetch(`${apiBase}/teller-booking/book-vehicle/${vehicle.bookedVehicleId}`, {
+    const response = await fetch(`${apiBase}/teller-booking/booked-vehicles/${vehicle.bookedVehicleId}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -1852,8 +1937,8 @@ const removeDriver = async (vehicle) => {
 
     if (response.ok) {
       console.log("Driver removed successfully");
-      // Refresh vehicle list from backend
-      await fetchBookedVehicles();
+      // Refresh booking details to sync driver removal
+      await fetchBookingDetails(activeSerialTab.value || serialNo.value);
     } else {
       const error = await response.json();
       alert("Failed to remove driver: " + (error.message || "Unknown error"));
@@ -1995,14 +2080,14 @@ const editPassengerFromModal = (passenger) => {
       :serialNo="serialNo"
       :uniqueSerialNumbers="uniqueSerialNumbers"
       :activeSerialTab="activeSerialTab"
-      @update:activeSerialTab="activeSerialTab = $event"
+      @update:activeSerialTab="activeSerialTab = $event; serialNo = $event"
       @newTransaction="handleNewTransaction"
       @closeTab="handleCloseTab"
       @openBookings="handleOpenBookings"
     />
   <main class="flex-1 min-h-0 grid grid-cols-[0.75fr_1.25fr]">
       <!-- LEFT PANEL -->
-      <div class="left-panel h-full flex flex-col bg-white border-r border-gray-200">
+      <div class="left-panel h-full min-h-0 flex flex-col bg-white border-r border-gray-200">
 
         <!-- Scrollable content -->
         <div class="flex-1 overflow-y-auto scrollbar-hidden px-8 pt-7 pb-6 space-y-6">
@@ -2292,7 +2377,7 @@ const editPassengerFromModal = (passenger) => {
       </div>
       <div
         ref="rightPanel"
-        class="right-panel bg-gray-100 h-full overflow-y-auto scrollbar-hidden"
+        class="right-panel bg-gray-100 h-full min-h-0 overflow-y-auto scrollbar-hidden"
       >
         <div
           class="flex flex-col gap-8 border-b border-gray-300 pt-8 pb-8 pl-10 pr-10"
