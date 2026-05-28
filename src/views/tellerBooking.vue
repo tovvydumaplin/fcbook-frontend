@@ -2377,665 +2377,399 @@ const editPassengerFromModal = (passenger) => {
       </div>
       <div
         ref="rightPanel"
-        class="right-panel bg-gray-100 h-full min-h-0 overflow-y-auto scrollbar-hidden"
+        class="right-panel bg-gray-50 h-full min-h-0 overflow-y-auto scrollbar-hidden"
       >
-        <div
-          class="flex flex-col gap-8 border-b border-gray-300 pt-8 pb-8 pl-10 pr-10"
-        >
-          <div class="top__part flex gap-5">
-            <div>
-              <h3 class="text-base font-medium text-gray-700 mb-3">
-                {{ returnTrip ? "Outbound Date" : "Select Date" }}
-              </h3>
-              <input
-                type="date"
-                v-model="outboundDate"
-                class="text-base text-gray-900 p-3 bg-white rounded-lg border border-gray-300"
-              />
-            </div>
-            <div v-if="returnTrip">
-              <h3 class="text-base font-medium text-gray-700 mb-3">
-                Return Date
-              </h3>
-              <input
-                type="date"
-                v-model="returnDate"
-                :min="outboundDate"
-                class="text-base text-gray-900 p-3 bg-white rounded-lg border border-gray-300"
-              />
-            </div>
-            <div class="flex-1">
-              <h3 class="text-base font-medium text-gray-700 mb-3">
-                Select Route
-              </h3>
-              <div
-                class="bg-white flex gap-2 items-center p-3 rounded-lg border border-gray-300"
-              >
-                <div class="flex items-center">
+        <div class="p-7 space-y-4">
+
+          <!-- ── Card 1: Date & Route ──────────────────────────────────────── -->
+          <div class="bg-white rounded-2xl border border-gray-200 p-5">
+            <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">Trip Setup</p>
+            <div class="flex gap-4 items-end flex-wrap">
+              <!-- Outbound date -->
+              <div class="flex-shrink-0">
+                <label class="block text-sm font-medium text-gray-600 mb-1.5">{{ returnTrip ? "Outbound Date" : "Travel Date" }}</label>
+                <div class="relative">
+                  <CalendarDaysIcon class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  <input
+                    type="date"
+                    v-model="outboundDate"
+                    class="pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                  />
+                </div>
+              </div>
+              <!-- Return date -->
+              <div v-if="returnTrip" class="flex-shrink-0">
+                <label class="block text-sm font-medium text-gray-600 mb-1.5">Return Date</label>
+                <div class="relative">
+                  <CalendarDaysIcon class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                  <input
+                    type="date"
+                    v-model="returnDate"
+                    :min="outboundDate"
+                    class="pl-9 pr-3 py-2.5 border border-gray-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                  />
+                </div>
+              </div>
+              <!-- Route -->
+              <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-medium text-gray-600 mb-1.5">Route</label>
+                <div class="relative">
+                  <ArrowsRightLeftIcon class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                   <select
                     v-model="selectedRoute"
-                    class="hide-select-icon text-center text-base min-w-[280px]"
+                    class="hide-select-icon w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
                   >
-                    <option
-                      v-for="route in routes"
-                      :key="route.route_id"
-                      :value="route"
-                    >
-                      {{
-                        route.portA?.port_name ||
-                        route.portA?.name ||
-                        "Port A"
-                      }}
-                      →
-                      {{
-                        route.portB?.port_name ||
-                        route.portB?.name ||
-                        "Port B"
-                      }}
+                    <option v-for="route in routes" :key="route.route_id" :value="route">
+                      {{ route.portA?.port_name || route.portA?.name || "Port A" }} → {{ route.portB?.port_name || route.portB?.name || "Port B" }}
                     </option>
                   </select>
                 </div>
               </div>
             </div>
-            <!-- Return Trip - Hidden for now -->
-            <!-- <div class="flex items-end">
-              <label class="flex items-center gap-2 pb-3">
-                <input
-                  type="checkbox"
-                  v-model="returnTrip"
-                  class="theme-checkbox"
-                />
-                <span class="text-sm font-medium text-gray-700">Return Trip</span>
-              </label>
-            </div> -->
           </div>
-          <div>
-            <div class="flex gap-4 items-center mb-3 justify-between">
-              <h3 class="text-base font-medium text-gray-700">
-                {{ returnTrip ? "Outbound Schedule" : "Select Schedule" }}
-              </h3>
 
-              <!-- Only show if a schedule is selected -->
-              <span
+          <!-- ── Card 2: Schedule ──────────────────────────────────────────── -->
+          <div class="bg-white rounded-2xl border border-gray-200 p-5">
+            <div class="flex items-center justify-between mb-4">
+              <p class="text-xs font-semibold uppercase tracking-widest text-gray-500">{{ returnTrip ? "Outbound Schedule" : "Select Schedule" }}</p>
+              <button
                 v-if="outboundSchedule"
-                class="text-sm flex gap-2 items-center justify-center cursor-pointer font-medium text-blue-900"
                 @click="outboundSchedule = null"
+                class="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
               >
-                <ArrowsRightLeftIcon class="w-4 h-4" /> Change Schedule
-              </span>
+                <ArrowsRightLeftIcon class="w-3.5 h-3.5" /> Change
+              </button>
             </div>
 
-            <!-- Port A Schedules -->
-            <div v-if="filteredSchedules.portA.length > 0" class="mb-8">
-              <h4 class="text-sm font-semibold text-gray-600 mb-3">
-                {{
-                  selectedRoute.portA?.port_name || selectedRoute.portA?.name
-                }}
-                →
-                {{
-                  selectedRoute.portB?.port_name || selectedRoute.portB?.name
-                }}
-              </h4>
-              <div class="grid grid-cols-4 gap-5">
+            <!-- Port A -->
+            <div v-if="filteredSchedules.portA.length > 0" class="mb-5">
+              <p class="text-xs font-semibold text-gray-400 mb-3">
+                {{ selectedRoute.portA?.port_name || selectedRoute.portA?.name }} → {{ selectedRoute.portB?.port_name || selectedRoute.portB?.name }}
+              </p>
+              <div class="grid grid-cols-4 gap-3">
                 <button
                   v-for="time in filteredSchedules.portA"
                   :key="time.id"
                   @click="outboundSchedule = time"
                   :class="[
-                    'p-3 text-center rounded-lg text-base border-2 transition-all duration-300',
+                    'py-3 px-2 text-center rounded-xl border transition-all',
                     outboundSchedule?.id === time.id
-                      ? 'border-2 bg-blue-900 text-white'
-                      : 'bg-white text-gray-700 border-gray-300 hover:shadow-[0_0_0_2px_#3b3b3b]',
+                      ? 'border-[#1e3a8a] bg-[#1e3a8a] text-white'
+                      : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50',
                   ]"
                 >
-                  <div class="font-medium">{{ time.time }}</div>
-                  <div class="text-xs opacity-75">{{ time.code }}</div>
+                  <div class="font-bold text-base">{{ time.time }}</div>
+                  <div class="text-xs opacity-60 mt-0.5">{{ time.code }}</div>
                 </button>
               </div>
             </div>
 
-            <!-- Port B Schedules (Return) -->
-            <div v-if="filteredSchedules.portB.length > 0" class="mb-8">
-              <h4 class="text-sm font-semibold text-gray-600 mb-3">
-                <span v-if="returnTrip">Return - </span>
-                {{
-                  selectedRoute.portB?.port_name || selectedRoute.portB?.name
-                }}
-                →
-                {{
-                  selectedRoute.portA?.port_name || selectedRoute.portA?.name
-                }}
-              </h4>
-              <div class="grid grid-cols-4 gap-5">
+            <!-- Port B -->
+            <div v-if="filteredSchedules.portB.length > 0" class="mb-2">
+              <p class="text-xs font-semibold text-gray-400 mb-3">
+                <span v-if="returnTrip">Return · </span>
+                {{ selectedRoute.portB?.port_name || selectedRoute.portB?.name }} → {{ selectedRoute.portA?.port_name || selectedRoute.portA?.name }}
+              </p>
+              <div class="grid grid-cols-4 gap-3">
                 <button
                   v-for="time in filteredSchedules.portB"
                   :key="time.id"
                   @click="returnTrip ? (returnSchedule = time) : (outboundSchedule = time)"
                   :class="[
-                    'p-3 text-center rounded-lg text-base border-2 transition-all duration-300',
-                    returnTrip 
-                      ? (returnSchedule?.id === time.id ? 'border-2 bg-blue-900 text-white' : 'bg-white text-gray-700 border-gray-300 hover:shadow-[0_0_0_2px_#3b3b3b]')
-                      : (outboundSchedule?.id === time.id ? 'border-2 bg-blue-900 text-white' : 'bg-white text-gray-700 border-gray-300 hover:shadow-[0_0_0_2px_#3b3b3b]'),
+                    'py-3 px-2 text-center rounded-xl border transition-all',
+                    returnTrip
+                      ? (returnSchedule?.id === time.id ? 'border-[#1e3a8a] bg-[#1e3a8a] text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50')
+                      : (outboundSchedule?.id === time.id ? 'border-[#1e3a8a] bg-[#1e3a8a] text-white' : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50'),
                   ]"
                 >
-                  <div class="font-medium">{{ time.time }}</div>
-                  <div class="text-xs opacity-75">{{ time.code }}</div>
+                  <div class="font-bold text-base">{{ time.time }}</div>
+                  <div class="text-xs opacity-60 mt-0.5">{{ time.code }}</div>
                 </button>
               </div>
             </div>
 
-            <!-- No schedules message -->
+            <!-- No schedules -->
             <div
-              v-if="
-                filteredSchedules.portA.length === 0 &&
-                filteredSchedules.portB.length === 0
-              "
-              class="text-center py-8 text-gray-500"
+              v-if="filteredSchedules.portA.length === 0 && filteredSchedules.portB.length === 0"
+              class="py-10 text-center"
             >
-              <span v-if="selectedRoute">
-                No schedules available for this route
-              </span>
-              <span v-else> Please select a route to view schedules </span>
+              <ClockIcon class="w-10 h-10 mx-auto mb-2 text-gray-200" />
+              <p class="text-sm text-gray-400">{{ selectedRoute ? "No schedules available for this route" : "Select a route to view schedules" }}</p>
             </div>
           </div>
 
-          <!-- I.A Checkbox - Before tabs so it applies to both -->
-          <div v-if="outboundSchedule">
-            <label class="flex items-center gap-3 p-4 bg-white rounded-lg border border-gray-300 cursor-pointer hover:border-blue-500 transition-colors">
-              <input
-                type="checkbox"
-                v-model="isInstitutionalAccount"
-                @change="handleIaCheckboxChange"
-                class="theme-checkbox w-5 h-5"
-              />
-              <div class="flex-1">
-                <span class="text-base font-medium text-gray-700">Institutional Account (I.A)</span>
-                <p class="text-xs text-gray-500 mt-0.5">Check if this booking is for an institutional account</p>
-              </div>
-            </label>
-          </div>
+          <!-- ── Cards only shown after schedule selected ──────────────────── -->
+          <template v-if="outboundSchedule">
 
-          <!-- Passenger/Vehicle Tabs -->
-          <div v-if="outboundSchedule">
-            <div class="flex gap-2 border-b border-gray-300 mb-6">
-              <button
-                @click="activeTab = 'Passenger'"
-                :class="[
-                  'px-6 py-3 text-base font-medium transition-all',
-                  activeTab === 'Passenger'
-                    ? 'border-b-2 border-blue-900 text-blue-900'
-                    : 'text-gray-600 hover:text-gray-900'
-                ]"
-              >
-                Passenger
-              </button>
-              <button
-                @click="activeTab = 'Vehicle'"
-                :class="[
-                  'px-6 py-3 text-base font-medium transition-all',
-                  activeTab === 'Vehicle'
-                    ? 'border-b-2 border-blue-900 text-blue-900'
-                    : 'text-gray-600 hover:text-gray-900'
-                ]"
-              >
-                Vehicle
-              </button>
-            </div>
-          </div>
-
-          <!-- Vehicle Flow: Just vehicle selection -->
-          <div v-if="activeTab === 'Vehicle' && outboundSchedule" class="space-y-6">
-            <div class="text-center py-8">
-              <div class="max-w-md mx-auto">
-                <div class="mb-6">
-                  <svg class="w-16 h-16 mx-auto text-blue-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  <h3 class="text-xl font-semibold text-gray-800 mb-2">Book Vehicle</h3>
-                  <p class="text-gray-600">Click below to select a vehicle and enter plate number</p>
-                </div>
-                <button
-                  @click="isVehicleModalOpen = true"
-                  class="px-6 py-3 bg-blue-900 text-white rounded-lg font-medium hover:bg-blue-800 transition-colors"
-                >
-                  Select Vehicle
-                </button>
-                <div v-if="selectedVehicleDetails" class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <p class="text-sm text-gray-600 mb-1">Selected Vehicle:</p>
-                  <p class="text-lg font-bold text-blue-900">
-                    {{ selectedVehicleDetails.vehicle_class || selectedVehicleDetails.type || "Vehicle" }}
-                  </p>
-                  <p v-if="selectedVehicleDetails.plate_number" class="text-sm text-gray-600 mt-1">
-                    Plate: {{ selectedVehicleDetails.plate_number }}
-                  </p>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Book Entry Button for Vehicle -->
-            <button
-              v-if="selectedVehicleDetails"
-              @click="bookVehicleEntry"
-              class="w-full p-4 rounded-lg text-base font-medium transition-all duration-300 bg-orange-500 text-white hover:bg-orange-600"
-            >
-              Book Entry
-            </button>
-          </div>
-
-          <!-- Selected Institutional Account Display - Shows for both tabs -->
-          <div
-            v-if="isInstitutionalAccount && selectedInstitutionalAccount"
-            class="p-4 bg-blue-50 rounded-lg border border-blue-200"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="w-12 h-12 rounded-lg overflow-hidden bg-white flex items-center justify-center"
-              >
-                <img
-                  v-if="selectedInstitutionalAccount.ia_image"
-                  :src="`${apiBase}/${selectedInstitutionalAccount.ia_image}`"
-                  :alt="selectedInstitutionalAccount.ia_name"
-                  class="w-full h-full object-cover"
+            <!-- ── Card 3: I.A ─────────────────────────────────────────────── -->
+            <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+              <label class="flex items-center gap-4 px-5 py-4 cursor-pointer hover:bg-blue-50/50 transition-colors">
+                <input
+                  type="checkbox"
+                  v-model="isInstitutionalAccount"
+                  @change="handleIaCheckboxChange"
+                  class="theme-checkbox w-5 h-5 flex-shrink-0"
                 />
-                <span v-else class="text-xl font-bold text-gray-400">
-                  {{ selectedInstitutionalAccount.ia_name.charAt(0) }}
-                </span>
+                <div class="flex-1">
+                  <p class="text-sm font-semibold text-gray-800">Institutional Account (I.A)</p>
+                  <p class="text-xs text-gray-400 mt-0.5">Check if this booking is for an institutional account</p>
+                </div>
+              </label>
+              <!-- Selected I.A -->
+              <div v-if="isInstitutionalAccount && selectedInstitutionalAccount" class="px-5 pb-4 border-t border-gray-100">
+                <div class="flex items-center gap-3 mt-3">
+                  <div class="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center flex-shrink-0">
+                    <img
+                      v-if="selectedInstitutionalAccount.ia_image"
+                      :src="`${apiBase}/${selectedInstitutionalAccount.ia_image}`"
+                      :alt="selectedInstitutionalAccount.ia_name"
+                      class="w-full h-full object-cover"
+                    />
+                    <span v-else class="text-lg font-bold text-gray-400">{{ selectedInstitutionalAccount.ia_name.charAt(0) }}</span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-xs text-gray-400 uppercase tracking-widest">Selected Institution</p>
+                    <p class="text-sm font-bold text-[#1e3a8a] truncate">{{ selectedInstitutionalAccount.ia_name }}</p>
+                  </div>
+                  <button @click="isIaModalOpen = true" class="text-xs text-blue-600 hover:text-blue-800 font-medium flex-shrink-0">Change</button>
+                </div>
               </div>
-              <div class="flex-1">
-                <p class="text-xs text-gray-600 font-medium">
-                  Selected Institution
-                </p>
-                <p class="text-sm font-bold text-blue-900">
-                  {{ selectedInstitutionalAccount.ia_name }}
-                </p>
-              </div>
-              <button
-                @click="isIaModalOpen = true"
-                class="text-blue-600 hover:text-blue-800 text-xs font-medium"
-              >
-                Change
-              </button>
-            </div>
-          </div>
-
-          <!-- Passenger Accommodation - Only for Passenger tab -->
-          <div v-if="activeTab === 'Passenger' && outboundSchedule">
-            <h3 class="text-base font-medium text-gray-700 mb-3">
-              Choose Passenger Accommodation
-            </h3>
-            <div class="grid gap-5" style="grid-template-columns: 1fr 1fr 1fr 0.5fr;">
-              <button
-                @click="handleAccommodationClick('Economy')"
-                :class="[
-                  'p-3 text-center rounded-lg text-base border border-gray-300 transition-all duration-300',
-                  selectedAccommodation === 'Economy'
-                    ? 'bg-blue-900 text-white font-medium'
-                    : 'bg-white hover:shadow-[0_0_0_2px_#3b3b3b]',
-                ]"
-              >
-                Economy
-              </button>
-              <button
-                @click="handleAccommodationClick('Premium Economy')"
-                :class="[
-                  'p-3 text-center rounded-lg text-base border border-gray-300 transition-all duration-300',
-                  selectedAccommodation === 'Premium Economy'
-                    ? 'bg-blue-900 text-white font-medium'
-                    : 'bg-white hover:shadow-[0_0_0_2px_#3b3b3b]',
-                ]"
-              >
-                Premium Economy
-              </button>
-              <button
-                @click="handleAccommodationClick('Business Class')"
-                :class="[
-                  'p-3 text-center rounded-lg text-base border border-gray-300 transition-all duration-300',
-                  selectedAccommodation === 'Business Class'
-                    ? 'bg-blue-900 text-white font-medium'
-                    : 'bg-white hover:shadow-[0_0_0_2px_#3b3b3b]',
-                ]"
-              >
-                Business Class
-              </button>
-              <button
-                @click="handleAccommodationClick('Senior/PWD')"
-                :class="[
-                  'p-3 text-center rounded-lg text-sm border border-gray-300 transition-all duration-300',
-                  selectedAccommodation === 'Senior/PWD'
-                    ? 'bg-blue-900 text-white font-medium'
-                    : 'bg-white hover:shadow-[0_0_0_2px_#3b3b3b]',
-                ]"
-              >
-                PWD
-              </button>
-            </div>
-          </div>
-
-          <!-- Seatmap Display -->
-          <div v-if="activeTab === 'Passenger' && selectedAccommodation">
-            <div class="flex items-center justify-between mb-3">
-              <h3 class="text-base font-medium text-gray-700">
-                Select Your Seat
-              </h3>
-              <button
-                v-if="!isManualSeatSelection && availableSeats.length > 0"
-                @click="isManualSeatSelection = true"
-                class="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
-              >
-                Select a Seat
-              </button>
             </div>
 
-            <!-- Loading State -->
-            <div v-if="loadingSeatmap" class="text-center py-8">
-              <div
-                class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-900"
-              ></div>
-              <p class="text-gray-600 mt-2">Loading seatmap...</p>
-            </div>
+            <!-- ── Card 4: Tabs + booking form ───────────────────────────── -->
+            <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
 
-            <!-- Auto-selected Seat Info -->
-            <div
-              v-if="!isManualSeatSelection && selectedSeat"
-              class="p-4 bg-green-50 rounded-lg border border-green-200"
-            >
-              <p class="text-sm font-medium text-green-900">
-                Auto-selected Seat: <span class="font-bold text-lg">{{ selectedSeat.seat_no }}</span>
-              </p>
-              <p class="text-xs text-green-700 mt-1">
-                This seat has been automatically assigned. Click "Select a Seat" to choose a different one.
-              </p>
-            </div>
-
-            <!-- Seatmap (only shown when manual selection is active) -->
-            <div
-              v-else-if="isManualSeatSelection && availableSeats.length > 0"
-              class="bg-white p-4 rounded-lg border border-gray-300"
-            >
-              <!-- Title and Selected Class -->
-              <div class="flex items-center justify-center gap-3 mb-3">
-                <p class="text-sm font-medium text-gray-700">Seatmap Preview</p>
-                <span
-                  class="px-3 py-1 bg-blue-900 text-white text-xs font-semibold rounded-full"
+              <!-- Tab bar -->
+              <div class="flex border-b border-gray-200">
+                <button
+                  @click="activeTab = 'Passenger'"
+                  :class="[
+                    'flex-1 py-3.5 text-sm font-semibold transition-all',
+                    activeTab === 'Passenger' ? 'text-[#1e3a8a] border-b-2 border-[#1e3a8a]' : 'text-gray-400 hover:text-gray-600',
+                  ]"
                 >
-                  {{ selectedAccommodation }}
-                </span>
-              </div>
-
-              <!-- Legend -->
-              <div class="flex items-center gap-4 mb-4 flex-wrap justify-center">
-                <div class="flex items-center gap-1.5">
-                  <span
-                    class="w-4 h-4 rounded bg-white border border-gray-300 flex-shrink-0"
-                  ></span>
-                  <span class="text-xs text-gray-500">Available</span>
-                </div>
-                <div class="flex items-center gap-1.5">
-                  <span class="w-4 h-4 rounded bg-red-600 flex-shrink-0"></span>
-                  <span class="text-xs text-gray-500">Blocked</span>
-                </div>
-                <div class="flex items-center gap-1.5">
-                  <span class="w-4 h-4 rounded bg-gray-200 flex-shrink-0"></span>
-                  <span class="text-xs text-gray-500">Path</span>
-                </div>
-                <div class="flex items-center gap-1.5">
-                  <span class="w-4 h-4 rounded bg-green-400 flex-shrink-0"></span>
-                  <span class="text-xs text-gray-500">PWD</span>
-                </div>
-                <div class="flex items-center gap-1.5">
-                  <span
-                    class="w-4 h-4 rounded bg-orange-400 flex-shrink-0"
-                  ></span>
-                  <span class="text-xs text-gray-500">Facility</span>
-                </div>
-              </div>
-
-              <!-- Seatmap Container -->
-              <div
-                class="relative h-[350px] overflow-auto border rounded-lg p-4 bg-white"
-              >
-                <div
-                  class="relative select-none"
-                  :style="{
-                    width: Math.max(...availableSeats.map(s => s.col)) * 44 + 44 + 'px',
-                    height: Math.max(...availableSeats.map(s => s.row)) * 44 + 44 + 'px',
-                  }"
+                  Passenger
+                </button>
+                <button
+                  @click="activeTab = 'Vehicle'"
+                  :class="[
+                    'flex-1 py-3.5 text-sm font-semibold transition-all',
+                    activeTab === 'Vehicle' ? 'text-[#1e3a8a] border-b-2 border-[#1e3a8a]' : 'text-gray-400 hover:text-gray-600',
+                  ]"
                 >
-                  <!-- Seats with Absolute Positioning -->
-                  <div
-                    v-for="seat in availableSeats"
-                    :key="seat.seat_no"
-                    :data-row="seat.row"
-                    :data-col="seat.col"
-                    class="absolute flex items-center justify-center border rounded-md text-xs font-medium cursor-pointer select-none transition-colors"
-                    :style="{
-                      width: '40px',
-                      height: '40px',
-                      top: seat.row * 44 + 2 + 'px',
-                      left: seat.col * 44 + 2 + 'px',
-                    }"
-                    :class="{
-                      'bg-red-600 border-red-700 text-white hover:bg-red-500':
-                        seat.blocked,
-                      'bg-gray-200 border-gray-300 text-gray-400 cursor-default':
-                        seat.path && !seat.blocked,
-                      'bg-orange-400 border-orange-500 text-white cursor-default':
-                        seat.facility && !seat.blocked && !seat.path,
-                      'bg-green-400 border-green-500 text-black':
-                        seat.pwd && !seat.blocked && !seat.path && !seat.facility,
-                      'bg-white border-gray-200 text-gray-700 hover:bg-blue-50 hover:border-blue-300':
-                        !seat.blocked &&
-                        !seat.path &&
-                        !seat.facility &&
-                        !seat.pwd &&
-                        selectedSeat?.seat_no !== seat.seat_no,
-                      'bg-blue-600 text-white shadow-lg ring-2 ring-blue-400':
-                        selectedSeat?.seat_no === seat.seat_no,
-                    }"
-                    @click="
-                      !seat.blocked && !seat.path && !seat.facility && !seat.pwd
-                        ? (selectedSeat = seat)
-                        : null
-                    "
+                  Vehicle
+                </button>
+              </div>
+
+              <div class="p-6 space-y-5">
+
+                <!-- ── VEHICLE TAB ──────────────────────────────────────── -->
+                <template v-if="activeTab === 'Vehicle'">
+                  <div class="text-center py-6">
+                    <div class="w-14 h-14 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center mx-auto mb-4">
+                      <svg class="w-7 h-7 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                      </svg>
+                    </div>
+                    <h3 class="text-base font-semibold text-gray-800 mb-1">Book a Vehicle</h3>
+                    <p class="text-sm text-gray-400 mb-5">Select vehicle type and enter plate number</p>
+                    <button
+                      @click="isVehicleModalOpen = true"
+                      class="px-6 py-2.5 bg-[#1e3a8a] text-white rounded-xl text-sm font-semibold hover:bg-[#162d6e] transition-colors"
+                    >
+                      Select Vehicle
+                    </button>
+                    <div v-if="selectedVehicleDetails" class="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-200 text-left">
+                      <p class="text-xs text-gray-400 uppercase tracking-widest mb-1">Selected</p>
+                      <p class="text-base font-bold text-[#1e3a8a]">{{ selectedVehicleDetails.vehicle_class || selectedVehicleDetails.type || "Vehicle" }}</p>
+                      <p v-if="selectedVehicleDetails.plate_number" class="font-mono text-sm text-gray-600 mt-0.5">{{ selectedVehicleDetails.plate_number }}</p>
+                    </div>
+                  </div>
+                  <button
+                    v-if="selectedVehicleDetails"
+                    @click="bookVehicleEntry"
+                    class="w-full py-3.5 rounded-xl text-sm font-semibold transition-all bg-orange-500 text-white hover:bg-orange-600"
                   >
-                    <span v-if="seat.blocked" class="text-white font-bold text-sm pointer-events-none">✕</span>
-                    <span v-else-if="!seat.path && !seat.facility" class="pointer-events-none">
-                      {{ seat.seat_no }}
-                    </span>
+                    Book Entry
+                  </button>
+                </template>
+
+                <!-- ── PASSENGER TAB ────────────────────────────────────── -->
+                <template v-if="activeTab === 'Passenger'">
+
+                  <!-- Accommodation -->
+                  <div>
+                    <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">Accommodation Class</p>
+                    <div class="grid grid-cols-4 gap-2">
+                      <button
+                        @click="handleAccommodationClick('Economy')"
+                        :class="['py-2.5 text-center rounded-xl text-sm font-semibold border transition-all', selectedAccommodation === 'Economy' ? 'border-[#1e3a8a] bg-[#1e3a8a] text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-blue-50']"
+                      >Economy</button>
+                      <button
+                        @click="handleAccommodationClick('Premium Economy')"
+                        :class="['py-2.5 text-center rounded-xl text-sm font-semibold border transition-all', selectedAccommodation === 'Premium Economy' ? 'border-[#1e3a8a] bg-[#1e3a8a] text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-blue-50']"
+                      >Prem. Economy</button>
+                      <button
+                        @click="handleAccommodationClick('Business Class')"
+                        :class="['py-2.5 text-center rounded-xl text-sm font-semibold border transition-all', selectedAccommodation === 'Business Class' ? 'border-[#1e3a8a] bg-[#1e3a8a] text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-blue-50']"
+                      >Business</button>
+                      <button
+                        @click="handleAccommodationClick('Senior/PWD')"
+                        :class="['py-2.5 text-center rounded-xl text-sm font-semibold border transition-all', selectedAccommodation === 'Senior/PWD' ? 'border-[#1e3a8a] bg-[#1e3a8a] text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-blue-50']"
+                      >PWD</button>
+                    </div>
                   </div>
 
-                  <!-- Facility labels overlay -->
-                  <div
-                    v-for="(facility, index) in computeFacilityLabels(availableSeats)"
-                    :key="index"
-                    class="absolute flex items-center justify-center text-white font-bold pointer-events-none bg-orange-500 rounded-md text-xs"
-                    :style="{
-                      top: facility.top + 2 + 'px',
-                      left: facility.left + 2 + 'px',
-                      width: facility.width - 4 + 'px',
-                      height: facility.height - 4 + 'px',
-                      zIndex: 10,
-                    }"
-                  >
-                    {{ facility.name }}
+                  <!-- Seat Selection -->
+                  <div v-if="selectedAccommodation">
+                    <div class="flex items-center justify-between mb-3">
+                      <p class="text-xs font-semibold uppercase tracking-widest text-gray-500">Seat</p>
+                      <button
+                        v-if="!isManualSeatSelection && availableSeats.length > 0"
+                        @click="isManualSeatSelection = true"
+                        class="text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                      >
+                        Choose manually →
+                      </button>
+                    </div>
+
+                    <!-- Loading -->
+                    <div v-if="loadingSeatmap" class="flex items-center gap-3 py-4">
+                      <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-[#1e3a8a] flex-shrink-0"></div>
+                      <p class="text-sm text-gray-400">Loading seatmap…</p>
+                    </div>
+
+                    <!-- Auto-selected -->
+                    <div v-else-if="!isManualSeatSelection && selectedSeat" class="flex items-center gap-3 p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl">
+                      <div class="w-10 h-10 rounded-lg bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                        <span class="text-white font-bold text-sm">{{ selectedSeat.seat_no }}</span>
+                      </div>
+                      <div>
+                        <p class="text-sm font-semibold text-emerald-800">Seat {{ selectedSeat.seat_no }} auto-assigned</p>
+                        <p class="text-xs text-emerald-600">Click "Choose manually" to change</p>
+                      </div>
+                    </div>
+
+                    <!-- Manual seatmap -->
+                    <div v-else-if="isManualSeatSelection && availableSeats.length > 0" class="bg-gray-50 rounded-xl border border-gray-200 p-4">
+                      <div class="flex items-center justify-between mb-3">
+                        <span class="text-xs font-semibold text-gray-500 bg-[#1e3a8a] text-white px-2 py-0.5 rounded-full">{{ selectedAccommodation }}</span>
+                        <div class="flex items-center gap-3">
+                          <div class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-white border border-gray-300"></span><span class="text-xs text-gray-400">Free</span></div>
+                          <div class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-red-500"></span><span class="text-xs text-gray-400">Blocked</span></div>
+                          <div class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-blue-600"></span><span class="text-xs text-gray-400">Selected</span></div>
+                          <div class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-green-400"></span><span class="text-xs text-gray-400">PWD</span></div>
+                          <div class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-orange-400"></span><span class="text-xs text-gray-400">Facility</span></div>
+                        </div>
+                      </div>
+                      <!-- Seatmap grid — internals unchanged -->
+                      <div class="relative h-[350px] overflow-auto border rounded-lg p-4 bg-white">
+                        <div
+                          class="relative select-none"
+                          :style="{ width: Math.max(...availableSeats.map(s => s.col)) * 44 + 44 + 'px', height: Math.max(...availableSeats.map(s => s.row)) * 44 + 44 + 'px' }"
+                        >
+                          <div
+                            v-for="seat in availableSeats"
+                            :key="seat.seat_no"
+                            :data-row="seat.row"
+                            :data-col="seat.col"
+                            class="absolute flex items-center justify-center border rounded-md text-xs font-medium cursor-pointer select-none transition-colors"
+                            :style="{ width: '40px', height: '40px', top: seat.row * 44 + 2 + 'px', left: seat.col * 44 + 2 + 'px' }"
+                            :class="{
+                              'bg-red-600 border-red-700 text-white hover:bg-red-500': seat.blocked,
+                              'bg-gray-200 border-gray-300 text-gray-400 cursor-default': seat.path && !seat.blocked,
+                              'bg-orange-400 border-orange-500 text-white cursor-default': seat.facility && !seat.blocked && !seat.path,
+                              'bg-green-400 border-green-500 text-black': seat.pwd && !seat.blocked && !seat.path && !seat.facility,
+                              'bg-white border-gray-200 text-gray-700 hover:bg-blue-50 hover:border-blue-300': !seat.blocked && !seat.path && !seat.facility && !seat.pwd && selectedSeat?.seat_no !== seat.seat_no,
+                              'bg-blue-600 text-white shadow-lg ring-2 ring-blue-400': selectedSeat?.seat_no === seat.seat_no,
+                            }"
+                            @click="!seat.blocked && !seat.path && !seat.facility && !seat.pwd ? (selectedSeat = seat) : null"
+                          >
+                            <span v-if="seat.blocked" class="text-white font-bold text-sm pointer-events-none">✕</span>
+                            <span v-else-if="!seat.path && !seat.facility" class="pointer-events-none">{{ seat.seat_no }}</span>
+                          </div>
+                          <div
+                            v-for="(facility, index) in computeFacilityLabels(availableSeats)"
+                            :key="index"
+                            class="absolute flex items-center justify-center text-white font-bold pointer-events-none bg-orange-500 rounded-md text-xs"
+                            :style="{ top: facility.top + 2 + 'px', left: facility.left + 2 + 'px', width: facility.width - 4 + 'px', height: facility.height - 4 + 'px', zIndex: 10 }"
+                          >{{ facility.name }}</div>
+                        </div>
+                      </div>
+                      <div v-if="selectedSeat" class="mt-3 flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <span class="text-sm font-medium text-blue-900">Seat <strong>{{ selectedSeat.seat_no }}</strong> selected</span>
+                        <button @click="isManualSeatSelection = false" class="px-4 py-1.5 bg-[#1e3a8a] text-white text-xs font-semibold rounded-lg hover:bg-[#162d6e] transition-colors">Confirm</button>
+                      </div>
+                    </div>
+
+                    <!-- No seatmap -->
+                    <div v-else class="py-6 text-center bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                      <p class="text-sm text-gray-400">No seatmap for this class</p>
+                      <p class="text-xs text-gray-300 mt-0.5">Seat will be auto-assigned</p>
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              <!-- Selected Seat Info -->
-              <div
-                v-if="selectedSeat"
-                class="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200"
-              >
-                <p class="text-sm font-medium text-blue-900">
-                  Selected Seat:
-                  <span class="font-bold">{{ selectedSeat.seat_no }}</span>
-                </p>
-              </div>
+                  <!-- Passenger name -->
+                  <div v-if="selectedAccommodation">
+                    <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-2">Passenger Name</p>
+                    <input
+                      type="text"
+                      v-model="fullname"
+                      placeholder="Enter full name"
+                      class="w-full px-4 py-3 border border-gray-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                    />
+                  </div>
 
-              <!-- Done Button -->
-              <button
-                v-if="selectedSeat"
-                @click="isManualSeatSelection = false"
-                class="mt-3 w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium"
-              >
-                Confirm Seat
-              </button>
+                  <!-- Type & Gender -->
+                  <div v-if="fullname">
+                    <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">Type & Gender</p>
+                    <div class="grid grid-cols-3 gap-2">
+                      <button
+                        @click="isPassengerTypeModalOpen = true"
+                        :class="['py-3 text-center rounded-xl text-base font-semibold border transition-all', selectedPassengerTypeDetails ? 'border-[#1e3a8a] bg-[#1e3a8a] text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-blue-50']"
+                      >{{ selectedPassengerTypeDetails ? selectedPassengerTypeDetails.type : 'Type' }}</button>
+                      <button
+                        @click="selectedGender = 'Male'"
+                        :class="['py-3 text-center rounded-xl text-base font-semibold border transition-all', selectedGender === 'Male' ? 'border-[#1e3a8a] bg-[#1e3a8a] text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-blue-50']"
+                      >Male</button>
+                      <button
+                        @click="selectedGender = 'Female'"
+                        :class="['py-3 text-center rounded-xl text-base font-semibold border transition-all', selectedGender === 'Female' ? 'border-[#1e3a8a] bg-[#1e3a8a] text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-blue-50']"
+                      >Female</button>
+                    </div>
+                    <div v-if="selectedPassengerTypeDetails" class="mt-2 flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200 text-xs flex-wrap">
+                      <span class="text-gray-500">Type:</span>
+                      <span class="font-semibold text-[#1e3a8a] capitalize">{{ selectedPassengerTypeDetails.type }}</span>
+                      <span v-if="parseFloat(selectedPassengerTypeDetails.discount) > 0" class="text-emerald-600 font-medium">({{ (parseFloat(selectedPassengerTypeDetails.discount) * 100).toFixed(0) }}% off)</span>
+                      <span v-if="selectedPassengerTypeDetails.waived" class="text-orange-500 font-medium">(Fee Waived)</span>
+                    </div>
+                  </div>
+
+                  <!-- Book Entry -->
+                  <button
+                    v-if="selectedGender"
+                    @click="bookEntry"
+                    :class="['w-full py-3.5 rounded-xl text-sm font-semibold transition-all', bookingActive ? 'bg-white shadow-border-brand-color' : 'bg-orange-500 text-white hover:bg-orange-600']"
+                  >
+                    Book Entry
+                  </button>
+
+                </template>
+              </div>
             </div>
 
-            <!-- No Seatmap Available -->
-            <div
-              v-else
-              class="bg-gray-50 p-6 rounded-lg border border-gray-300 text-center"
-            >
-              <p class="text-gray-600">
-                No seatmap available for this accommodation class.
-              </p>
-              <p class="text-sm text-gray-500 mt-1">
-                Seat will be assigned automatically.
-              </p>
+          </template>
+
+          <!-- Step instruction -->
+          <div v-if="stepInstruction" class="pb-2">
+            <div class="flex items-center gap-2.5 px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl">
+              <svg class="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p class="text-sm text-blue-700 font-medium">{{ stepInstruction }}</p>
             </div>
           </div>
 
-          <!-- Passenger Information -->
-          <div v-if="activeTab === 'Passenger' && selectedAccommodation">
-            <h3 class="text-base font-medium text-gray-700 mb-3">
-              Passenger Information
-            </h3>
-            <div class="space-y-2">
-              <label class="block text-sm text-gray-600">Fullname</label>
-              <input
-                type="text"
-                v-model="fullname"
-                placeholder="Enter Passenger Fullname"
-                class="w-full p-3 border border-gray-300 rounded-lg text-base focus:outline-none focus:shadow-[0_0_0_2px_#155dfc]"
-              />
-            </div>
-          </div>
-          
-          <!-- Passenger Type and Gender in one row -->
-          <div v-if="activeTab === 'Passenger' && fullname">
-            <h3 class="text-base font-medium text-gray-700 mb-3">
-              Passenger Type & Gender
-            </h3>
-            <div class="grid grid-cols-3 gap-5">
-              <button
-                @click="isPassengerTypeModalOpen = true"
-                :class="[
-                  'p-3 text-center rounded-lg text-base border border-gray-300 transition-all duration-300',
-                  selectedPassengerTypeDetails
-                    ? 'bg-blue-900 text-white font-medium'
-                    : 'bg-white hover:shadow-[0_0_0_2px_#3b3b3b]',
-                ]"
-              >
-                {{ selectedPassengerTypeDetails ? selectedPassengerTypeDetails.type : 'Select Type' }}
-              </button>
-              <button
-                @click="selectedGender = 'Male'"
-                :class="[
-                  'p-3 text-center rounded-lg text-base border border-gray-300 transition-all duration-300',
-                  selectedGender === 'Male'
-                    ? 'bg-blue-900 text-white font-medium'
-                    : 'bg-white hover:shadow-[0_0_0_2px_#3b3b3b]',
-                ]"
-              >
-                Male
-              </button>
-              <button
-                @click="selectedGender = 'Female'"
-                :class="[
-                  'p-3 text-center rounded-lg text-base border border-gray-300 transition-all duration-300',
-                  selectedGender === 'Female'
-                    ? 'bg-blue-900 text-white font-medium'
-                    : 'bg-white hover:shadow-[0_0_0_2px_#3b3b3b]',
-                ]"
-              >
-                Female
-              </button>
-            </div>
-            
-            <!-- Selected Passenger Type Info -->
-            <div v-if="selectedPassengerTypeDetails" class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <div class="flex items-center gap-2 text-sm">
-                <span class="text-gray-600">Type:</span>
-                <span class="font-medium text-blue-900 capitalize">{{ selectedPassengerTypeDetails.type }}</span>
-                <span
-                  v-if="parseFloat(selectedPassengerTypeDetails.discount) > 0"
-                  class="text-xs text-green-600 font-medium ml-2"
-                >
-                  ({{ (parseFloat(selectedPassengerTypeDetails.discount) * 100).toFixed(0) }}% Discount)
-                </span>
-                <span
-                  v-if="selectedPassengerTypeDetails.waived"
-                  class="text-xs text-orange-600 font-medium ml-2"
-                >
-                  (Fee Waived)
-                </span>
-              </div>
-            </div>
-          </div>
-          <!-- Discount Selection - Hidden for now -->
-          <!-- <div v-if="activeTab === 'Passenger' && selectedGender">
-            <h3 class="text-base font-medium text-gray-700 mb-3">
-              Choose Discount
-            </h3>
-            <div class="grid grid-cols-3 gap-5">
-              <button
-                v-for="discount in discounts"
-                :key="discount.value"
-                @click="selectedDiscount = discount.value"
-                :class="[
-                  'p-3 text-center rounded-lg text-base border border-gray-300 transition-all duration-300',
-                  selectedDiscount === discount.value
-                    ? 'bg-blue-900 text-white font-medium'
-                    : 'bg-white hover:shadow-[0_0_0_2px_#3b3b3b]',
-                ]"
-              >
-                {{ discount.label }} <span v-if="discount.percent !== '0%'" class="font-semibold">({{ discount.percent }})</span>
-              </button>
-            </div>
-            <div class="text-xs text-gray-500 mt-1">
-              <p>*req. valid/soft ID for new entry</p>
-              <p
-                v-if="
-                  selectedPassengerTypeDetails?.discount &&
-                  parseFloat(selectedPassengerTypeDetails.discount) > 0
-                "
-                class="text-green-600 font-medium mt-0.5"
-              >
-                ✓ Passenger Type Discount ({{
-                  (
-                    parseFloat(selectedPassengerTypeDetails.discount) * 100
-                  ).toFixed(0)
-                }}%) will be automatically applied
-              </p>
-              <p
-                v-if="selectedPassengerTypeDetails?.waived"
-                class="text-orange-600 font-medium mt-0.5"
-              >
-                ✓ Admin Fee Waived for this passenger type
-              </p>
-            </div>
-          </div> -->
-          <button
-            v-if="activeTab === 'Passenger' && selectedGender"
-            @click="bookEntry"
-            :class="[
-              'w-full p-4 rounded-lg text-base font-medium transition-all duration-300',
-              bookingActive
-                ? 'bg-white shadow-border-brand-color font-medium'
-                : 'bg-orange-500 text-white hover:bg-orange-600',
-            ]"
-          >
-            Book Entry
-          </button>
-        </div>
-        <div class="mt-8 mb-8">
-          <h4
-            class="step__instruction text-base font-medium text-gray-700 text-center"
-          >
-            {{ stepInstruction }}
-          </h4>
         </div>
       </div>
   </main>
