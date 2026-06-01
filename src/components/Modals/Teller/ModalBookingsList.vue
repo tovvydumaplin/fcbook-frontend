@@ -98,6 +98,21 @@ const openGeneratedDoc = async (url) => {
   }
 };
 
+// ─── Generate e-ticket (booking level) ───────────────────────────────────────
+const generatingEticket = ref(false);
+const generateEticket = async () => {
+  const bookingNumber = selectedPayment.value?.booking?.booking_number;
+  if (!bookingNumber) return;
+  generatingEticket.value = true;
+  try {
+    await openGeneratedDoc(`${apiBase}/teller-booking/generate-eticket?booking_number=${encodeURIComponent(bookingNumber)}`);
+  } catch (err) {
+    console.error("generateEticket error:", err);
+  } finally {
+    generatingEticket.value = false;
+  }
+};
+
 // ─── Generate ticket ─────────────────────────────────────────────────────────
 const generatingTicket = ref(false);
 const generateTicket = async () => {
@@ -136,8 +151,16 @@ const closeModal = () => {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const creatorName = (c) => {
   if (!c) return "—";
-  return [c.first_name, c.middle_name, c.last_name].filter(Boolean).join(" ");
+  if (c.first_name || c.last_name)
+    return [c.first_name, c.middle_name, c.last_name].filter(Boolean).join(" ");
+  return c.full_name || c.name || c.username || "—";
 };
+
+const resolvedCreator = computed(() => {
+  const p = selectedPayment.value;
+  if (!p) return null;
+  return p.creator ?? p.booking?.creator ?? p.agent ?? p.booking?.agent ?? null;
+});
 
 const fmtDate = (val) => {
   if (!val) return "—";
@@ -300,6 +323,21 @@ watch(() => props.isOpen, (open) => { if (open) fetchPayments(); });
                   <span :class="['px-3 py-1 rounded-full text-sm font-semibold capitalize', modeColor(selectedPayment.payment_method)]">
                     {{ selectedPayment.payment_method || "—" }}
                   </span>
+                  <!-- Generate E-Ticket -->
+                  <button
+                    @click="generateEticket"
+                    :disabled="generatingEticket || !selectedPayment.booking?.booking_number"
+                    class="flex items-center gap-1.5 px-4 py-1.5 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg v-if="generatingEticket" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                    </svg>
+                    {{ generatingEticket ? "Generating…" : "Generate E-Ticket" }}
+                  </button>
                   <button
                     @click="generateTicket"
                     :disabled="generatingTicket || !selectedPayment.booking?.booking_number"
@@ -399,14 +437,15 @@ watch(() => props.isOpen, (open) => { if (open) fetchPayments(); });
                       <span class="text-gray-500">Processed</span>
                       <span class="font-medium text-gray-800">{{ fmtDate(selectedPayment.created_at) }}</span>
                     </div>
-                    <div v-if="selectedPayment.creator" class="flex items-center gap-2 px-4 py-2.5">
-                      <span class="text-gray-500 text-sm flex-shrink-0">Teller</span>
-                      <div class="flex items-center gap-1.5 ml-auto">
+                    <div class="flex items-center gap-2 px-4 py-2.5">
+                      <span class="text-gray-500 text-sm flex-shrink-0">Issued By</span>
+                      <div v-if="resolvedCreator" class="flex items-center gap-1.5 ml-auto">
                         <div class="w-6 h-6 rounded-full bg-[#1e3a8a] flex items-center justify-center flex-shrink-0">
-                          <span class="text-white text-[10px] font-bold">{{ creatorName(selectedPayment.creator).charAt(0) }}</span>
+                          <span class="text-white text-[10px] font-bold">{{ creatorName(resolvedCreator).charAt(0) }}</span>
                         </div>
-                        <span class="text-xs font-medium text-gray-700 truncate max-w-[100px]">{{ creatorName(selectedPayment.creator) }}</span>
+                        <span class="text-xs font-medium text-gray-700 truncate max-w-[100px]">{{ creatorName(resolvedCreator) }}</span>
                       </div>
+                      <span v-else class="text-gray-400 text-xs ml-auto">—</span>
                     </div>
                   </div>
                 </div>
