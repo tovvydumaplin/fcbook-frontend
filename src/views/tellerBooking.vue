@@ -1475,7 +1475,7 @@ const handlePrintingSelected = async (option, referenceNumber = null) => {
       // Admin fee: 2 pesos per passenger, 25 pesos per vehicle
       const total_admin_fee = (filteredPassengers.value.length * 2) + (filteredVehicles.value.length * 25);
       
-      const grand_total = total_fare + total_admin_fee - total_discount;
+      const grand_total = total_fare + total_admin_fee;
 
       const paymentBody = {
         serial_no: activeSerialTab.value || serialNo.value,
@@ -1719,49 +1719,29 @@ const removePassenger = async (passenger) => {
   if (passenger.bookedPassengerId) {
     try {
       const stored = localStorage.getItem("token");
-      
-      if (!stored) {
-        alert("Authentication required. Please log in again.");
-        return;
-      }
-      
+      if (!stored) { alert("Authentication required. Please log in again."); return; }
       const authHeader = stored.startsWith("Bearer ") ? stored : `Bearer ${stored}`;
 
       const response = await fetch(`${apiBase}/teller-booking/booked-passengers/${passenger.bookedPassengerId}`, {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: authHeader,
-        },
+        headers: { Authorization: authHeader },
       });
 
-      // Refresh booking details + tab list to check if deletion worked
-      const prevCount = passengers.value.filter(p => p.serialNo === (activeSerialTab.value || serialNo.value)).length;
+      if (!response.ok) {
+        let message = response.statusText;
+        try { const err = await response.json(); message = err.message || err.error || message; } catch {}
+        alert(`Failed to delete passenger (${response.status}): ${message}`);
+        return;
+      }
+
+      // Unblock the seat locally
+      if (passenger.seat && passenger.seat !== "N/A") {
+        const seatToUnblock = availableSeats.value.find(s => s.seat_no === passenger.seat);
+        if (seatToUnblock) seatToUnblock.blocked = false;
+      }
+
       await fetchBookingDetails(activeSerialTab.value || serialNo.value);
       await fetchBookings();
-      const newCount = passengers.value.filter(p => p.serialNo === (activeSerialTab.value || serialNo.value)).length;
-
-      if (newCount < prevCount) {
-        // Passenger was deleted successfully
-        // Unblock the seat
-        if (passenger.seat && passenger.seat !== "N/A") {
-          const seatToUnblock = availableSeats.value.find(
-            (s) => s.seat_no === passenger.seat,
-          );
-          if (seatToUnblock) {
-            seatToUnblock.blocked = false;
-          }
-        }
-        console.log("Passenger deleted successfully");
-      } else {
-        // Deletion failed
-        try {
-          const result = await response.json();
-          alert("Failed to delete passenger: " + (result.message || result.error || response.statusText));
-        } catch {
-          alert("Failed to delete passenger");
-        }
-      }
     } catch (err) {
       console.error("Error deleting passenger:", err);
       alert("Network error: " + err.message);
@@ -1795,40 +1775,23 @@ const removeVehicle = async (vehicle) => {
   if (vehicle.bookedVehicleId) {
     try {
       const stored = localStorage.getItem("token");
-      
-      if (!stored) {
-        alert("Authentication required. Please log in again.");
-        return;
-      }
-      
+      if (!stored) { alert("Authentication required. Please log in again."); return; }
       const authHeader = stored.startsWith("Bearer ") ? stored : `Bearer ${stored}`;
 
       const response = await fetch(`${apiBase}/teller-booking/booked-vehicles/${vehicle.bookedVehicleId}`, {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: authHeader,
-        },
+        headers: { Authorization: authHeader },
       });
 
-      // Refresh booking details + tab list to check if deletion worked
-      const prevVehicleCount = vehicles.value.filter(v => v.serialNo === (activeSerialTab.value || serialNo.value)).length;
+      if (!response.ok) {
+        let message = response.statusText;
+        try { const err = await response.json(); message = err.message || err.error || message; } catch {}
+        alert(`Failed to delete vehicle (${response.status}): ${message}`);
+        return;
+      }
+
       await fetchBookingDetails(activeSerialTab.value || serialNo.value);
       await fetchBookings();
-      const newVehicleCount = vehicles.value.filter(v => v.serialNo === (activeSerialTab.value || serialNo.value)).length;
-
-      if (newVehicleCount < prevVehicleCount) {
-        // Vehicle was deleted successfully
-        console.log("Vehicle deleted successfully");
-      } else {
-        // Deletion failed
-        try {
-          const result = await response.json();
-          alert("Failed to delete vehicle: " + (result.message || result.error || response.statusText));
-        } catch {
-          alert("Failed to delete vehicle");
-        }
-      }
     } catch (err) {
       console.error("Error deleting vehicle:", err);
       alert("Network error: " + err.message);

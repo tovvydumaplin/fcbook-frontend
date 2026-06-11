@@ -50,6 +50,9 @@ const printingOptions = ref([
 const passengerFare = computed(() =>
   props.passengers.reduce((sum, p) => sum + parseFloat(p.fare || 0), 0)
 );
+const passengerOriginalFare = computed(() =>
+  props.passengers.reduce((sum, p) => sum + parseFloat(p.fare || 0) + parseFloat(p.discountAmount || 0), 0)
+);
 const passengerAdminFee = computed(() =>
   props.passengers.length * 2 + props.vehicles.length * 25
 );
@@ -60,7 +63,7 @@ const vehicleFare = computed(() =>
   props.vehicles.reduce((sum, v) => sum + parseFloat(v.vehicle?.rate || 0), 0)
 );
 const totalAmount = computed(() =>
-  passengerFare.value + passengerAdminFee.value + vehicleFare.value - passengerDiscount.value
+  passengerFare.value + passengerAdminFee.value + vehicleFare.value
 );
 const change = computed(() => Math.max(0, cashRendered.value - totalAmount.value));
 
@@ -188,7 +191,14 @@ const selectPrintingOption = (option) => {
               <div class="divide-y divide-gray-100 text-sm">
                 <div class="flex justify-between items-center px-4 py-3">
                   <span class="text-gray-500">Passenger Fare</span>
-                  <span class="font-medium text-gray-800">₱{{ passengerFare.toFixed(2) }}</span>
+                  <div class="text-right">
+                    <span v-if="passengerDiscount > 0" class="line-through text-gray-400 text-xs mr-1.5">₱{{ passengerOriginalFare.toFixed(2) }}</span>
+                    <span class="font-medium text-gray-800">₱{{ passengerFare.toFixed(2) }}</span>
+                  </div>
+                </div>
+                <div v-if="passengerDiscount > 0" class="flex justify-between items-center px-4 py-2 bg-emerald-50">
+                  <span class="text-emerald-700 text-xs font-medium">Discount applied</span>
+                  <span class="font-semibold text-emerald-600 text-xs">-₱{{ passengerDiscount.toFixed(2) }}</span>
                 </div>
                 <div v-if="vehicles.length > 0" class="flex justify-between items-center px-4 py-3">
                   <span class="text-gray-500">Vehicle Fare</span>
@@ -197,10 +207,6 @@ const selectPrintingOption = (option) => {
                 <div class="flex justify-between items-center px-4 py-3">
                   <span class="text-gray-500">Admin Fee</span>
                   <span class="font-medium text-gray-800">₱{{ passengerAdminFee.toFixed(2) }}</span>
-                </div>
-                <div v-if="passengerDiscount > 0" class="flex justify-between items-center px-4 py-3">
-                  <span class="text-gray-500">Discount</span>
-                  <span class="font-medium text-red-500">-₱{{ passengerDiscount.toFixed(2) }}</span>
                 </div>
                 <div class="flex justify-between items-center px-4 py-3 bg-blue-50">
                   <span class="font-semibold text-blue-900">Total</span>
