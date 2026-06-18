@@ -85,7 +85,8 @@ Tabs let the teller manage multiple in-progress bookings.
 - `GET /teller-booking/bookings` — list of incomplete bookings (tabs, teller UI only)
 - `GET /teller-booking/bookings/{serial}` — full detail for a tab (passengers + vehicles, teller UI only)
 
-Closing a tab deletes all its passengers and vehicles from the backend.
+Closing a tab cancels the entire booking in one call:
+- `DELETE /teller-booking/bookings/{serial_no}`
 
 ---
 

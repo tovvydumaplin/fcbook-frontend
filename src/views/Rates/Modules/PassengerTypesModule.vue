@@ -76,6 +76,7 @@ onMounted(fetchPassengerTypes);
             <th class="px-6 py-3 text-left text-xs text-gray-500">Type</th>
             <th class="px-6 py-3 text-left text-xs text-gray-500">Discount</th>
             <th class="px-6 py-3 text-left text-xs text-gray-500">Waived</th>
+            <th class="px-6 py-3 text-left text-xs text-gray-500">Has Seat</th>
             <th class="px-6 py-3 text-left text-xs text-gray-500">Status</th>
             <th class="px-6 py-3 text-left text-xs text-gray-500">Action</th>
           </tr>
@@ -91,6 +92,7 @@ onMounted(fetchPassengerTypes);
             <td class="px-6 py-4 text-sm">{{ p.type }}</td>
             <td class="px-6 py-4 text-sm">{{ Number(p.discount) * 100 }}%</td>
             <td class="px-6 py-4 text-sm">{{ p.waived ? "✅" : "❌" }}</td>
+            <td class="px-6 py-4 text-sm">{{ p.has_seat !== false ? "✅" : "❌" }}</td>
             <td class="px-6 py-4 text-sm">
               <span
                 :class="[

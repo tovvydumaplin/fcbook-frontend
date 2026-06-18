@@ -4,6 +4,7 @@ import { ref, watch } from "vue";
 const emit = defineEmits(["saved", "close"]);
 const apiBase = import.meta.env.VITE_API_URL;
 const waived = ref(false);
+const hasSeat = ref(true);
 const isLoading = ref(false);
 const errorMsg = ref("");
 
@@ -33,6 +34,7 @@ const savePassengerType = async () => {
       // UI percent → DB decimal
       discount: Number(passengerType.value.selectedDiscount) / 100,
       waived: waived.value ? 1 : 0,
+      has_seat: hasSeat.value ? 1 : 0,
       status: 1, // 1 = active, 0 = inactive
     };
 
@@ -81,10 +83,12 @@ watch(
         newVal.discount != null ? Number(newVal.discount) * 100 : "";
 
       waived.value = newVal.waived ?? false;
+      hasSeat.value = newVal.has_seat !== false && newVal.has_seat !== 0;
     } else {
       passengerType.value.passengerTypeName = "";
       passengerType.value.selectedDiscount = "";
       waived.value = false;
+      hasSeat.value = true;
     }
   },
   { immediate: true },
@@ -186,6 +190,19 @@ watch(
           />
           <span class="text-sm text-gray-700">
             {{ waived ? "Waived" : "Not Waived" }}
+          </span>
+        </div>
+
+        <!-- Has Seat Toggle -->
+        <div class="flex items-center gap-3">
+          <input
+            type="checkbox"
+            v-model="hasSeat"
+            class="w-5 h-5 accent-blue-600"
+            :disabled="isLoading"
+          />
+          <span class="text-sm text-gray-700">
+            {{ hasSeat ? "Requires a seat" : "No seat required (e.g. Infant)" }}
           </span>
         </div>
 

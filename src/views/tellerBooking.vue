@@ -19,6 +19,8 @@ const bookingActive = ref(false);
 
 const isPaymentModalOpen = ref(false);
 const isVehicleModalOpen = ref(false);
+const showPaymentSuccess = ref(false);
+const paymentSuccessData = ref(null);
 const isIaModalOpen = ref(false);
 const isPassengerTypeModalOpen = ref(false);
 const isDriverSelectionOpen = ref(false);
@@ -1242,8 +1244,8 @@ const bookEntry = async () => {
     gender: selectedGender.value.toLowerCase(),
     passenger_category_id: passengerCategory?.id || passengerCategory?.category_id || null,
     passenger_category_snapshot: selectedAccommodation.value,
-    seat_id: selectedSeat.value?.id || selectedSeat.value?.seat_id || null,
-    seat_number_snapshot: selectedSeat.value?.seat_no || "N/A",
+    seat_id: selectedPassengerTypeDetails.value?.has_seat !== false ? (selectedSeat.value?.id || selectedSeat.value?.seat_id || null) : null,
+    seat_number_snapshot: selectedPassengerTypeDetails.value?.has_seat !== false ? (selectedSeat.value?.seat_no || "N/A") : null,
     discount_amount: parseFloat(discountAmount.toFixed(2)),
     discount_id: null,
     institutional_account_id: selectedInstitutionalAccount.value?.ia_id || selectedInstitutionalAccount.value?.id || null,
@@ -1504,9 +1506,9 @@ const handlePrintingSelected = async (option, referenceNumber = null) => {
       if (response.ok) {
         const result = await response.json();
         console.log("Payment successful:", result);
-        alert("Payment processed successfully!");
         isPaymentModalOpen.value = false;
-        // TODO: Generate E-Ticket/Receipt
+        paymentSuccessData.value = result;
+        showPaymentSuccess.value = true;
       } else {
         const error = await response.json();
         console.error("Payment error:", error);
@@ -1610,33 +1612,17 @@ const handleCloseTab = async (serialToClose) => {
   if (!stored) return;
   const authHeader = stored.startsWith("Bearer ") ? stored : `Bearer ${stored}`;
 
-  // Ensure detail is loaded before we try to delete
-  if (!passengers.value.some(p => p.serialNo === serialToClose) &&
-      !vehicles.value.some(v => v.serialNo === serialToClose)) {
-    await fetchBookingDetails(serialToClose);
+  const response = await fetch(`${apiBase}/teller-booking/bookings/${serialToClose}`, {
+    method: "DELETE",
+    headers: { Authorization: authHeader },
+  });
+
+  if (!response.ok) {
+    let message = response.statusText;
+    try { const err = await response.json(); message = err.message || err.error || message; } catch {}
+    alert(`Failed to cancel booking (${response.status}): ${message}`);
+    return;
   }
-
-  const passengersToDelete = passengers.value.filter(
-    (p) => p.serialNo === serialToClose && p.bookedPassengerId
-  );
-  const vehiclesToDelete = vehicles.value.filter(
-    (v) => v.serialNo === serialToClose && v.bookedVehicleId
-  );
-
-  await Promise.all([
-    ...passengersToDelete.map((p) =>
-      fetch(`${apiBase}/teller-booking/booked-passengers/${p.bookedPassengerId}`, {
-        method: "DELETE",
-        headers: { Authorization: authHeader },
-      })
-    ),
-    ...vehiclesToDelete.map((v) =>
-      fetch(`${apiBase}/teller-booking/booked-vehicles/${v.bookedVehicleId}`, {
-        method: "DELETE",
-        headers: { Authorization: authHeader },
-      })
-    ),
-  ]);
 
   // Remove from local state
   passengers.value = passengers.value.filter(p => p.serialNo !== serialToClose);
@@ -2036,6 +2022,49 @@ const editPassengerFromModal = (passenger) => {
     :isOpen="isBookingsModalOpen"
     @close="isBookingsModalOpen = false"
   />
+
+  <!-- Payment Success Modal -->
+  <transition name="modal-fade">
+    <div
+      v-if="showPaymentSuccess"
+      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+    >
+      <div class="bg-white rounded-2xl w-full max-w-sm border border-gray-200 overflow-hidden">
+        <!-- Green top bar -->
+        <div class="h-1.5 bg-emerald-500"></div>
+
+        <div class="p-8 flex flex-col items-center text-center">
+          <!-- Check icon -->
+          <div class="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-5">
+            <svg class="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+
+          <h2 class="text-xl font-bold text-gray-900 mb-1">Payment Successful</h2>
+          <p class="text-sm text-gray-500 mb-5">The booking has been confirmed and payment recorded.</p>
+
+          <!-- Booking number if available -->
+          <div
+            v-if="paymentSuccessData?.data?.booking_number || paymentSuccessData?.booking_number"
+            class="w-full mb-5 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl"
+          >
+            <p class="text-xs text-gray-400 mb-0.5">Booking Number</p>
+            <p class="font-mono font-bold text-[#1e3a8a] text-base">
+              {{ paymentSuccessData?.data?.booking_number || paymentSuccessData?.booking_number }}
+            </p>
+          </div>
+
+          <button
+            @click="showPaymentSuccess = false; paymentSuccessData = null; passengers = []; vehicles = []; handleNewTransaction(); fetchBookings();"
+            class="w-full py-3 bg-[#1e3a8a] text-white font-semibold rounded-xl hover:bg-[#162d6e] transition-colors"
+          >
+            Continue
+          </button>
+        </div>
+      </div>
+    </div>
+  </transition>
 
   <!-- App shell: header fixed, panels fill remaining height -->
   <div class="h-screen flex flex-col overflow-hidden">
@@ -2583,8 +2612,8 @@ const editPassengerFromModal = (passenger) => {
                     </div>
                   </div>
 
-                  <!-- Seat Selection -->
-                  <div v-if="selectedAccommodation">
+                  <!-- Seat Selection — hidden for types that don't require a seat -->
+                  <div v-if="selectedAccommodation && selectedPassengerTypeDetails?.has_seat !== false">
                     <div class="flex items-center justify-between mb-3">
                       <p class="text-xs font-semibold uppercase tracking-widest text-gray-500">Seat</p>
                       <button
