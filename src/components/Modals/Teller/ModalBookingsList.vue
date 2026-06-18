@@ -282,6 +282,15 @@ watch(() => props.isOpen, (open) => { if (open) fetchPayments(); });
                   {{ p.vessel_snapshot }}
                   <span v-if="p.schedule?.departure_time"> · {{ fmtTime(p.schedule.departure_time) }}</span>
                 </p>
+                <!-- IA badge -->
+                <div v-if="p.institutional_account_snapshot" class="mt-1.5">
+                  <span class="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-50 border border-purple-200 text-purple-700 text-[10px] font-semibold rounded-full truncate max-w-full">
+                    <svg class="w-2.5 h-2.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    {{ p.institutional_account_snapshot }}
+                  </span>
+                </div>
                 <!-- Date + amount -->
                 <div class="flex items-center justify-between mt-2">
                   <span class="text-xs text-gray-400">{{ fmtDate(p.travel_date) }}</span>
@@ -383,7 +392,10 @@ watch(() => props.isOpen, (open) => { if (open) fetchPayments(); });
                 </div>
                 <div class="bg-white border border-gray-200 rounded-xl px-4 py-3 text-center col-span-2">
                   <p class="text-2xl font-bold text-emerald-600">{{ fmtMoney(selectedPayment.grand_total) }}</p>
-                  <p class="text-xs text-gray-400 mt-0.5">Total Paid</p>
+                  <p class="text-xs text-gray-400 mt-0.5">
+                    Total Paid
+                    <span v-if="selectedPayment.total_admin_fee > 0" class="text-gray-400"> · incl. {{ fmtMoney(selectedPayment.total_admin_fee) }} admin fee</span>
+                  </p>
                 </div>
               </div>
 
@@ -411,6 +423,10 @@ watch(() => props.isOpen, (open) => { if (open) fetchPayments(); });
                     <div class="flex justify-between items-center px-4 py-2.5">
                       <span class="text-gray-500">Travel Date</span>
                       <span class="font-medium text-gray-800">{{ fmtDate(selectedPayment.booking?.travel_date) }}</span>
+                    </div>
+                    <div v-if="selectedPayment.booking?.institutional_account_snapshot" class="flex justify-between items-center px-4 py-2.5 bg-purple-50">
+                      <span class="text-purple-700 text-sm">Institution</span>
+                      <span class="font-semibold text-purple-800 text-xs text-right max-w-[60%] truncate">{{ selectedPayment.booking.institutional_account_snapshot }}</span>
                     </div>
                   </div>
                 </div>
