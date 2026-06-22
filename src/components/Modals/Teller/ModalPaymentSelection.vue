@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import cashImg from "../../../assets/payment-method-images/cash.png";
 import gcashImg from "../../../assets/payment-method-images/gcash.png";
 import paymongoImg from "../../../assets/payment-method-images/paymongo.png";
@@ -30,6 +30,13 @@ const emit = defineEmits(["close", "paymentSelected", "printingSelected"]);
 const selectedPaymentMethod = ref(null);
 const referenceNumber = ref("");
 const cashRendered = ref(0);
+const managerPin = ref(["", "", "", "", ""]);
+const pinInputs = ref([]);
+const MANAGER_KEY = "aaaaa";
+const managerKey = computed(() => managerPin.value.join(""));
+const isVerifying = ref(false);
+const managerKeyVerified = ref(false);
+const managerKeyRejected = ref(false);
 
 const paymentMethods = ref([
   { id: "cash",     name: "Cash",     logo: cashImg },
@@ -66,8 +73,66 @@ const totalAmount = computed(() =>
   passengerFare.value + passengerAdminFee.value + vehicleFare.value
 );
 const change = computed(() => Math.max(0, cashRendered.value - totalAmount.value));
+const hasDiscount = computed(() => passengerDiscount.value > 0);
+const printEnabled = computed(() => !hasDiscount.value || managerKeyVerified.value);
 
 const passengerCount = computed(() => props.passengers.length);
+
+const resetPinState = () => {
+  managerKeyVerified.value = false;
+  managerKeyRejected.value = false;
+};
+
+const onPinInput = (index, event) => {
+  const val = event.target.value.slice(-1);
+  managerPin.value[index] = val;
+  resetPinState();
+
+  if (val && index < 4) {
+    pinInputs.value[index + 1]?.focus();
+  } else if (val && index === 4) {
+    isVerifying.value = true;
+    setTimeout(() => {
+      isVerifying.value = false;
+      if (managerKey.value === MANAGER_KEY) {
+        managerKeyVerified.value = true;
+      } else {
+        managerKeyRejected.value = true;
+        // Clear boxes and refocus first after a short pause
+        setTimeout(() => {
+          managerKeyRejected.value = false;
+          managerPin.value = ["", "", "", "", ""];
+          nextTick(() => pinInputs.value[0]?.focus());
+        }, 1200);
+      }
+    }, 900);
+  }
+};
+
+const onPinKeydown = (index, event) => {
+  if (event.key === "Backspace") {
+    if (managerPin.value[index]) {
+      managerPin.value[index] = "";
+      resetPinState();
+    } else if (index > 0) {
+      managerPin.value[index - 1] = "";
+      resetPinState();
+      pinInputs.value[index - 1]?.focus();
+    }
+  }
+};
+
+watch(() => props.isOpen, (open) => {
+  if (!open) {
+    managerPin.value = ["", "", "", "", ""];
+    managerKeyVerified.value = false;
+    managerKeyRejected.value = false;
+    isVerifying.value = false;
+    selectedPaymentMethod.value = null;
+    referenceNumber.value = "";
+    cashRendered.value = 0;
+  }
+});
 
 const closeModal = () => emit("close");
 const selectPaymentMethod = (method) => {
@@ -163,6 +228,77 @@ const selectPrintingOption = (option) => {
                   <span class="text-sm text-gray-500">Change</span>
                   <span class="text-sm font-semibold text-gray-800">₱{{ change.toFixed(2) }}</span>
                 </div>
+
+                <!-- Port Manager Authorization (only when discount is applied) -->
+                <div v-if="hasDiscount" class="mt-1">
+                  <div
+                    :class="[
+                      'rounded-xl border p-3.5 transition-colors duration-300',
+                      isVerifying
+                        ? 'border-blue-200 bg-blue-50'
+                        : managerKeyVerified
+                          ? 'border-emerald-300 bg-emerald-50'
+                          : managerKeyRejected
+                            ? 'border-red-300 bg-red-50'
+                            : 'border-amber-300 bg-amber-50',
+                    ]"
+                  >
+                    <div class="flex items-center gap-2 mb-2.5">
+                      <div
+                        :class="[
+                          'w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 transition-colors duration-300',
+                          isVerifying ? 'bg-blue-400' : managerKeyVerified ? 'bg-emerald-500' : managerKeyRejected ? 'bg-red-400' : 'bg-amber-400',
+                        ]"
+                      >
+                        <svg v-if="isVerifying" class="w-3.5 h-3.5 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+                        </svg>
+                        <svg v-else-if="managerKeyRejected" class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        <svg v-else-if="managerKeyVerified" class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <svg v-else class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 1C8.676 1 6 3.676 6 7v1H4v14h16V8h-2V7c0-3.324-2.676-6-6-6zm0 2c2.276 0 4 1.724 4 4v1H8V7c0-2.276 1.724-4 4-4zm0 9a2 2 0 110 4 2 2 0 010-4z"/>
+                        </svg>
+                      </div>
+                      <div>
+                        <p :class="['text-xs font-bold transition-colors duration-300', isVerifying ? 'text-blue-700' : managerKeyVerified ? 'text-emerald-800' : managerKeyRejected ? 'text-red-700' : 'text-amber-800']">
+                          {{ isVerifying ? 'Authenticating…' : managerKeyVerified ? 'Authorization Granted' : managerKeyRejected ? 'Incorrect Key' : 'Port Manager Authorization Required' }}
+                        </p>
+                        <p :class="['text-xs transition-colors duration-300', isVerifying ? 'text-blue-500' : managerKeyVerified ? 'text-emerald-600' : managerKeyRejected ? 'text-red-500' : 'text-amber-600']">
+                          {{ isVerifying ? 'Please wait while we verify the key.' : managerKeyVerified ? 'Discount has been approved.' : managerKeyRejected ? 'The key you entered is invalid. Please try again.' : 'A discount is applied. Enter the Port Manager key to proceed.' }}
+                        </p>
+                      </div>
+                    </div>
+                    <div class="flex gap-1.5">
+                      <input
+                        v-for="(_, i) in managerPin"
+                        :key="i"
+                        :ref="el => pinInputs[i] = el"
+                        :value="managerPin[i]"
+                        type="password"
+                        maxlength="1"
+                        inputmode="text"
+                        :disabled="isVerifying || managerKeyRejected"
+                        @input="onPinInput(i, $event)"
+                        @keydown="onPinKeydown(i, $event)"
+                        :class="[
+                          'w-8 h-9 text-center text-sm font-bold rounded-md border outline-none transition-all duration-300',
+                          isVerifying
+                            ? 'border-blue-200 bg-blue-50 text-blue-400 cursor-not-allowed'
+                            : managerKeyVerified
+                              ? 'border-emerald-400 bg-emerald-50 text-emerald-800 focus:ring-1 focus:ring-emerald-300'
+                              : managerKeyRejected
+                                ? 'border-red-300 bg-red-50 text-red-400 cursor-not-allowed'
+                                : 'border-amber-300 bg-white text-gray-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-200',
+                        ]"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -217,21 +353,33 @@ const selectPrintingOption = (option) => {
 
             <!-- Print & Confirm -->
             <div class="mt-auto">
-              <p class="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">Print & Confirm</p>
+              <div class="flex items-center justify-between mb-3">
+                <p class="text-xs font-semibold uppercase tracking-widest text-gray-400">Print & Confirm</p>
+                <span v-if="hasDiscount && !managerKeyVerified" class="flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 1C8.676 1 6 3.676 6 7v1H4v14h16V8h-2V7c0-3.324-2.676-6-6-6zm0 2c2.276 0 4 1.724 4 4v1H8V7c0-2.276 1.724-4 4-4zm0 9a2 2 0 110 4 2 2 0 010-4z"/>
+                  </svg>
+                  Locked
+                </span>
+              </div>
               <div class="grid grid-cols-2 gap-2">
                 <button
                   v-for="option in printingOptions"
                   :key="option.id"
-                  @click="selectPrintingOption(option)"
+                  @click="printEnabled && selectPrintingOption(option)"
+                  :disabled="!printEnabled"
                   :class="[
-                    'flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-white text-sm font-semibold transition-colors',
-                    option.bg,
+                    'flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-white text-sm font-semibold transition-all relative',
+                    printEnabled ? option.bg : 'bg-gray-300 cursor-not-allowed opacity-60',
                   ]"
                 >
                   <component :is="option.icon" />
                   {{ option.name }}
                 </button>
               </div>
+              <p v-if="hasDiscount && !managerKeyVerified" class="text-center text-xs text-amber-600 mt-2">
+                Enter the Port Manager key on the left to unlock printing.
+              </p>
             </div>
           </div>
         </div>

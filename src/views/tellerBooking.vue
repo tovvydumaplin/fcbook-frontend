@@ -4,7 +4,6 @@ import ModalPaymentSelection from "../components/Modals/Teller/ModalPaymentSelec
 import VehicleSelection from "../components/Modals/Teller/VehicleSelection.vue";
 import ViewTellerPassenger from "../components/Modals/Teller/ViewTellerPassenger.vue";
 import IaModal from "../components/Modals/Teller/IaModal.vue";
-import PassengerTypeModal from "../components/Modals/Teller/PassengerTypeModal.vue";
 import ModalBookingsList from "../components/Modals/Teller/ModalBookingsList.vue";
 import TellerHeader from "../components/TellerHeader.vue";
 import {
@@ -22,7 +21,6 @@ const isVehicleModalOpen = ref(false);
 const showPaymentSuccess = ref(false);
 const paymentSuccessData = ref(null);
 const isIaModalOpen = ref(false);
-const isPassengerTypeModalOpen = ref(false);
 const isDriverSelectionOpen = ref(false);
 const isBookingsModalOpen = ref(false);
 // Selected vehicle for driver assignment
@@ -45,6 +43,9 @@ const selectedPassengerTypeDetails = ref(null);
 
 // Store regular passenger type for auto-selection
 const regularPassengerType = ref(null);
+
+// All passenger types fetched from API
+const allPassengerTypes = ref([]);
 
 // Serial Number - Auto-generated
 const serialNo = ref("");
@@ -921,7 +922,6 @@ onMounted(async () => {
   }
 });
 
-const passengerTypes = ["Regular Passenger", "Institutional Account"];
 const accommodations = [
   "Business Class",
   "Premium Economy",
@@ -1013,11 +1013,13 @@ const fetchPassengerTypes = async () => {
       console.log("Passenger Types Response:", result);
 
       if (result.success && result.data?.types) {
+        allPassengerTypes.value = result.data.types.filter(t => t.status === 1);
+
         // Find and auto-select "Regular" passenger type
-        const regularType = result.data.types.find(
-          (type) => type.type.toLowerCase() === "regular" && type.status === 1
+        const regularType = allPassengerTypes.value.find(
+          (type) => type.type.toLowerCase() === "regular"
         );
-        
+
         if (regularType) {
           regularPassengerType.value = regularType;
           selectedPassengerTypeDetails.value = regularType;
@@ -2010,12 +2012,6 @@ const editPassengerFromModal = (passenger) => {
     @select="handleIaSelect"
   />
 
-  <!-- Passenger Type Modal -->
-  <PassengerTypeModal
-    :isOpen="isPassengerTypeModalOpen"
-    @close="isPassengerTypeModalOpen = false"
-    @select="handlePassengerTypeSelect"
-  />
 
   <!-- Bookings List Modal -->
   <ModalBookingsList
@@ -2712,14 +2708,10 @@ const editPassengerFromModal = (passenger) => {
                     />
                   </div>
 
-                  <!-- Type & Gender -->
+                  <!-- Gender -->
                   <div v-if="fullname">
-                    <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">Type & Gender</p>
-                    <div class="grid grid-cols-3 gap-2">
-                      <button
-                        @click="isPassengerTypeModalOpen = true"
-                        :class="['py-3 text-center rounded-xl text-base font-semibold border transition-all', selectedPassengerTypeDetails ? 'border-[#1e3a8a] bg-[#1e3a8a] text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-blue-50']"
-                      >{{ selectedPassengerTypeDetails ? selectedPassengerTypeDetails.type : 'Type' }}</button>
+                    <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">Gender</p>
+                    <div class="grid grid-cols-2 gap-2">
                       <button
                         @click="selectedGender = 'Male'"
                         :class="['py-3 text-center rounded-xl text-base font-semibold border transition-all', selectedGender === 'Male' ? 'border-[#1e3a8a] bg-[#1e3a8a] text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-blue-50']"
@@ -2729,11 +2721,21 @@ const editPassengerFromModal = (passenger) => {
                         :class="['py-3 text-center rounded-xl text-base font-semibold border transition-all', selectedGender === 'Female' ? 'border-[#1e3a8a] bg-[#1e3a8a] text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-blue-50']"
                       >Female</button>
                     </div>
-                    <div v-if="selectedPassengerTypeDetails" class="mt-2 flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200 text-xs flex-wrap">
-                      <span class="text-gray-500">Type:</span>
-                      <span class="font-semibold text-[#1e3a8a] capitalize">{{ selectedPassengerTypeDetails.type }}</span>
-                      <span v-if="parseFloat(selectedPassengerTypeDetails.discount) > 0" class="text-emerald-600 font-medium">({{ (parseFloat(selectedPassengerTypeDetails.discount) * 100).toFixed(0) }}% off)</span>
-                      <span v-if="selectedPassengerTypeDetails.waived" class="text-orange-500 font-medium">(Fee Waived)</span>
+                  </div>
+
+                  <!-- Passenger Type -->
+                  <div v-if="fullname">
+                    <p class="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">Passenger Type</p>
+                    <div class="grid grid-cols-4 gap-2">
+                      <button
+                        v-for="type in allPassengerTypes"
+                        :key="type.p_id || type.id"
+                        @click="handlePassengerTypeSelect(type)"
+                        :class="['py-2.5 text-center rounded-xl text-sm font-semibold border transition-all capitalize', selectedPassengerTypeDetails === type ? 'border-[#1e3a8a] bg-[#1e3a8a] text-white' : 'border-gray-200 bg-white text-gray-600 hover:border-blue-300 hover:bg-blue-50']"
+                      >
+                        {{ type.type }}
+                        <span v-if="parseFloat(type.discount) > 0" class="block text-xs font-normal opacity-75">{{ (parseFloat(type.discount) * 100).toFixed(0) }}% off</span>
+                      </button>
                     </div>
                   </div>
 
