@@ -14,7 +14,7 @@ const activeType = ref(1);
 const selectedVehicle = ref(null);
 const apiBase = import.meta.env.VITE_API_URL;
 
-const vehicleTypes = [1, 2, 3, 4, 5];
+const vehicleTypes = [1, 2, 3, 4, 5, 6];
 
 const openEditVehicle = (vehicle) => {
   selectedVehicle.value = vehicle;
@@ -48,9 +48,12 @@ const fetchVehicles = async () => {
     const data = await res.json();
 
     vehicles.value = data.data.vehicles.map((v) => ({
-      vehicle_id: v.vehicle_id,
+      vehicleId: v.vehicle_id,
       vehicleType: Number(v.vehicle_type),
       vehicleClass: v.vehicle_class,
+      vehicleLength: Number(v.length),
+      vehicleWeight: Number(v.weight),
+      withPlateNumber: v.with_plate_number,
       updatedAt: new Date(v.updated_at).toLocaleDateString(),
     }));
   } catch (err) {
@@ -140,6 +143,12 @@ onMounted(fetchVehicles);
               <th class="w-64 px-6 py-3 text-left text-xs text-gray-500">
                 Vehicle Class
               </th>
+              <th class="w-30 px-6 py-3 text-left text-xs text-gray-500">
+                Length
+              </th>
+              <th class="w-30 px-6 py-3 text-left text-xs text-gray-500">
+                Weight
+              </th>
               <th class="w-40 px-6 py-3 text-left text-xs text-gray-500">
                 Updated
               </th>
@@ -164,7 +173,7 @@ onMounted(fetchVehicles);
             <tr
               v-else-if="vehicles.length > 0"
               v-for="(vehicle, index) in filteredVehicles"
-              :key="vehicle.vehicle_id"
+              :key="vehicle.vehicleId"
               class="hover:bg-gray-50"
             >
               <td class="px-6 py-4 text-sm">
@@ -173,6 +182,14 @@ onMounted(fetchVehicles);
 
               <td class="px-6 py-4 text-sm">
                 {{ vehicle.vehicleClass }}
+              </td>
+
+              <td class="px-6 py-4 text-sm">
+                {{ vehicle.vehicleLength ? vehicle.vehicleLength + "m" : "-" }}
+              </td>
+
+              <td class="px-6 py-4 text-sm">
+                {{ vehicle.vehicleWeight ? vehicle.vehicleWeight + "kg" : "-" }}
               </td>
 
               <td class="px-6 py-4 text-sm">

@@ -10,6 +10,8 @@ const prefix = ref("");
 const vesselInfo = reactive({
   name: "",
   details: "",
+  length: 0,
+  weight: 0,
   status: 1,
 });
 
@@ -23,6 +25,8 @@ const saveVessel = async () => {
   const payload = {
     vessel_name: fullName,
     description: vesselInfo.details,
+    decklane_length_capacity: vesselInfo.length,
+    weight_capacity: vesselInfo.weight,
     status: 1,
     capacity: 0,
   };
@@ -69,7 +73,7 @@ const saveVessel = async () => {
     @click="$emit('close')"
   >
     <div
-      class="modal-card bg-white rounded-lg shadow-xl w-full max-w-md mx-4"
+      class="modal-card bg-white rounded-lg shadow-xl w-full max-w-lg mx-4"
       @click.stop
     >
       <div
@@ -114,6 +118,35 @@ const saveVessel = async () => {
               v-model="vesselInfo.name"
               type="text"
               placeholder="Input vessel code"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              :disabled="isLoading"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-6">
+          <div class="flex flex-col">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Lane Length Capacity (meters)
+            </label>
+            <input
+              v-model="vesselInfo.length"
+              type="number"
+              placeholder="Input Length Capacity"
+              required
+              class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              :disabled="isLoading"
+            />
+          </div>
+          <div class="flex flex-col">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Weight Capacity (kg)
+            </label>
+            <input
+              v-model="vesselInfo.weight"
+              type="number"
+              placeholder="Input Weight Capacity"
               required
               class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               :disabled="isLoading"

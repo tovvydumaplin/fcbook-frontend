@@ -12,9 +12,14 @@ const props = defineProps({
   },
 });
 
+const withPlateNumber = ref(props.vehicle.withPlateNumber || false);
+
 const form = reactive({
   vehicleType: props.vehicle?.vehicleType || "",
   vehicleClass: props.vehicle?.vehicleClass || "",
+  vehicleLength: props.vehicle?.vehicleLength || 0,
+  vehicleWeight: props.vehicle?.vehicleWeight || 0,
+  withPlateNumber: props.vehicle?.withPlateNumber || false,
 });
 
 const saveVehicle = async () => {
@@ -30,9 +35,12 @@ const saveVehicle = async () => {
     const payload = {
       vehicle_type: form.vehicleType,
       vehicle_class: form.vehicleClass,
+      length: form.vehicleLength,
+      weight: form.vehicleWeight,
+      with_plate_number: withPlateNumber.value,
     };
     const res = await fetch(
-      `${import.meta.env.VITE_API_URL}/vehicles/${props.vehicle.vehicle_id}`,
+      `${import.meta.env.VITE_API_URL}/vehicles/${props.vehicle.vehicleId}`,
       {
         method: "PUT",
         headers: {
@@ -81,7 +89,7 @@ const saveVehicle = async () => {
         class="flex items-center justify-between p-6 border-b border-gray-200"
       >
         <h2 class="text-lg font-semibold text-gray-900">
-          Edit Vehicle {{ form.vehicleType }}
+          Edit {{ form.vehicleClass }}
         </h2>
         <button
           @click="$emit('close')"
@@ -106,6 +114,17 @@ const saveVehicle = async () => {
       <form @submit.prevent="saveVehicle" class="p-6 space-y-6">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">
+            Vehicle Type
+          </label>
+          <input
+            type="text"
+            v-model="form.vehicleType"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
             Vehicle Class
           </label>
           <input
@@ -113,6 +132,60 @@ const saveVehicle = async () => {
             v-model="form.vehicleClass"
             class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Length (meters)
+          </label>
+          <input
+            type="number"
+            v-model="form.vehicleLength"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Weight (kg)
+          </label>
+          <input
+            type="number"
+            v-model="form.vehicleWeight"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+
+        <div class="flex flex-col gap-4">
+          <label class="block text-sm font-medium text-gray-700"
+            >Plate Number</label
+          >
+          <div class="flex items-center gap-3 select-none">
+            <button
+              type="button"
+              role="switch"
+              :aria-checked="withPlateNumber"
+              @click="withPlateNumber = !withPlateNumber"
+              :class="[
+                'relative inline-flex items-center w-12 h-6 rounded-full transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 cursor-pointer flex-shrink-0',
+                withPlateNumber ? 'bg-blue-600' : 'bg-gray-300',
+              ]"
+            >
+              <span
+                :class="[
+                  'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-300',
+                  withPlateNumber ? 'translate-x-6' : 'translate-x-0',
+                ]"
+              />
+            </button>
+            <span
+              :class="[
+                'text-sm font-medium transition-colors duration-200',
+                withPlateNumber ? 'text-gray-700' : 'text-gray-400',
+              ]"
+              >With Plate Number</span
+            >
+          </div>
         </div>
 
         <div
