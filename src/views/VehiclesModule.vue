@@ -14,7 +14,7 @@ const activeType = ref(1);
 const selectedVehicle = ref(null);
 const apiBase = import.meta.env.VITE_API_URL;
 
-const vehicleTypes = [1, 2, 3, 4, 5];
+const vehicleTypes = [1, 2, 3, 4, 5, 6];
 
 const openEditVehicle = (vehicle) => {
   selectedVehicle.value = vehicle;
@@ -53,6 +53,7 @@ const fetchVehicles = async () => {
       vehicleClass: v.vehicle_class,
       vehicleLength: Number(v.length),
       vehicleWeight: Number(v.weight),
+      withPlateNumber: v.with_plate_number,
       updatedAt: new Date(v.updated_at).toLocaleDateString(),
     }));
   } catch (err) {
@@ -184,11 +185,11 @@ onMounted(fetchVehicles);
               </td>
 
               <td class="px-6 py-4 text-sm">
-                {{ vehicle.vehicleLength ? vehicle.vehicleLength + "m" : "" }}
+                {{ vehicle.vehicleLength ? vehicle.vehicleLength + "m" : "-" }}
               </td>
 
               <td class="px-6 py-4 text-sm">
-                {{ vehicle.vehicleWeight ? vehicle.vehicleWeight + "kg" : "" }}
+                {{ vehicle.vehicleWeight ? vehicle.vehicleWeight + "kg" : "-" }}
               </td>
 
               <td class="px-6 py-4 text-sm">

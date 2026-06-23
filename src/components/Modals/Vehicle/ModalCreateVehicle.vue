@@ -133,6 +133,7 @@ watch(selectedType, () => {
             <option :value="3">Type 3</option>
             <option :value="4">Type 4</option>
             <option :value="5">Type 5</option>
+            <option :value="6">Type 6</option>
           </select>
 
           <div v-if="selectedType" class="mt-4 space-y-3">
